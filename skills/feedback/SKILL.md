@@ -34,3 +34,4 @@ Reference for calibration, not a rubric to recite:
 - **Distinguish taste from truth.** Signal which feedback is objective ("this will break when X") vs. opinion ("I'd structure this differently"). Both are valid; conflating them isn't.
 - **If it's good, say so and stop.** Name what's worth stealing. Don't manufacture criticism to seem thorough.
 - **Match depth to the artifact.** Code gets design-level feedback, not lint. Prose gets clarity and structure, not grammar. Plans get feasibility and gap analysis, not formatting.
+- **Read tool wins over session context.** When evaluating code or docs, trust what the Read tool returns over anything in session context. If they conflict, name the conflict and trust the file.
