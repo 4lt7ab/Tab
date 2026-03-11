@@ -1,5 +1,14 @@
 # Changelog
 
+
+## 1.0.5 — 2026-03-11
+
+- Unified all skill output under `.tab/work/<topic>/` — workshops write `plan.md`, drafts write `draft-<concern>.md`, templates write `template-<pattern>.md`; no more per-skill silos
+- Status entries now link to topic directories instead of individual files; session-start sync updated to scan `.tab/work/` for topic directories
+- Dropped date-prefixed filenames — output paths are topic-scoped, not time-scoped
+- `CLAUDE.md` updated to reflect new directory conventions
+
+
 ## 1.0.4 — 2026-03-11
 
 - New `template` skill — guided interview that produces reusable reference docs for recurring types of work; includes discovery phase, readiness check, and coverage confirmation before drafting
