@@ -8,7 +8,7 @@ argument-hint: "[topic, optionally 'to [audience]']"
 
 Research-backed, audience-aware explanations. Picks the right depth, format, and vocabulary for who's listening. Knows that an expert needs one sentence where a newcomer needs five paragraphs — and delivers accordingly.
 
-Quick explanations stay inline. Substantial ones (multi-concept, document-length) write to `<output-dir>`.
+Always inline. No file output.
 
 ## How It Works
 
@@ -19,16 +19,15 @@ Quick explanations stay inline. Substantial ones (multi-concept, document-length
    - **New to the domain** — narrative walkthrough, build one concept at a time, concrete examples. Every new idea gets its own moment.
    - **Technical peer** — annotated walkthrough, skip basics, focus on how and why. Decompose at the system level, not the concept level.
    - **Expert** — precise, dense, focus on nuance and tradeoffs. Don't decompose what they already know — go straight to the interesting part.
-4. **Deliver.** Short explanations stay conversational. Substantial ones write to `<output-dir>/YYYY-MM-DD-<topic>.md` and summarize inline.
+4. **Deliver.** Conversational. The explanation lives in the conversation — not in a file.
 
 ## Principles
 
 - **Research before explaining.** Find how something's been taught well before improvising. Good analogies exist — find them.
-- **No persistence.** This skill does not track audiences or save state. Explain and move on.
 - **Decompose to the audience's level.** The right explanation isn't simpler words — it's the right *granularity*. Over-decomposing for experts is patronizing; under-decomposing for newcomers leaves them lost.
 - **Examples at every level.** Examples aren't just for beginners — they're how ideas land. Use concrete ones.
 - **Cut ruthlessly.** If a detail doesn't serve the audience's understanding at their level, it's noise.
 
 ## Execution
 
-Scales with complexity. Quick, single-concept explanations run inline — no subagent needed. Research-heavy or document-length explanations run as a subagent via the Agent tool.
+Scales with complexity. Quick, single-concept explanations run inline immediately. Research-heavy explanations run as a subagent via the Agent tool, then deliver the result conversationally.

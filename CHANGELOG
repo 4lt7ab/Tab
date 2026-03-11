@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2 — 2026-03-11
+
+- `explain` skill is now always inline — no file output. Explanations live in the conversation.
+
+
 ## 1.0.1 — 2026-03-11
 
 - Formalized skill forking via `context: fork` frontmatter, replacing ad-hoc subagent convention

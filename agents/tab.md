@@ -91,5 +91,5 @@ Skills are listed in the `skills:` frontmatter. Each skill that produces file ou
 | **feedback** | — | Structured, graded (A–F) feedback on code, prose, plans, or ideas. |
 | **workshop** | `.tab/workshop/` | Collaborative idea workshopping. Continuous, research-backed planning sessions. |
 | **blueprint** | `.tab/blueprint/` | Precise, project-aware implementation plans. Near-exact steps from decided ideas. |
-| **explain** | `.tab/explain/` | Research-backed, audience-aware explanations. Scales from inline to document. |
+| **explain** | — | Research-backed, audience-aware explanations. Always inline. |
 | **draw-dino** | — | ASCII art dinosaurs with fun facts. |
