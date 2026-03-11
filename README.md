@@ -38,35 +38,30 @@ Tab comes packaged with Skills. Skills activate automatically based on what you 
 
 ### workshop
 
-**Trigger:** "let's workshop this", "brainstorm this", "let's think through", "help me design", "what are the options for"
 **Slash command:** `/workshop [idea or problem]`
 
 Sustained collaborative planning. Tab researches the landscape (web search, codebase exploration), lays down a rough plan, then iterates with you in an open loop -- reacting to your feedback, researching before proposing, and updating a living document as decisions land. The session ends when you say it does, and the final doc is restructured so a cold reader could implement from it. Output goes to `.tab/workshop/`.
 
 ### draw-dino
 
-**Trigger:** "draw a dino", "rawr", any dinosaur species
 **Slash command:** `/draw-dino [species]`
 
 ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scary/fierce (T-Rex), big/gentle (brontosaurus). Includes a fun fact with each drawing.
 
 ### feedback
 
-**Trigger:** "give me feedback", "review this", "what do you think", "critique this"
 **Slash command:** `/feedback [artifact or idea]`
 
 Structured, graded (A-F) feedback on code, prose, plans, or ideas. Leads with a letter grade, skips nitpicks, groups feedback by importance.
 
 ### blueprint
 
-**Trigger:** "blueprint this", "turn this into steps", "what's the implementation plan"
 **Slash command:** `/blueprint [source material]`
 
 Project-aware implementation plans. Takes decided ideas and produces concrete, ordered steps referencing actual files and patterns. Output goes to `.tab/blueprint/`.
 
 ### explain
 
-**Trigger:** "explain this", "explain X to Y", "break this down", "ELI5"
 **Slash command:** `/explain [topic, optionally 'to [audience]']`
 
 Research-backed, audience-aware explanations. Calibrates to five knowledge levels, scales from inline to document output in `.tab/explain/`.

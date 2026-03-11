@@ -42,7 +42,7 @@ Each skill lives in `skills/<name>/SKILL.md`. Claude Code discovers them automat
 - **Naming**: lowercase, hyphenated for all directories (e.g., `draw-dino`, `workshop`).
 - **Frontmatter**: SKILL.md files use YAML frontmatter with `name`, `description`, and optionally `argument-hint`. Agent files use `name`, `description`, and `skills` at minimum.
 - **Skill triggers**: the `description` field in SKILL.md frontmatter doubles as the trigger condition. Write it as "Use when the user says X" (reactive), not "This skill does X" (descriptive).
-- **Subagent skills**: some skills include prose indicating they should run as a subagent via the Agent tool. This is a convention, not a frontmatter field.
+- **Forked skills**: skills that can run autonomously (no back-and-forth with the user) should set `context: fork` in frontmatter. This runs the skill in an isolated subagent. Optionally pair with `agent: <type>` to select a specific subagent type (e.g., `Explore`, `Plan`, `general-purpose`). Most skills run inline — only fork when the skill does heavy research or autonomous work and doesn't need the conversation.
 - **Skill output directories**: skills use `<output-dir>` as a placeholder. The agent resolves it — its Skills table maps each skill to a concrete path (e.g., `.tab/workshop/`). Skill files should not hardcode output paths.
 - **Git commits**: conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - **No code**: this project has no tests, no linting, no build. If you're writing code, you're in the wrong repo.

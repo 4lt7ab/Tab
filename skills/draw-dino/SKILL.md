@@ -1,6 +1,6 @@
 ---
 name: draw-dino
-description: Draw an ASCII art dinosaur. Use this skill when the user asks for a dinosaur, dino, asks you to draw a dino, wants ASCII art of a dinosaur, or says things like "rawr", "show me a dino", "draw a T-Rex", or references any dinosaur species.
+description: "Use when the user asks for a dinosaur, dino, ASCII art dinosaur, or says things like 'rawr', 'show me a dino', 'draw a T-Rex', or references any dinosaur species."
 argument-hint: "[species]"
 ---
 
