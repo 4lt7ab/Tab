@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3 — 2026-03-11
+
+- `blueprint` skill renamed to `draft` — reframed as iterative proposed-changes doc rather than auditable step list; output format is now `### Proposed Changes` with inline em-dash rationale
+- Guard secrets moved from Guidance to Hard Boundaries — makes the no-override contract explicit
+- Workflow section rewritten as four named principles: Read the doc, One suggestion, Earn the introduction, Design problems go back to workshop
+- Workshop doc format updated: `Key Decisions` replaced with per-idea status blocks carrying confidence, date, and four readiness heuristics (complete, reasoning, scoped, templated)
+
+
 ## 1.0.2 — 2026-03-11
 
 - `explain` skill is now always inline — no file output. Explanations live in the conversation.

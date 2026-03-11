@@ -1,12 +1,14 @@
 ---
-name: blueprint
-description: "Use when the user already knows *what* to build and needs exact steps for *how* — says things like 'blueprint this', 'turn this into steps', 'what's the implementation plan', 'how do I build this'. Not for exploration or brainstorming — the decisions should already be made."
+name: draft
+description: "Use when the user already knows *what* to build and needs exact proposed changes for *how* — says things like 'draft this', 'turn this into a plan', 'what's the implementation plan', 'how do I build this'. Not for exploration or brainstorming — the decisions should already be made."
 argument-hint: "[source material — doc, idea, conversation topic]"
 ---
 
 ## What This Skill Does
 
-Takes unstructured input — a brain dump, scattered notes, rough plans, conversation context — and crystallizes it into a concrete, project-aware implementation plan. The output is an **auditable** construction document: steps that are verifiable (done or not done, checkable by someone else). Someone should be able to pick it up and start building.
+Takes a decided plan — a workshop doc, brain dump, or settled idea — and produces a **Proposed Changes** document: an ordered, reviewable set of exact file edits with inline rationale. The output is iterative by design: propose → review → refine, as many passes as needed until the plan is ready to execute.
+
+Not for exploration or design — decisions should already be made. This translates them into buildable precision.
 
 ## Output Directory
 
@@ -23,43 +25,45 @@ Writes to `<output-dir>/YYYY-MM-DD-<topic>.md`. The invoking agent resolves `<ou
 
    The right decomposition depends on the objective — name the pattern, don't prescribe a fixed list. Areas to investigate typically include:
    - **Directory structure and naming conventions** — how are things organized? What patterns do new files follow?
-   - **Similar existing implementations** — find the closest analog to what's being built. Read it. The blueprint should mirror its patterns.
+   - **Similar existing implementations** — find the closest analog to what's being built. Read it. The draft should mirror its patterns.
    - **Config and wiring files** — manifests, registries, index files, frontmatter references — anything that needs updating when a new thing is added.
    - **Dependencies and interfaces** — what does the new thing need to connect to? Read those interfaces so steps can reference exact function signatures, type shapes, or API contracts.
-3. **Generate the blueprint.** Write to `<output-dir>/YYYY-MM-DD-<topic>.md` using the document structure below. Every step references actual project files, line numbers when useful, and concrete values — not placeholders.
-4. **Present and refine (one round).** Summarize the plan conversationally — key phases, notable decisions, anything surprising. The user gives targeted feedback. Incorporate it in one update pass, then the blueprint is done. If feedback reveals a gap that needs deeper investigation, don't stall — finish the full plan and mark those steps with a severity and a note on what's unresolved and what kind of work would resolve it:
-   - `⚠️ uncertain` — the step is plausible but unverified. Likely right, needs a codebase check. (e.g., "confirm X accepts this argument shape")
-   - `🚧 underspecified` — the step exists but lacks precision. Needs investigation. (e.g., "needs codebase investigation into how X handles Y")
-   - `🛑 unresolved` — a design decision is missing. Can't write a precise step until it's made. (e.g., "design decision: should this use A or B?")
+3. **Generate the draft.** Write to `<output-dir>/YYYY-MM-DD-<topic>.md` using the document structure below. Every change references actual project files, line numbers when useful, and concrete values — not placeholders.
+4. **Present and iterate.** Summarize the plan conversationally — key phases, notable decisions, anything surprising. The user reviews and gives targeted feedback. Incorporate it and re-propose. The loop continues until the user is satisfied — there's no fixed number of rounds. If feedback reveals a gap that needs deeper investigation, don't stall — mark those steps with a severity note and finish the full plan:
+   - `⚠️ uncertain` — plausible but unverified. Needs a codebase check.
+   - `🚧 underspecified` — exists but lacks precision. Needs investigation.
+   - `🛑 unresolved` — design decision missing. Can't write a precise step until it's made.
 
-   The user gets a complete blueprint with known holes visible and sized, not half a blueprint.
+   The user gets a complete draft with known holes visible and sized, not half a draft.
 
 ## Document Structure
 
-The blueprint is a pure execution plan. No research notes, no decision history, no open questions.
+The draft is a pure execution plan. No research notes, no decision history, no open questions.
 
 ### Objective
 
 One sentence. What we're building and why.
 
-### Steps
+### Proposed Changes
 
-Ordered, numbered, precise. Each step is something you can sit down and do without needing to investigate anything — the blueprint already did the investigating.
+Ordered, numbered, precise. Each change is something you can sit down and do without needing to investigate anything — the draft already did the investigating.
 
-Steps must include:
+Changes include inline rationale via em-dash: state what changes and why it changes that way alongside each other. Example: `Update the description in frontmatter — reflects the iterative contract rather than the auditable-steps framing.`
+
+Changes must include:
 - **Exact file paths as markdown links** — not "the config file," but [agents/tab.md](agents/tab.md). Links use relative paths from the project root. This makes paths clickable in IDEs and reviewable in rendered markdown.
-- **Concrete values** — not "add the appropriate entry," but "add `tab:blueprint` to the `skills:` list"
-- **Code snippets or content** when the step involves writing something non-obvious — show what to write, not just where to write it
+- **Concrete values** — not "add the appropriate entry," but "add `tab:draft` to the `skills:` list"
+- **Code snippets or content** when the change involves writing something non-obvious — show what to write, not just where to write it
 - **Line references** when helpful — append to the link: [agents/tab.md:7](agents/tab.md#L7)
 
-The precision test: could someone follow this step with zero familiarity with the codebase and get it right on the first try? If not, it needs more detail.
+The precision test: could someone follow this change with zero familiarity with the codebase and get it right on the first try? If not, it needs more detail.
 
 Bad: "Create a new skill file with the right frontmatter"
-Good: "Create [skills/blueprint/SKILL.md](skills/blueprint/SKILL.md) with frontmatter: `name: blueprint`, `description: \"...\"`, `argument-hint: \"...\"` — matching the YAML frontmatter format used by existing skills"
+Good: "Create [skills/draft/SKILL.md](skills/draft/SKILL.md) with frontmatter: `name: draft`, `description: \"...\"`, `argument-hint: \"...\"` — matching the YAML frontmatter format used by existing skills"
 
-Annotate steps where effort would surprise someone scanning the plan — not every step, just the surprising ones. Examples: `(heavy — requires migrating existing data)` or `(quick — one-line config change)`.
+Annotate changes where effort would surprise someone scanning the plan — not every change, just the surprising ones. Examples: `(heavy — requires migrating existing data)` or `(quick — one-line config change)`.
 
-When a plan has distinct phases, use subheadings under Steps (`### Phase 1: Setup`, etc.). Number steps sequentially across phases. One document, not multiple files.
+When a plan has distinct phases, use subheadings under Proposed Changes (`### Phase 1: Setup`, etc.). Number changes sequentially across phases. One document, not multiple files.
 
 ### Dependencies
 
@@ -82,7 +86,7 @@ Explicitly name what this plan does *not* cover, to prevent scope creep. If ever
 
 Add a `lint` skill that runs ESLint with the project's config and reports results conversationally.
 
-## Steps
+## Proposed Changes
 
 ### Phase 1: Skill setup
 
@@ -122,6 +126,6 @@ Add a `lint` skill that runs ESLint with the project's config and reports result
 
 ## Principles
 
-- **Read the actual files.** A blueprint that says "follow existing patterns" has failed. Every step must reference real files (as markdown links), real values, real interfaces — because the skill read them, not because it assumed them.
+- **Read the actual files.** A draft that says "follow existing patterns" has failed. Every change must reference real files (as markdown links), real values, real interfaces — because the skill read them, not because it assumed them.
 - **Scope is explicit.** What's in and what's out are both stated clearly.
-- **Split when it sprawls.** If the plan exceeds ~15 steps, break it into phases or suggest separate blueprints per workstream. A plan too big to hold in your head isn't a plan.
+- **Split when it sprawls.** If the plan exceeds ~15 changes, break it into phases or suggest separate drafts per workstream. A plan too big to hold in your head isn't a plan.

@@ -41,7 +41,15 @@ The living document is the shared canvas. It starts rough and gains resolution o
 Structure it however makes sense for the topic, but generally:
 - **Goal** — what we're building and why
 - **Approach** — how we're building it, concrete enough that someone could start implementing from this section alone
-- **Key Decisions** — what was considered, what was rejected, and why the chosen approach won. "We did X" isn't useful; "we almost did Y, but Z made X the better call" is.
+- **Idea status blocks** — each landed idea gets its own block:
+  ```
+  ### <Idea title>
+  *Landed YYYY-MM-DD · confidence: <high|medium|low>*
+  ✓ complete · ✓ reasoning · ✓ scoped · ✓ templated
+
+  <One paragraph: what was decided and why this over the alternatives.>
+  ```
+  Status markers: `✓` settled, `~` partial, `✗` failed. The four heuristics (complete, reasoning, scoped, templated) are what draft needs to do its job without stalling. "Templated" = conventions were considered, not that a template skill was invoked. Applies to greenfield work too.
 - **Open Questions** — things still unresolved
 - **Research Notes** — relevant findings from web searches and codebase exploration
 
