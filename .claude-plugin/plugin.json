@@ -7,7 +7,6 @@
   },
   "license": "Apache-2.0",
   "repository": "https://github.com/AltT4b/Tab",
-  "readme": "./README.md",
   "agents": "./agents/tab.md",
   "skills": "./skills/"
 }
