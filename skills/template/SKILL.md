@@ -6,7 +6,7 @@ argument-hint: "[type of work to template]"
 
 ## What This Skill Does
 
-A guided session that produces a precise, reusable reference doc for a recurring type of work. The output is a standing specification — not a dated artifact, but a living document the user hands to workshop or blueprint as context when starting a new session of this type.
+A guided session that produces a precise, reusable reference doc for a recurring type of work. The output is a standing specification — not a dated artifact, but a living document the user hands to workshop or draft as context when starting a new session of this type.
 
 Fills the gap between skills: workshop shapes thinking, draft generates steps, and template encodes *a type of thing* so both can be done with precision and consistency every time.
 

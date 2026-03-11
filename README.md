@@ -40,13 +40,13 @@ Tab comes packaged with Skills. Skills activate automatically based on what you 
 
 **Slash command:** `/workshop [idea or problem]`
 
-Sustained collaborative planning. Tab researches the landscape (web search, codebase exploration), lays down a rough plan, then iterates with you in an open loop -- reacting to your feedback, researching before proposing, and updating a living document as decisions land. The session ends when you say it does, and the final doc is restructured so a cold reader could implement from it. Output goes to `.tab/workshop/`.
+Sustained collaborative planning. Tab researches the landscape (web search, codebase exploration), lays down a rough plan, then iterates with you in an open loop -- reacting to your feedback, researching before proposing, and updating a living document as decisions land. The session ends when you say it does, and the final doc is restructured so a cold reader could implement from it. Output goes to `.tab/work/<topic>/plan.md`.
 
-### draw-dino
+### draft
 
-**Slash command:** `/draw-dino [species]`
+**Slash command:** `/draft [source material]`
 
-ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scary/fierce (T-Rex), big/gentle (brontosaurus). Includes a fun fact with each drawing.
+Translates decided plans into reviewable proposed-changes docs. Takes a workshop plan, brain dump, or settled idea and produces an ordered set of exact file edits with inline rationale. Iterative by design -- propose, review, refine. Output goes to `.tab/work/<topic>/draft-<concern>.md`.
 
 ### feedback
 
@@ -54,25 +54,25 @@ ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scar
 
 Structured, graded (A-F) feedback on code, prose, plans, or ideas. Leads with a letter grade, skips nitpicks, groups feedback by importance.
 
-### blueprint
+### template
 
-**Slash command:** `/blueprint [source material]`
+**Slash command:** `/template [type of work]`
 
-Project-aware implementation plans. Takes decided ideas and produces concrete, ordered steps referencing actual files and patterns. Output goes to `.tab/blueprint/`.
+Guided interview that produces reusable reference docs for recurring types of work. Researches prior art first, then asks only what it couldn't infer. Output goes to `.tab/work/<topic>/template-<pattern>.md`.
 
-### explain
+### draw-dino
 
-**Slash command:** `/explain [topic, optionally 'to [audience]']`
+**Slash command:** `/draw-dino [species]`
 
-Research-backed, audience-aware explanations. Calibrates to five knowledge levels, scales from inline to document output in `.tab/explain/`.
+ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scary/fierce (T-Rex), big/gentle (brontosaurus). Includes a fun fact with each drawing.
 
 ### Built-in: Greeting
 
-Tab greets and orients on session start. First-time users get a short intro; returning users get relevant context from memory and recent work.
+Tab greets and orients on session start. First-time users get a short intro; returning users get relevant context from status and recent work.
 
 ### Built-in: Status Tracking
 
-Tab maintains `.tab/status.md` automatically — a lightweight orientation file that tracks what's in progress and what recently shipped. No manual memory commands needed. The workbench *is* the state: an unfinished workshop doc is an open thread, a blueprint not yet executed is pending work.
+Tab maintains `.tab/status.md` automatically — a lightweight orientation file that tracks what's in progress and what recently shipped. No manual memory commands needed. All skill output lives under `.tab/work/<topic>/` — an unfinished workshop doc is an open thread, a draft not yet executed is pending work.
 
 ---
 
@@ -85,10 +85,10 @@ agents/
   tab.md                # Claude Code agent (persona, voice, rules, skills via frontmatter)
 skills/
   workshop/SKILL.md     # Collaborative idea workshopping and planning
-  draw-dino/SKILL.md    # ASCII art dinosaurs
+  draft/SKILL.md        # Translates settled plans into proposed-changes docs
   feedback/SKILL.md     # Structured, graded feedback
-  blueprint/SKILL.md    # Project-aware implementation plans
-  explain/SKILL.md      # Audience-aware explanations
+  template/SKILL.md     # Guided interview for reusable reference docs
+  draw-dino/SKILL.md    # ASCII art dinosaurs
 .claude-plugin/
   plugin.json           # Plugin manifest
 settings.json           # Activates Tab as the primary persona
@@ -96,7 +96,7 @@ settings.json           # Activates Tab as the primary persona
 
 ### How Agents Work
 
-**`agents/tab.md`** is the Claude Code agent. Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:blueprint`, `tab:explain`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and a table mapping each skill to its output directory under `.tab/`.
+**`agents/tab.md`** is the Claude Code agent. Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draft`, `tab:template`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and a table mapping each skill to its output directory under `.tab/work/`.
 
 **`settings.json`** at the plugin root sets `"agent": "tab:Tab"`, which tells Claude Code to load Tab as the primary persona. This is the mechanism that makes Tab "just work" after install -- no setup commands needed.
 
@@ -117,7 +117,7 @@ argument-hint: "[species]"
 - **`description`** -- doubles as the **trigger condition**. Write it as "Use when the user says X" (reactive), not "This skill does X" (descriptive). The description tells the model *when* to activate; the body tells it *what* to do.
 - **`argument-hint`** -- optional. Hints at accepted arguments.
 
-Skills that produce file output write to a directory defined in `agents/tab.md`'s skill table (under `.tab/`). Skills reference `<output-dir>` in their instructions rather than hardcoding paths.
+Skills that produce file output write to `.tab/work/<topic>/`. Skills reference `<output-dir>` in their instructions rather than hardcoding paths.
 
 ### Add a New Skill
 
@@ -133,13 +133,13 @@ Skills that produce file output write to a directory defined in `agents/tab.md`'
 
 ### Status Tracking
 
-Tab maintains `.tab/status.md` automatically as operational bookkeeping — no user approval needed. The file tracks in-progress work (active workshops, pending blueprints) and recent completions. Tab updates it at session boundaries and when work state changes. See the Status section in `agents/tab.md` for the full spec.
+Tab maintains `.tab/status.md` automatically as operational bookkeeping — no user approval needed. The file tracks in-progress work (active workshops, pending drafts) and recent completions. Tab updates it at session boundaries and when work state changes. See the Status section in `agents/tab.md` for the full spec.
 
 ### Conventions
 
 - **Naming:** lowercase, hyphenated directories and files.
 - **Git commits:** conventional prefixes -- `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`.
-- **Output:** file output goes to `.tab/` in the user's working directory, which is gitignored.
+- **Output:** all skill output goes to `.tab/work/<topic>/` in the user's working directory, which is gitignored.
 - **No code:** this project has no tests, no linting, no build. If you're writing code, you're in the wrong repo.
 
 ---
