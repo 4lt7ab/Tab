@@ -8,11 +8,11 @@ argument-hint: "[type of work to template]"
 
 A guided session that produces a precise, reusable reference doc for a recurring type of work. The output is a standing specification — not a dated artifact, but a living document the user hands to workshop or blueprint as context when starting a new session of this type.
 
-Fills the gap between skills: workshop shapes thinking, draft/blueprint generates steps, and template encodes *a type of thing* so both can be done with precision and consistency every time.
+Fills the gap between skills: workshop shapes thinking, draft generates steps, and template encodes *a type of thing* so both can be done with precision and consistency every time.
 
 ## Output Directory
 
-Writes to `<output-dir>`. The invoking agent resolves `<output-dir>` to a concrete path.
+Tab writes to `<output-dir>/<topic>/template-<pattern>.md`. `<pattern>` is the name of the landed decision in `plan.md` this template encodes — derived from the decision's heading in the Landed Decisions section. Tab always asks for the topic before writing and creates the directory if needed.
 
 ## How It Works
 
@@ -32,7 +32,7 @@ Ask targeted questions, one at a time. Cover only what discovery couldn't answer
 
 ### Coverage Check
 
-Before drafting, show a one-line coverage summary per section, flagging anything thin. User confirms or redirects. Tab owns "done," user owns the final confirm.
+Before drafting, show a one-line coverage summary per section, flagging anything thin. User confirms or redirects. The agent owns "done," user owns the final confirm.
 
 The bar: all five sections have enough material to be substantive. A new contributor should be able to produce a correct artifact from this template alone, without follow-up questions.
 
@@ -46,13 +46,13 @@ Re-running the skill means re-running discovery against current artifacts and di
 
 ## Output Document Structure
 
-File path: `<output-dir>/<topic>.md` — no date prefix. Templates are living reference docs, not dated artifacts.
+File path: `<output-dir>/<topic>/template-<pattern>.md` — no date prefix. `<pattern>` matches the heading of the landed decision in `plan.md` this template encodes (e.g., if the decision heading is "Skill Authoring," the file is `template-skill-authoring.md`). Templates are living reference docs, not dated artifacts. If a workshop plan exists at `<output-dir>/<topic>/plan.md`, it should reference templates as pointers, not inline their content.
 
 Sections:
 
 - **What this is** — precise definition of this type of work in this specific project
 - **Settled context** — conventions, patterns, file locations, existing decisions. Specification level: syntax, canonical form, edge cases. The stuff that never needs re-explaining.
-- **Recurring questions** — the questions worth asking every time for this type of work. Written as actual questions ("What's the intended audience?"), not prose. Tab knows this section is done when a new contributor could pick up the list and run a competent session without follow-up questions. If a question would itself prompt five clarifying questions, it's underspecified.
+- **Recurring questions** — the questions worth asking every time for this type of work. Written as actual questions ("What's the intended audience?"), not prose. This section is done when a new contributor could pick up the list and run a competent session without follow-up questions. If a question would itself prompt five clarifying questions, it's underspecified.
 - **Constraints** — what's fixed, what can't be skipped, what must be considered
 - **Pointers** — existing examples of this type of work. The "read these first" list.
 

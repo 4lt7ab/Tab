@@ -12,7 +12,7 @@ Not for exploration or design — decisions should already be made. This transla
 
 ## Output Directory
 
-Writes to `<output-dir>/YYYY-MM-DD-<topic>.md`. The invoking agent resolves `<output-dir>` to a concrete path.
+Tab writes to `<output-dir>/<topic>/draft-<concern>.md`. Tab always asks for the topic before writing and creates the directory if needed. Tab acts on the draft conversationally by default — writing to disk is for output worth persisting across sessions.
 
 ## How It Works
 
@@ -28,7 +28,7 @@ Writes to `<output-dir>/YYYY-MM-DD-<topic>.md`. The invoking agent resolves `<ou
    - **Similar existing implementations** — find the closest analog to what's being built. Read it. The draft should mirror its patterns.
    - **Config and wiring files** — manifests, registries, index files, frontmatter references — anything that needs updating when a new thing is added.
    - **Dependencies and interfaces** — what does the new thing need to connect to? Read those interfaces so steps can reference exact function signatures, type shapes, or API contracts.
-3. **Generate the draft.** Write to `<output-dir>/YYYY-MM-DD-<topic>.md` using the document structure below. Every change references actual project files, line numbers when useful, and concrete values — not placeholders.
+3. **Generate the draft.** Tab writes to `<output-dir>/<topic>/draft-<concern>.md` using the document structure below. Every change references actual project files, line numbers when useful, and concrete values — not placeholders.
 4. **Present and iterate.** Summarize the plan conversationally — key phases, notable decisions, anything surprising. The user reviews and gives targeted feedback. Incorporate it and re-propose. The loop continues until the user is satisfied — there's no fixed number of rounds. If feedback reveals a gap that needs deeper investigation, don't stall — mark those steps with a severity note and finish the full plan:
    - `⚠️ uncertain` — plausible but unverified. Needs a codebase check.
    - `🚧 underspecified` — exists but lacks precision. Needs investigation.
@@ -52,7 +52,7 @@ Changes include inline rationale via em-dash: state what changes and why it chan
 
 Changes must include:
 - **Exact file paths as markdown links** — not "the config file," but [agents/tab.md](agents/tab.md). Links use relative paths from the project root. This makes paths clickable in IDEs and reviewable in rendered markdown.
-- **Concrete values** — not "add the appropriate entry," but "add `tab:draft` to the `skills:` list"
+- **Concrete values** — not "add the appropriate entry," but "add `draft` to the `skills:` list"
 - **Code snippets or content** when the change involves writing something non-obvious — show what to write, not just where to write it
 - **Line references** when helpful — append to the link: [agents/tab.md:7](agents/tab.md#L7)
 
@@ -98,9 +98,9 @@ Add a `lint` skill that runs ESLint with the project's config and reports result
    ```
    *(quick — single file, follow [skills/draw-dino/SKILL.md](skills/draw-dino/SKILL.md) for structure)*
 
-2. Register the skill in [agents/tab.md](agents/tab.md) — add `tab:lint` to the `skills:` list in frontmatter (line 7) and add a row to the Skills table:
+2. Register the skill in [agents/agent.md](agents/agent.md) — add `lint` to the `skills:` list in frontmatter (line 7) and add a row to the Skills table:
    ```
-   | **lint** | `.tab/lint/` | Run ESLint and report results. |
+   | **lint** | `.agent/lint/` | Run ESLint and report results. |
    ```
 
 ### Phase 2: Skill logic

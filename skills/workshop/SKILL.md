@@ -12,7 +12,7 @@ Not for quick answers or direct implementation — this is for problems that ben
 
 ## Output Directory
 
-Writes to `<output-dir>`. The invoking agent resolves `<output-dir>` to a concrete path.
+Tab derives a topic slug from the idea (kebab-case, brief) and writes the plan to `<output-dir>/<topic>/plan.md`, announcing the path on write. The directory is created if it doesn't exist.
 
 ## How It Works
 
@@ -20,7 +20,7 @@ Writes to `<output-dir>`. The invoking agent resolves `<output-dir>` to a concre
 
 1. Read the idea. Restate it back in one or two sentences to confirm understanding.
 2. Do initial research — scan relevant files in the project and run a few web searches to understand the landscape. Share what you find before asking anything.
-3. Lay down a **rough sketch** — a short, informal outline of the plan as you currently understand it. Write it to `<output-dir>/YYYY-MM-DD-<topic>.md`. This is the seed. It will be wrong and incomplete. That's the point.
+3. Lay down a **rough sketch** — a short, informal outline of the plan as you currently understand it. Tab derives a topic slug from the idea (kebab-case, brief) and writes the sketch to `<output-dir>/<topic>/plan.md`, announcing the path on write. This is the seed. It will be wrong and incomplete. That's the point.
 
 ### The Loop
 
