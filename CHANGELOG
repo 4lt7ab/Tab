@@ -1,0 +1,11 @@
+# Changelog
+
+## 1.0.0 — 2026-03-11
+
+Initial release.
+
+- Tab persona — voice, rules, behaviors, session-to-session status tracking
+- Five skills: workshop, blueprint, feedback, explain, draw-dino
+- Plugin manifest and settings for automatic persona activation
+- Created lightweight `.tab/status.md` workbench model
+- CLAUDE.md scoped to contributor guidance

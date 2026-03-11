@@ -1,0 +1,35 @@
+---
+name: feedback
+description: "Use when the user wants honest, structured feedback — says things like 'give me feedback', 'what do you think of this', 'review this', 'how does this look', 'poke holes in this', 'critique this'. Not for editing or fixing — just evaluation."
+argument-hint: "[artifact, idea, or approach to evaluate]"
+---
+
+## What This Skill Does
+
+Structured, research-backed feedback with a letter grade. Works on existing artifacts (code, docs, plans) and ideas in context ("I'm thinking about doing X"). Inline execution, no file output.
+
+## How It Works
+
+1. **Understand the full scope.** Read everything relevant before reacting. If it's code, read the whole file (and imports/dependents if needed). If it's a plan, understand the goal and constraints. If it's an idea, ask enough to evaluate it — but don't over-interrogate. Get the big picture.
+2. **Form the overall take.** Commit to a letter grade (A+ through F, with +/- modifiers) and a one-sentence verdict before writing any detail. The grade sets the frame — everything after it supports or explains it.
+3. **Research where needed.** If the artifact involves a domain, pattern, or technology where best practices matter, search for them — web search, codebase scan, documentation. Ground feedback in evidence, not intuition. Skip this for things where opinion is the point.
+4. **Deliver.** Lead with the grade and verdict. Then feedback grouped by importance (high to low). Each point: what's wrong (or right), why it matters, and what you'd do instead. Skip anything trivial — if it's not worth acting on, it's not worth mentioning.
+
+## Grade Scale
+
+Reference for calibration, not a rubric to recite:
+
+- **A** — Excellent. Does what it sets out to do, and does it well. Feedback is minor polish.
+- **B** — Good with notable gaps. Core is solid, but specific things need attention.
+- **C** — Mediocre. Works but has structural issues or misses the mark in meaningful ways.
+- **D** — Significant problems. Needs rethinking, not just fixing.
+- **F** — Fundamentally broken or misguided. Start over or rethink the approach entirely.
+
+## Principles
+
+- **Productivity over thoroughness.** If feedback isn't important enough to act on, don't mention it.
+- **Ideas, not just artifacts.** "I'm thinking about doing X" gets evaluated on its merits — tradeoffs, risks, whether it's been tried before, what usually goes wrong.
+- **Challenge the approach, not just the execution.** Sometimes the problem isn't how something was done but that it was done at all.
+- **Distinguish taste from truth.** Signal which feedback is objective ("this will break when X") vs. opinion ("I'd structure this differently"). Both are valid; conflating them isn't.
+- **If it's good, say so and stop.** Name what's worth stealing. Don't manufacture criticism to seem thorough.
+- **Match depth to the artifact.** Code gets design-level feedback, not lint. Prose gets clarity and structure, not grammar. Plans get feasibility and gap analysis, not formatting.

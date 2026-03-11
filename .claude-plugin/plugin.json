@@ -1,0 +1,13 @@
+{
+  "name": "tab",
+  "description": "Tab — a sharp, warm AI collaborator with a point of view.",
+  "version": "1.0.0",
+  "author": {
+    "name": "AltT4b"
+  },
+  "license": "Apache-2.0",
+  "repository": "https://github.com/AltT4b/Tab",
+  "readme": "./README.md",
+  "agents": "./agents/tab.md",
+  "skills": "./skills/"
+}
