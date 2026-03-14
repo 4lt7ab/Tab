@@ -36,7 +36,7 @@ settings.json           ← activates Tab as the primary persona via agent ref
 
 ### Main Agent (`agents/tab.md`)
 
-The Tab agent definition. Loaded as the primary persona via `settings.json`. Defines persona, voice, rules, and behaviors. References skills via `skills:` frontmatter. Maintains `.tab/status.md` for session-to-session orientation.
+The Tab agent definition. Loaded as the primary persona via `settings.json`. Defines persona, voice, rules, behaviors, and status tracking format. References skills via `skills:` frontmatter. Maintains `.tab/status.md` for session-to-session orientation.
 
 ### Specialists (`agents/<name>.md`)
 
@@ -67,6 +67,7 @@ description: "<What it does>. <When to use it>."
 context: fork
 agent: general-purpose  # or: Explore, Plan
 isolation: worktree     # optional — run in an isolated git worktree
+model: sonnet           # optional — sonnet, opus, or haiku
 ---
 
 <Instructions for the specialist. What it does, how it works, output format.>
@@ -114,5 +115,6 @@ Tab dispatches specialists and presents their output. The specialist never talks
 - **Specialist triggers**: the `description` field is a routing contract. Write it as "<What it does>. <When to use it>."
 - **Skills vs. specialists**: if the work is conversational (back-and-forth with the user), it's a skill. If it's autonomous (task in, results out), it's a specialist. Most autonomous work should be a specialist, not a forked skill.
 - **Skill output directories**: file-writing skills use `<output-dir>` as a placeholder. The agent resolves it — output lands in `.tab/work/<topic>/`. Skills that execute inline (feedback, draw-dino) don't write files and don't use `<output-dir>`.
+- **Skill-relative files**: skills can reference co-located files via `${CLAUDE_SKILL_DIR}/filename` in SKILL.md. No current skills use this, but it's available for skills that need templates, rubrics, or examples alongside their definition.
 - **Git commits**: conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - **No code**: this project has no tests, no linting, no build. If you're writing code, you're in the wrong repo.

@@ -42,12 +42,6 @@ Tab comes packaged with Skills. Skills activate automatically based on what you 
 
 Sustained collaborative planning. Tab researches the landscape (web search, codebase exploration), lays down a rough plan, then iterates with you in an open loop -- reacting to your feedback, researching before proposing, and updating a living document as decisions land. The session ends when you say it does, and the final doc is restructured so a cold reader could implement from it. Output goes to `.tab/work/<topic>/plan.md`.
 
-### draft
-
-**Slash command:** `/draft [source material]`
-
-Translates decided plans into reviewable proposed-changes docs. Takes a workshop plan, brain dump, or settled idea and produces an ordered set of exact file edits with inline rationale. Iterative by design -- propose, review, refine. Output goes to `.tab/work/<topic>/draft-<concern>.md`.
-
 ### feedback
 
 **Slash command:** `/feedback [artifact or idea]`
@@ -79,7 +73,6 @@ agents/
   tab.md                # Claude Code agent (persona, voice, rules, skills via frontmatter)
 skills/
   workshop/SKILL.md     # Collaborative idea workshopping and planning
-  draft/SKILL.md        # Translates settled plans into proposed-changes docs
   feedback/SKILL.md     # Structured, graded feedback
   draw-dino/SKILL.md    # ASCII art dinosaurs
 .claude-plugin/
@@ -89,7 +82,7 @@ settings.json           # Activates Tab as the primary persona
 
 ### How Agents Work
 
-**`agents/tab.md`** is the Claude Code agent. Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draft`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and a table mapping each skill to its output directory under `.tab/work/`.
+**`agents/tab.md`** is the Claude Code agent. Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and skill output conventions under `.tab/work/`.
 
 **`settings.json`** at the plugin root sets `"agent": "tab:Tab"`, which tells Claude Code to load Tab as the primary persona. This is the mechanism that makes Tab "just work" after install -- no setup commands needed.
 
@@ -120,7 +113,7 @@ Skills that produce file output write to `.tab/work/<topic>/`. Skills reference 
 
 3. **Write the body.** Define workflow, instructions, constraints. Start with a "What This Skill Does" section.
 
-4. **Register in the agent.** Add `tab:my-skill` to the `skills:` list in `agents/tab.md` frontmatter. If the skill produces file output, add a row to the skill table in the agent body. (You don't need to touch `plugin.json` -- Claude Code discovers skills automatically from the `skills/` path.)
+4. **Register in the agent.** Add `tab:my-skill` to the `skills:` list in `agents/tab.md` frontmatter. (You don't need to touch `plugin.json` -- Claude Code discovers skills automatically from the `skills/` path.)
 
 5. **If it needs scripts or assets**, put them alongside `SKILL.md` in the skill directory.
 
