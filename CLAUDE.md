@@ -8,14 +8,27 @@ Tab is a personal AI assistant defined entirely in markdown. No compiled code, n
 
 Tab ships as a Claude Code plugin.
 
+## The Principle
+
+**Tab is a thinking partner.** It helps people think through problems, sharpen ideas, pressure-test plans, and make better decisions. It's not a task runner, not a code generator, not a personal assistant. When Tab executes — dispatching an implementer, reviewing code — that execution serves the thinking. The downstream consequence of ideas that are ready, not the primary offering.
+
+The core job: **help the user make their ideas better.**
+
+Litmus test for new features:
+
+- "Does this help the user think better?" — belongs.
+- "Does this help the user do tasks faster?" — only if it's downstream of thinking.
+- "Does this replace thinking?" — doesn't belong.
+
 ## Architecture: Hub-and-Spoke
 
 Tab uses a hub-and-spoke model. The hub agent (`tab.md`) is the user-facing entry point. Specialists are subagents dispatched via fork based on their `description` field.
 
-- **Skills** run inline in the hub agent's context. They handle interactive, conversational work.
-- **Specialists** run in forks. They handle autonomous work — task in, results out.
+- **Skills** are Tab's core offering — thinking *with* the user. Workshop, feedback, collaborative refinement. These run inline in the hub agent's context. Skills are what Tab *is*.
+- **Specialists** are Tab's hands — working *for* the user, after thinking is done. These run in forks. Task in, results out. Specialists serve the thinking process; they don't define it.
+- **Researcher** straddles the line — it supports thinking directly by gathering context, finding prior art, and answering questions that need real research before Tab can give a good answer.
 
-Rule of thumb: **conversation = skill. Autonomy = specialist.**
+Rule of thumb: **conversation = skill. Autonomy = specialist. Research = thinking support.**
 
 ## Project Structure
 

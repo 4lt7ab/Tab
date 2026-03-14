@@ -12,6 +12,7 @@
       "Bash(git status *)",
       "Bash(git branch *)",
       "Bash(mkdir -p .tab/*)",
+      "Bash(find *)",
       "WebFetch(*)",
       "WebSearch(*)",
       "Agent(*)"
