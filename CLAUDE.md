@@ -24,6 +24,7 @@ agents/
   tab.md                ← main agent (hub, default, the persona)
   code-reviewer.md      ← specialist: reviews PRs and code changes
   implementer.md        ← specialist: implements changes in isolated worktrees from settled plans
+  researcher.md         ← specialist: researches topics via codebase scanning and web search
   ...                   ← add specialists by dropping .md files here
 skills/                 ← plugin-level skills discovered automatically
   workshop/             ← collaborative idea workshopping and planning

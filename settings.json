@@ -2,6 +2,7 @@
   "agent": "tab:Tab",
   "permissions": {
     "allow": [
+      "Read(./.tab/**)",
       "Edit(./.tab/**)",
       "Write(./.tab/**)",
       "Bash(git log *)",
