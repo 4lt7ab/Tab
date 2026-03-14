@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: "Research a topic by scanning codebases, searching the web, and finding prior art. Use when Tab needs deep context-gathering for workshop sessions or any planning work."
+description: "Research a topic by scanning codebases, searching the web, and finding prior art. Use when Tab needs deep context-gathering — during workshop sessions, when exploring unfamiliar territory, or when a question needs real research before Tab can give a good answer."
 context: fork
 agent: general-purpose
 model: sonnet

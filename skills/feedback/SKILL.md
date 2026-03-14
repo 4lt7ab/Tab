@@ -1,6 +1,6 @@
 ---
 name: feedback
-description: "Honest, structured feedback on artifacts, ideas, or approaches. Only invoke when the user explicitly runs /feedback."
+description: "Use when the user runs /feedback or explicitly asks for structured, graded feedback on an artifact, idea, or approach."
 argument-hint: "[artifact, idea, or approach to evaluate]"
 ---
 

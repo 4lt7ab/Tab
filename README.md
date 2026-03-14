@@ -69,6 +69,7 @@ agents/
   tab.md                # Main agent — hub, persona, skills via frontmatter
   code-reviewer.md      # Specialist: reviews PRs and code changes
   implementer.md        # Specialist: implements changes in isolated worktrees
+  researcher.md         # Specialist: deep research across codebases and the web
 skills/
   workshop/SKILL.md     # Collaborative idea workshopping and planning
   feedback/SKILL.md     # Structured, graded feedback
@@ -82,7 +83,7 @@ settings.json           # Activates Tab as the primary persona
 
 **`agents/tab.md`** is the main agent (the hub). Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draw-dino`). The body defines voice, rules, and behaviors.
 
-**Specialists** (`agents/code-reviewer.md`, `agents/implementer.md`) are focused subagents — one task, one job. Tab delegates to them automatically based on the task. They run in forks and return results to Tab; the user never interacts with them directly. Each specialist must be listed in the `"agents"` array in `plugin.json`.
+**Specialists** (`agents/code-reviewer.md`, `agents/implementer.md`, `agents/researcher.md`) are focused subagents — one task, one job. Tab delegates to them automatically based on the task. They run in forks and return results to Tab; the user never interacts with them directly. Each specialist must be listed in the `"agents"` array in `plugin.json`.
 
 **`settings.json`** at the plugin root sets `"agent": "tab:Tab"`, which tells Claude Code to load Tab as the primary persona. This is the mechanism that makes Tab "just work" after install -- no setup commands needed.
 

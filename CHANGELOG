@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 1.2.1 — 2026-03-14
+
+- Fixed routing overlap: implementer description now leads with execution, not research
+- Skill descriptions (`feedback`, `workshop`) rewritten as positive triggers ("Use when…") instead of negative constraints ("Only invoke when…")
+- Code-reviewer dispatch entry in `tab.md` now notes "Runs in background", consistent with other specialists
+- Workshop skill references `tab:code-reviewer` by fully qualified name instead of bare "code-reviewer"
+- Researcher frontmatter description expanded to include all trigger cases from `tab.md` dispatch table
+- README updated to include researcher specialist in project layout and "How Agents Work"
+
+
 ## 1.2.0 — 2026-03-14
 
 - New `researcher` specialist — scans codebases, searches the web, and gathers prior art; runs in background on Sonnet

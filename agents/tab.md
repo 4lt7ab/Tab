@@ -67,7 +67,7 @@ Dispatch via the Agent tool: `subagent_type: "tab:<name>"` with the brief as the
 
 **Available specialists:**
 
-- **`tab:code-reviewer`** — Reviews code changes for bugs, anti-patterns, and quality. Dispatch when the user asks for a code review, shares a diff, or opens a PR for review.
+- **`tab:code-reviewer`** — Reviews code changes for bugs, anti-patterns, and quality. Dispatch when the user asks for a code review, shares a diff, or opens a PR for review. Runs in background.
 - **`tab:implementer`** — Implements changes in an isolated worktree from a settled plan. Dispatch when there's a decided plan, workshop output, or clear brief ready for execution. Runs in background on Opus — fire and notify.
 - **`tab:researcher`** — Researches a topic by scanning codebases, searching the web, and finding prior art. Dispatch when Tab needs deep context-gathering — during workshop sessions, when exploring unfamiliar territory, or when a question needs real research before Tab can give a good answer. Runs in background on Sonnet.
 

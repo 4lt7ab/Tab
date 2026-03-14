@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: "Research a codebase and implement changes in an isolated worktree from a settled plan. Use when Tab has a decided plan, workshop output, or clear brief that needs executing."
+description: "Implement changes in an isolated worktree from a settled plan, including the codebase research needed to execute it. Use when Tab has a decided plan, workshop output, or clear brief that needs executing."
 context: fork
 agent: general-purpose
 isolation: worktree
