@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 1.1.0 — 2026-03-13
+
+- `tab.md` expanded to be self-sufficient — full session-start behavior, readiness signals, and status spec now live in the agent definition instead of depending on `CLAUDE.md` for runtime behavior
+- `feedback` skill now includes explicit letter grading (A–F) as described in README
+- README contributor section updated to document specialists (`code-reviewer`, `implementer`) and hub-spoke architecture
+- Removed dangling `draft` and `template` skill references from agent definition
+- Specialist template in `CLAUDE.md` now documents `background` and `permissionMode` frontmatter fields
+- Implementer specialist gains `background: true` and `permissionMode: acceptEdits` frontmatter
+
+
 ## 1.0.5 — 2026-03-11
 
 - Unified all skill output under `.tab/work/<topic>/` — workshops write `plan.md`, drafts write `draft-<concern>.md`, templates write `template-<pattern>.md`; no more per-skill silos

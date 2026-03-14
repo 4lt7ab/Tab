@@ -36,7 +36,7 @@ settings.json           ← activates Tab as the primary persona via agent ref
 
 ### Main Agent (`agents/tab.md`)
 
-The Tab agent definition. Loaded as the primary persona via `settings.json`. Defines persona, voice, rules, behaviors, and status tracking format. References skills via `skills:` frontmatter. Maintains `.tab/status.md` for session-to-session orientation.
+The Tab agent definition. Loaded as the primary persona via `settings.json`. Defines persona, voice, rules, and behaviors. References skills via `skills:` frontmatter. Orients on session start by scanning `.tab/work/` for topic directories.
 
 ### Specialists (`agents/<name>.md`)
 
@@ -68,6 +68,8 @@ context: fork
 agent: general-purpose  # or: Explore, Plan
 isolation: worktree     # optional — run in an isolated git worktree
 model: sonnet           # optional — sonnet, opus, or haiku
+background: true        # optional — run in background, notify on completion
+permissionMode: acceptEdits  # optional — auto-accept file edits without prompting
 ---
 
 <Instructions for the specialist. What it does, how it works, output format.>

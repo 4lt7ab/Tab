@@ -58,9 +58,9 @@ ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scar
 
 Tab greets and orients on session start. First-time users get a short intro; returning users get relevant context from status and recent work.
 
-### Built-in: Status Tracking
+### Built-in: Work Tracking
 
-Tab maintains `.tab/status.md` automatically — a lightweight orientation file that tracks what's in progress and what recently shipped. No manual memory commands needed. All skill output lives under `.tab/work/<topic>/` — an unfinished workshop doc is an open thread, a draft not yet executed is pending work.
+All skill output lives under `.tab/work/<topic>/`. Tab scans these directories on session start to orient — an unfinished workshop doc is an open thread, a draft not yet executed is pending work. The filesystem is the source of truth; no separate status file needed.
 
 ---
 
@@ -70,19 +70,23 @@ Tab maintains `.tab/status.md` automatically — a lightweight orientation file 
 
 ```
 agents/
-  tab.md                # Claude Code agent (persona, voice, rules, skills via frontmatter)
+  tab.md                # Main agent — hub, persona, skills via frontmatter
+  code-reviewer.md      # Specialist: reviews PRs and code changes
+  implementer.md        # Specialist: implements changes in isolated worktrees
 skills/
   workshop/SKILL.md     # Collaborative idea workshopping and planning
   feedback/SKILL.md     # Structured, graded feedback
   draw-dino/SKILL.md    # ASCII art dinosaurs
 .claude-plugin/
-  plugin.json           # Plugin manifest
+  plugin.json           # Plugin manifest — lists agents, auto-discovers skills
 settings.json           # Activates Tab as the primary persona
 ```
 
 ### How Agents Work
 
-**`agents/tab.md`** is the Claude Code agent. Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and skill output conventions under `.tab/work/`.
+**`agents/tab.md`** is the main agent (the hub). Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and skill output conventions under `.tab/work/`.
+
+**Specialists** (`agents/code-reviewer.md`, `agents/implementer.md`) are focused subagents — one task, one job. Tab delegates to them automatically based on the task. They run in forks and return results to Tab; the user never interacts with them directly. Each specialist must be listed in the `"agents"` array in `plugin.json`.
 
 **`settings.json`** at the plugin root sets `"agent": "tab:Tab"`, which tells Claude Code to load Tab as the primary persona. This is the mechanism that makes Tab "just work" after install -- no setup commands needed.
 
@@ -116,10 +120,6 @@ Skills that produce file output write to `.tab/work/<topic>/`. Skills reference 
 4. **Register in the agent.** Add `tab:my-skill` to the `skills:` list in `agents/tab.md` frontmatter. (You don't need to touch `plugin.json` -- Claude Code discovers skills automatically from the `skills/` path.)
 
 5. **If it needs scripts or assets**, put them alongside `SKILL.md` in the skill directory.
-
-### Status Tracking
-
-Tab maintains `.tab/status.md` automatically as operational bookkeeping — no user approval needed. The file tracks in-progress work (active workshops, pending drafts) and recent completions. Tab updates it at session boundaries and when work state changes. See the Status section in `agents/tab.md` for the full spec.
 
 ### Conventions
 

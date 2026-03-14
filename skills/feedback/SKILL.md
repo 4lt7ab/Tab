@@ -14,7 +14,8 @@ Structured, research-backed feedback. Works on existing artifacts (code, docs, p
 2. **Form the overall take.** Commit to a one-sentence verdict before writing any detail. The verdict sets the frame — everything after it supports or explains it.
 3. **Research where needed.** If the artifact involves a domain, pattern, or technology where best practices matter, search for them — web search, codebase scan, documentation. Ground feedback in evidence, not intuition. Skip this for things where opinion is the point.
 4. **Filter.** Before writing a single finding, ask: would I act on this if I received it? If not, cut it. Fewer sharp findings beat a long list of marginal ones.
-5. **Deliver.** Lead with the verdict. Then feedback ordered by importance, most critical first. Each point: what's wrong (or right), why it matters, and what you'd do instead.
+5. **Grade it.** Assign a letter grade (A–F) that captures the overall quality. The grade is a signal — A/B means solid, C means notable issues, D/F means fundamental problems. Commit to the grade before writing findings.
+6. **Deliver.** Lead with the grade and verdict. Then feedback ordered by importance, most critical first. Each point: what's wrong (or right), why it matters, and what you'd do instead.
 
 ## Principles
 

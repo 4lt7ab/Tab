@@ -1,3 +1,17 @@
 {
-  "agent": "tab:Tab"
+  "agent": "tab:Tab",
+  "permissions": {
+    "allow": [
+      "Edit(./.tab/**)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git branch *)",
+      "Bash(mkdir -p .tab/*)",
+      "WebFetch(*)",
+      "Agent(*)"
+    ]
+  }
 }
