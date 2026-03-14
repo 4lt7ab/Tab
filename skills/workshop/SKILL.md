@@ -10,6 +10,8 @@ A continuous planning session that shapes a raw idea into an in-depth implementa
 
 Not for quick answers or direct implementation — this is for problems that benefit from exploration before committing to an approach.
 
+**Project context:** Load CLAUDE.md at the start of every workshop session. Workshop is where design decisions happen — it needs the project architecture.
+
 ## Output Directory
 
 Tab derives a topic slug from the idea (kebab-case, brief) and writes the plan to `<output-dir>/<topic>/plan.md`, announcing the path on write. The directory is created if it doesn't exist.

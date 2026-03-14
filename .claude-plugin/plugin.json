@@ -7,6 +7,10 @@
   },
   "license": "Apache-2.0",
   "repository": "https://github.com/AltT4b/Tab",
-  "agents": "./agents/tab.md",
+  "agents": [
+    "./agents/tab.md",
+    "./agents/code-reviewer.md",
+    "./agents/implementer.md"
+  ],
   "skills": "./skills/"
 }
