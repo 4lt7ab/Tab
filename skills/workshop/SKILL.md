@@ -1,6 +1,6 @@
 ---
 name: workshop
-description: "Sustained thinking about a problem before committing to an approach. Use when the user wants to brainstorm, think through a problem space, or says things like 'let's workshop this', 'help me think through', 'help me design', 'what are the options for', 'let's figure this out'."
+description: "Sustained thinking about a problem before committing to an approach. Only invoke when the user explicitly runs /workshop."
 argument-hint: "[idea or problem to workshop]"
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: feedback
-description: "Use when the user wants honest, structured feedback — says things like 'give me feedback', 'what do you think of this', 'how does this look', 'poke holes in this', 'critique this', 'review this'. Not for editing or fixing — just evaluation."
+description: "Honest, structured feedback on artifacts, ideas, or approaches. Only invoke when the user explicitly runs /feedback."
 argument-hint: "[artifact, idea, or approach to evaluate]"
 ---
 
