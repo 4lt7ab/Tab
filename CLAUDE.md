@@ -10,10 +10,10 @@ Tab ships as a Claude Code plugin.
 
 ## Architecture: Hub-and-Spoke
 
-Tab uses a hub-and-spoke model. Tab is the hub — the one agent users talk to. Specialists are subagents that Tab delegates to automatically based on the task. Users never switch agents or pick a persona. They talk to Tab, and Tab brings in help when it fits.
+Tab uses a hub-and-spoke model. The hub agent (`tab.md`) is the user-facing entry point. Specialists are subagents dispatched via fork based on their `description` field.
 
-- **Skills** handle interactive work (conversation with the user). Workshop, feedback, draw-dino are skills. They run inline in Tab's context.
-- **Specialists** handle autonomous work (task in, results out). Code review, implementation, test writing, PR summarization are specialists. They run in forks.
+- **Skills** run inline in the hub agent's context. They handle interactive, conversational work.
+- **Specialists** run in forks. They handle autonomous work — task in, results out.
 
 Rule of thumb: **conversation = skill. Autonomy = specialist.**
 
@@ -36,15 +36,15 @@ settings.json           ← activates Tab as the primary persona via agent ref
 
 ### Main Agent (`agents/tab.md`)
 
-The Tab agent definition. Loaded as the primary persona via `settings.json`. Defines persona, voice, rules, and behaviors. References skills via `skills:` frontmatter. Orients on session start by scanning `.tab/work/` for topic directories.
+The hub agent definition — persona, voice, rules, and runtime behaviors. Loaded as the primary persona via `settings.json`. This file is the single source of truth for how the hub agent behaves; don't restate its contents elsewhere.
 
 ### Specialists (`agents/<name>.md`)
 
-Focused subagents — one task, one job. Each specialist must be listed in the `"agents"` array in `plugin.json`. Tab delegates to specialists automatically based on their `description` field. Specialists run in forks and return results to Tab.
+Focused subagents — one task, one job. Each specialist must be listed in the `"agents"` array in `plugin.json`. The hub agent dispatches specialists based on their `description` field. Specialists run in forks and return results to the hub.
 
 ### Skills (`skills/`)
 
-Each skill lives in `skills/<name>/SKILL.md`. Claude Code discovers them automatically from the path declared in `plugin.json`. Skills that write files use `<output-dir>` as a placeholder — the agent resolves it at runtime. Not all skills write files; some (feedback, draw-dino) execute inline with no file output.
+Each skill lives in `skills/<name>/SKILL.md`. Claude Code discovers them automatically from the path declared in `plugin.json`. Not all skills write files; some (feedback, draw-dino) execute inline with no file output. File-writing skills use their own output directories (e.g., `workshop/<topic>/`).
 
 ### Plugin wiring
 
@@ -101,13 +101,9 @@ Two sentences. First: what it does. Second: when to use it.
 
 If two specialists could both plausibly handle the same user request, sharpen the descriptions. The fix is always in the descriptions, not in routing logic.
 
-### Dispatch patterns
+### Dispatch
 
-Tab dispatches specialists and presents their output. The specialist never talks to the user directly. Dispatch uses the Skill tool with the specialist's name (e.g., `tab:implementer`) and a free-form brief containing all relevant context. Follow each specialist's own protocol — some require multiple dispatches.
-
-- **Direct dispatch.** User request → Tab sends a brief → specialist returns output → Tab presents it. Used for standalone tasks (code review, implementation from a clear brief).
-- **Workshop-driven dispatch.** Workshop produces a settled plan → Tab dispatches the specialist with that plan as the brief → specialist returns output → Tab presents it. Used when the work needed design thinking first.
-- **Iteration.** Each dispatch is a fresh run — not a continuation. Include prior output and feedback in the new brief. Tab always mediates; the user never talks to the specialist directly.
+Specialists are dispatched via the Skill tool using their name (e.g., `tab:implementer`) and a free-form brief. Each dispatch is a fresh run — not a continuation. Dispatch behavior is defined in `tab.md`; don't restate it here.
 
 ## Conventions
 
@@ -116,7 +112,7 @@ Tab dispatches specialists and presents their output. The specialist never talks
 - **Skill triggers**: the `description` field in SKILL.md frontmatter doubles as the trigger condition. Write it as "Use when the user says X" (reactive), not "This skill does X" (descriptive).
 - **Specialist triggers**: the `description` field is a routing contract. Write it as "<What it does>. <When to use it>."
 - **Skills vs. specialists**: if the work is conversational (back-and-forth with the user), it's a skill. If it's autonomous (task in, results out), it's a specialist. Most autonomous work should be a specialist, not a forked skill.
-- **Skill output directories**: file-writing skills use `<output-dir>` as a placeholder. The agent resolves it — output lands in `.tab/work/<topic>/`. Skills that execute inline (feedback, draw-dino) don't write files and don't use `<output-dir>`.
+- **Skill output directories**: file-writing skills use their own output directories (e.g., `workshop/<topic>/`). Skills that execute inline (feedback, draw-dino) don't write files.
 - **Skill-relative files**: skills can reference co-located files via `${CLAUDE_SKILL_DIR}/filename` in SKILL.md. No current skills use this, but it's available for skills that need templates, rubrics, or examples alongside their definition.
 - **Git commits**: conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - **No code**: this project has no tests, no linting, no build. If you're writing code, you're in the wrong repo.

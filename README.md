@@ -56,11 +56,7 @@ ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scar
 
 ### Built-in: Greeting
 
-Tab greets and orients on session start. First-time users get a short intro; returning users get relevant context from status and recent work.
-
-### Built-in: Work Tracking
-
-All skill output lives under `.tab/work/<topic>/`. Tab scans these directories on session start to orient — an unfinished workshop doc is an open thread, a draft not yet executed is pending work. The filesystem is the source of truth; no separate status file needed.
+Tab greets and orients on session start. Uses project memory to pick up where things left off, or introduces itself to new users.
 
 ---
 
@@ -84,7 +80,7 @@ settings.json           # Activates Tab as the primary persona
 
 ### How Agents Work
 
-**`agents/tab.md`** is the main agent (the hub). Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draw-dino`). The body defines voice, rules, status tracking behavior, and skill output conventions under `.tab/work/`.
+**`agents/tab.md`** is the main agent (the hub). Its YAML frontmatter declares identity and lists skills (`tab:feedback`, `tab:workshop`, `tab:draw-dino`). The body defines voice, rules, and behaviors.
 
 **Specialists** (`agents/code-reviewer.md`, `agents/implementer.md`) are focused subagents — one task, one job. Tab delegates to them automatically based on the task. They run in forks and return results to Tab; the user never interacts with them directly. Each specialist must be listed in the `"agents"` array in `plugin.json`.
 
@@ -107,7 +103,7 @@ argument-hint: "[species]"
 - **`description`** -- doubles as the **trigger condition**. Write it as "Use when the user says X" (reactive), not "This skill does X" (descriptive). The description tells the model *when* to activate; the body tells it *what* to do.
 - **`argument-hint`** -- optional. Hints at accepted arguments.
 
-Skills that produce file output write to `.tab/work/<topic>/`. Skills reference `<output-dir>` in their instructions rather than hardcoding paths.
+Skills that produce file output write to their own output directories (e.g., `workshop/<topic>/`).
 
 ### Add a New Skill
 
@@ -125,7 +121,7 @@ Skills that produce file output write to `.tab/work/<topic>/`. Skills reference 
 
 - **Naming:** lowercase, hyphenated directories and files.
 - **Git commits:** conventional prefixes -- `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`.
-- **Output:** all skill output goes to `.tab/work/<topic>/` in the user's working directory, which is gitignored.
+- **Output:** file-writing skills use their own output directories (e.g., `workshop/<topic>/`).
 - **No code:** this project has no tests, no linting, no build. If you're writing code, you're in the wrong repo.
 
 ---
