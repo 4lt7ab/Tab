@@ -10,6 +10,66 @@ Tab ships as a **Claude Code plugin**.
 
 Install Tab from the Claude Code plugin marketplace. Tab activates automatically -- no setup commands needed.
 
+### Recommended permissions
+
+Tab works out of the box with default Claude Code permissions (you'll be prompted for each tool use). For a smoother experience, add this to your project's `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "Agent(*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(dd *)",
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(sftp *)",
+      "Bash(nc *)",
+      "Bash(netcat *)",
+      "Bash(ncat *)",
+      "Bash(socat *)",
+      "Bash(git push *)",
+      "Bash(git remote add *)",
+      "Bash(git remote set-url *)",
+      "Bash(npm publish *)",
+      "Bash(cargo publish *)",
+      "Bash(gem push *)",
+      "Bash(twine upload *)",
+      "Bash(pip upload *)",
+      "Bash(docker push *)",
+      "Bash(kubectl *)",
+      "Bash(helm *)",
+      "Bash(terraform apply *)",
+      "Bash(terraform destroy *)",
+      "Bash(pulumi *)",
+      "Bash(aws *)",
+      "Bash(gcloud *)",
+      "Bash(az *)",
+      "Bash(vercel *)",
+      "Bash(netlify *)",
+      "Bash(heroku *)",
+      "Bash(fly *)",
+      "Bash(railway *)",
+      "Bash(launchctl *)",
+      "Bash(systemctl *)",
+      "Bash(crontab *)",
+      "Bash(security find-generic-password *)",
+      "Bash(security find-internet-password *)"
+    ]
+  }
+}
+```
+
+This gives Tab full development capabilities while blocking destructive operations, remote access, package publishing, cloud/deploy CLIs, and credential extraction. Customize to taste.
+
 ---
 
 ## Quick Start
@@ -86,11 +146,11 @@ settings.json           # Activates Tab as the primary persona
 
 ### How It Works
 
-**`agents/tab.md`** is the agent definition. Its YAML frontmatter declares identity and lists skills (`tab:workshop`, `tab:draw-dino`). The body defines voice, rules, behaviors, and dispatch logic for specialists.
+**`agents/tab.md`** is the agent definition. Its YAML frontmatter declares identity and memory scope. The body defines voice, rules, behaviors, and dispatch logic for specialists. Skills are discovered automatically from the `skills/` directory — they don't need to be listed in the agent frontmatter.
 
 **Specialist agents** (`researcher.md`, `implementer.md`, `reviewer.md`) are sub-agents Tab dispatches for autonomous work. Each runs in background with a fresh context — the dispatch brief is their entire world. They're registered in `plugin.json` and available as `subagent_type: "tab:<Name>"`.
 
-**`settings.json`** at the plugin root sets `"agent": "tab:Tab"`, which tells Claude Code to load Tab as the primary persona. This is the mechanism that makes Tab "just work" after install -- no setup commands needed.
+**`settings.json`** at the plugin root sets `"agent": "tab:Tab"`, which tells Claude Code to load Tab as the primary persona. This is the mechanism that makes Tab "just work" after install -- no setup commands needed. Note: plugin `settings.json` only supports the `agent` key. Permissions are configured in the user's project-level `.claude/settings.json` (see [Recommended permissions](#recommended-permissions)).
 
 
 ### How Skills Work
@@ -119,7 +179,7 @@ Skills that produce artifacts write them wherever makes sense for the project.
 
 3. **Write the body.** Define workflow, instructions, constraints. Start with a "What This Skill Does" section.
 
-4. **Register in the agent.** Add `tab:my-skill` to the `skills:` list in `agents/tab.md` frontmatter. (You don't need to touch `plugin.json` -- Claude Code discovers skills automatically from the `skills/` path.)
+4. **That's it.** Claude Code discovers skills automatically from the `skills/` path declared in `plugin.json`. No registration needed.
 
 5. **If it needs scripts or assets**, put them alongside `SKILL.md` in the skill directory.
 

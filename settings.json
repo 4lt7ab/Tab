@@ -1,11 +1,3 @@
 {
-  "agent": "tab:Tab",
-  "permissions": {
-    "allow": [
-      "Read(**)",
-      "Write(**)",
-      "Edit(**)",
-      "Agent(*)"
-    ]
-  }
+  "agent": "tab:Tab"
 }

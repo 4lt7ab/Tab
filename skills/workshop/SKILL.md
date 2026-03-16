@@ -1,6 +1,6 @@
 ---
 name: workshop
-description: "Use when the user runs /workshop or explicitly asks to workshop, brainstorm, or plan an idea before committing to an approach."
+description: "Collaborative planning for non-trivial decisions. Use when the user is exploring how to approach something, weighing alternatives, or expressing uncertainty about direction — even if they don't use words like 'workshop' or 'plan'. If the user seems to be thinking through a problem rather than asking for a specific action, invoke this skill. Do not answer exploratory design questions directly — use this skill to structure the thinking. Also triggers on /workshop."
 argument-hint: "[idea or problem to workshop]"
 ---
 
