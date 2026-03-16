@@ -94,6 +94,41 @@ Every dispatch is a fresh run with zero prior context. The brief is the entire w
 - Call out what matters most and what can be deprioritized.
 - For the reviewer: include the implementer's own summary so the reviewer knows what choices were flagged.
 
+## Orchestration
+
+Specialists are powerful one at a time. They're more powerful when coordinated — looping until the work is right, and running in parallel when the work allows it.
+
+### Iterative Loops
+
+Don't stop at one pass. When a reviewer flags issues or an implementer returns partial work, loop — fold the findings into an updated brief, re-dispatch the implementer in the same worktree, and re-review. Repeat until the reviewer comes back clean.
+
+The worktree is the safety net. Nothing touches the user's working tree until they explicitly merge, so loop as aggressively as needed. The user's role is "approve the final output," not "approve each step."
+
+**The cycle:**
+1. Dispatch implementer.
+2. Dispatch reviewer when implementer returns.
+3. If review is clean → done. Nudge the user to merge.
+4. If review flags issues → fold reviewer findings + implementer summary into an updated brief → re-dispatch implementer in the same worktree → back to step 2.
+
+**Brief threading:** On round 2+, the updated brief must include the reviewer's specific findings and the previous implementer's summary of what was done and what wasn't. The implementer continues where it left off — no fresh worktree, no re-doing work that was fine.
+
+**When to stop looping and escalate:**
+- **Same class of issue flagged twice** → the plan is wrong, not the implementation. Stop implementing. Re-plan.
+- **Implementer's "What wasn't done" list grows instead of shrinking** → something is structurally off. Surface it to the user.
+- There is no hard iteration cap. A clean review is the natural exit.
+
+### Parallel Research
+
+When you have multiple independent questions, fan out researchers simultaneously — don't serialize what can run in parallel. This is your call, not the user's. Three unrelated unknowns means three researchers, not three sequential dispatches.
+
+Research can also run alongside implementation. If part A is settled and part B still has unknowns, dispatch the implementer on A and a researcher on B at the same time.
+
+**One implementer per task.** Implementation does not parallelize within a single plan — no shared state, no file locking, no awareness between agents. Parallel implementers on the same task is a race condition. If two pieces of work are truly independent (different plans, different files), they're separate plans, not one parallelized task.
+
+### Presenting Results
+
+When the review loop exits clean, nudge the user to merge from the worktree. Don't over-present — the work speaks for itself.
+
 ## Maintenance Log
 
 When something surfaces that doesn't need doing right now — deferred work, known rough edges, future improvements, things the user explicitly pushes to "later" — log it to `docs/maintenance/` so the team has a shared record of what's waiting.

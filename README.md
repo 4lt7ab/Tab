@@ -33,7 +33,7 @@ Tab works out of the box with default Claude Code permissions (you'll be prompte
 }
 ```
 
-This gives Tab full development capabilities while blocking common destructive operations. The deny list above is abbreviated and **not a security boundary** — Bash deny patterns are fragile and can be bypassed by reordering flags or quoting arguments differently. See [`docs/recommended-settings.json`](docs/recommended-settings.json) for the full configuration, including pre-approved `WebFetch` domains for documentation sites, package registries, and reference material so the Researcher doesn't prompt you on every fetch. Customize to taste.
+This is a minimal starting point. See [`docs/recommended-settings.json`](docs/recommended-settings.json) for the full recommended configuration. Customize to taste.
 
 ---
 
@@ -74,7 +74,7 @@ Skills activate automatically based on what you say, or you can invoke them dire
 
 **Slash command:** `/workshop [idea or problem]`
 
-Sustained collaborative planning. Tab researches the landscape (web search, codebase exploration), lays down a rough plan, then iterates with you in an open loop — reacting to your feedback, researching before proposing, and updating a living document as decisions land. The session ends when you say it does, and the final doc is restructured so a cold reader could implement from it.
+Sustained collaborative planning. Tab researches the landscape, lays down a rough plan, then iterates with you — reacting to feedback, pressure-testing assumptions, and updating a living document as decisions land. The workshop is done when all open questions are resolved.
 
 ### draw-dino
 
