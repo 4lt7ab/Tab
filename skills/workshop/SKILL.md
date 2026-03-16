@@ -10,7 +10,7 @@ A continuous planning session that shapes a raw idea into an in-depth implementa
 
 1. Read the idea. Restate it back in one or two sentences to confirm understanding. **Stop and wait for confirmation before doing anything else.**
 2. Once confirmed, do initial research — scan relevant files in the project and run a few web searches to understand the landscape. Share what you find.
-3. Write a **rough sketch** to `docs/plans/<topic>.md`, where `<topic>` is a short kebab-case name derived from the idea (e.g., `docs/plans/auth-rewrite.md`). Mention the path so the user knows where it lives. This is the seed. It will be wrong and incomplete. That's the point.
+3. Check if a plan already exists at `docs/plans/<topic>.md`. If it does, read it, orient to where things left off, and pick up from there — skip the rough sketch and jump straight into the loop. If not, write a **rough sketch** to `docs/plans/<topic>.md`, where `<topic>` is a short kebab-case name derived from the idea (e.g., `docs/plans/auth-rewrite.md`). Mention the path so the user knows where it lives. This is the seed. It will be wrong and incomplete. That's the point.
 
 ## Plan Template
 

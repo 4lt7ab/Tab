@@ -44,6 +44,8 @@ settings.json           ← activates Tab as the primary persona
 
 The agent definition — persona, voice, rules, runtime behaviors, and dispatch logic for specialists. Loaded as the primary persona via `settings.json`. This file is the single source of truth for how Tab behaves; don't restate its contents elsewhere.
 
+Frontmatter fields: `name` (agent identity), `description` (one-line summary), `memory` (scope for persistent memory — `project` means memories are scoped to the project directory and shared via version control).
+
 ### Specialists (`agents/researcher.md`, `agents/implementer.md`, `agents/reviewer.md`)
 
 Sub-agents that Tab dispatches when the thinking is done and autonomous work needs to happen. Each runs in background with a fresh context — the dispatch brief is their entire world. They serve the thinking, they don't replace it.
@@ -60,7 +62,7 @@ Each skill lives in `skills/<name>/SKILL.md`. Claude Code discovers them automat
 ## Conventions
 
 - **Frontmatter**: SKILL.md files use `name`, `description`, and optionally `argument-hint`.
-- **Skill triggers**: the `description` field doubles as the trigger condition. Write it as "Use when the user says X" (reactive), not "This skill does X" (descriptive).
+- **Skill triggers**: the `description` field doubles as the trigger condition. A brief semantic frame ("Collaborative planning for non-trivial decisions") followed by reactive conditions ("Use when the user is exploring...") is more effective than either alone. Lead with what the skill is, then specify when to fire.
 - **Skill output**: skills that produce artifacts write them wherever makes sense for the project. Inline skills (draw-dino) don't write files.
 - **Skill-relative files**: skills can reference co-located files via `${CLAUDE_SKILL_DIR}/filename` in SKILL.md.
 - **Git commits**: conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).

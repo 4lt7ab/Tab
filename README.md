@@ -106,7 +106,7 @@ You can dispatch them explicitly ("have the researcher look into X") or Tab will
 
 ## Skills
 
-Tab comes packaged with Skills. Skills activate automatically based on what you say, or you can invoke them directly with slash commands. Built-in behaviors (greeting, status tracking) are part of the agent definition and don't need separate skill files.
+Tab comes packaged with Skills. Skills activate automatically based on what you say, or you can invoke them directly with slash commands.
 
 ### workshop
 
@@ -119,10 +119,6 @@ Sustained collaborative planning. Tab researches the landscape (web search, code
 **Slash command:** `/draw-dino [species]`
 
 ASCII art dinosaurs. Customizable by mood: cute/baby, flying (pterodactyl), scary/fierce (T-Rex), big/gentle (brontosaurus). Includes a fun fact with each drawing.
-
-### Built-in: Greeting
-
-Tab greets and orients on session start. Introduces itself to new users, or picks up where things left off with returning users.
 
 ---
 
