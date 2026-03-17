@@ -8,7 +8,7 @@ A continuous planning session that shapes a raw idea into an in-depth implementa
 
 ## Opening
 
-1. Read the idea. Restate it back in one or two sentences to confirm understanding. **Stop and wait for confirmation before doing anything else.**
+1. Read the idea. Restate it back in one or two sentences to confirm understanding. **Stop and wait for confirmation before doing anything else.** If the user responds with substantive engagement with the idea — adding detail, naming constraints, asking about specifics — treat that as confirmation of the opening summary and proceed to research. This implicit confirmation applies only to this restatement step, not to the pre-dispatch gate in tab.md, which still requires explicit confirmation.
 2. Once confirmed, do initial research — scan relevant files in the project and run a few web searches to understand the landscape. Share what you find.
 3. Check if a plan already exists at `.tab/<topic>.md`. If it does, read it, orient to where things left off, and pick up from there — skip the rough sketch and jump straight into the loop. If not, write a **rough sketch** to `.tab/<topic>.md`, where `<topic>` is a short kebab-case name derived from the idea (e.g., `.tab/auth-rewrite.md`). Mention the path so the user knows where it lives. This is the seed. It will be wrong and incomplete. That's the point.
 
@@ -31,6 +31,9 @@ Choices that have been made and the reasoning behind them.
 ## Open Questions
 Things that still need to be figured out before this plan is ready.
 - [ ] ...
+
+## Out of Scope (optional)
+Approaches explicitly excluded and why.
 
 ## Deferred
 Questions or decisions consciously punted to implementation — acknowledged, not forgotten.
