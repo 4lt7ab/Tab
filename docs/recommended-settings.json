@@ -5,7 +5,7 @@
       "Read(**)",
       "Write(**)",
       "Edit(**)",
-      "Agent(*)",
+      "Agent(tab:*)",
 
       "WebSearch",
 
