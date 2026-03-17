@@ -8,7 +8,11 @@ Tab ships as a **Claude Code plugin**.
 
 ## Install
 
-Install Tab from the Claude Code plugin marketplace. Tab activates automatically — no setup commands needed.
+**From the marketplace:** Search for "Tab" in the Claude Code plugin marketplace and install it. Tab activates automatically — no setup commands needed.
+
+**From a local clone:** Clone this repo, then add it as a plugin in Claude Code by pointing at the directory. Claude Code discovers the plugin via `.claude-plugin/plugin.json`, which registers Tab's agents and auto-discovers skills from `skills/`. The included `settings.json` sets Tab as the primary persona automatically.
+
+For the full Claude Code plugin install workflow, see the [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code).
 
 ### Recommended Permissions
 
@@ -75,6 +79,12 @@ Skills activate automatically based on what you say, or you can invoke them dire
 **Slash command:** `/workshop [idea or problem]`
 
 Sustained collaborative planning. Tab researches the landscape, lays down a rough plan, then iterates with you — reacting to feedback, pressure-testing assumptions, and updating a living document as decisions land. The workshop is done when all open questions are resolved.
+
+### log
+
+**Slash command:** `/log [what to log]`
+
+Deferred work tracking. When something surfaces that doesn't need doing right now — out-of-scope issues, "we'll handle that later" items, known gaps from a workshop or review — Tab logs it to `docs/maintenance/` so the team has a shared record of what's waiting. One file per item, named descriptively. Tab also surfaces this proactively when deferred work comes up in conversation.
 
 ### draw-dino
 

@@ -25,6 +25,7 @@ agents/
 skills/                 ← auto-discovered from path in plugin.json
   workshop/             ← collaborative planning
   draw-dino/            ← ASCII art dinosaurs (easter egg)
+  log/                  ← deferred work tracking (docs/maintenance/)
 docs/
   maintenance/              ← deferred work items, one file per item (team-facing)
   recommended-settings.json  ← full recommended .claude/settings.json template
