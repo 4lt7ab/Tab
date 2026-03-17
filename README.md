@@ -14,33 +14,9 @@ Tab ships as a **Claude Code plugin**.
 
 For the full Claude Code plugin install workflow, see the [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code). To verify the install, ask Tab something — if it responds in character, you're set.
 
-### Recommended Permissions
+### Permissions
 
-Tab works out of the box with default Claude Code permissions (you'll be prompted for each tool use). For a smoother experience, add this to your project's `.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash",
-      "Read(**)",
-      "Write(**)",
-      "Edit(**)",
-      "Agent(tab:*)",
-      "WebSearch"
-    ],
-    "deny": [
-      "Bash(rm -rf *)",
-      "Bash(sudo *)",
-      "Bash(git push *)"
-    ]
-  }
-}
-```
-
-See [`docs/recommended-settings.json`](docs/recommended-settings.json) for the full recommended configuration.
-
-**What the deny list is — and isn't.** The deny list is an autonomy control, not a security fence. It forces a confirmation prompt on high-stakes irreversible operations — deploys, publishes, infrastructure changes, destructive git commands, privilege escalation — where you want a human confirming, not Tab acting on its own. It doesn't prevent a determined actor from working around it (any shell can invoke another program). The goal is to ensure Tab pauses before doing something that can't be undone. Customize to taste, but that's the principle.
+Tab works out of the box with default Claude Code permissions — you'll be prompted for each tool use. Customize your project's `.claude/settings.json` to taste as you learn which prompts you want to skip and which you want to keep.
 
 ---
 

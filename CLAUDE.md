@@ -28,7 +28,6 @@ skills/                 ← auto-discovered from path in plugin.json
   log/                  ← deferred work tracking (docs/maintenance/)
 docs/
   maintenance/              ← deferred work items, one file per item (team-facing)
-  recommended-settings.json  ← full recommended .claude/settings.json template
 .claude-plugin/
   plugin.json           ← plugin manifest
 settings.json           ← sets Tab as primary persona on install
@@ -37,7 +36,7 @@ settings.json           ← sets Tab as primary persona on install
 ### Plugin Wiring
 
 - `plugin.json` registers all agents and auto-discovers skills from `./skills/`.
-- `settings.json` sets `"agent": "tab:Tab"` so Tab loads as the primary persona. The Claude Code plugin system only supports the `agent` key in plugin `settings.json` — any other keys are silently ignored. Permissions belong in the user's own `.claude/settings.json`; use `docs/recommended-settings.json` as the template.
+- `settings.json` sets `"agent": "tab:Tab"` so Tab loads as the primary persona. The Claude Code plugin system only supports the `agent` key in plugin `settings.json` — any other keys are silently ignored. Permissions belong in the user's own `.claude/settings.json`.
 
 ### Agent Frontmatter
 
