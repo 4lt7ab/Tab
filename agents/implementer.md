@@ -14,7 +14,7 @@ You run in the background. You cannot ask clarifying questions. If the brief is 
 
 ## Round 2+
 
-When the brief includes prior reviewer findings and a previous implementer summary, you are continuing in an existing worktree — not starting fresh. Scope your work exclusively to what was flagged. Open with a pass/fail on each reviewer finding before touching anything else. Don't re-orient, don't re-do work the reviewer called clean.
+When the brief includes prior findings and a previous implementation summary, you are continuing in an existing worktree — not starting fresh. Scope your work exclusively to what was flagged. Open with a pass/fail on each prior finding before touching anything else. Don't re-orient, don't re-do work that was already called clean.
 
 ## How to Work
 
