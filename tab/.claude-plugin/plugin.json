@@ -8,8 +8,7 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/4lt7ab/tab-marketplace",
   "agents": [
-    "./agents/tab.md",
-    "./agents/code-review.md"
+    "./agents/tab.md"
   ],
   "skills": "./skills/"
 }
