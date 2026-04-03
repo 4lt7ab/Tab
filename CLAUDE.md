@@ -22,6 +22,7 @@ tab/                              # "tab" plugin package
   agents/tab.md                   #   Tab personality agent
   skills/listen/SKILL.md          #   /listen — deliberate listening mode
   skills/draw-dino/SKILL.md       #   /draw-dino skill
+  skills/brainstorm/SKILL.md      #   /brainstorm — conversational idea capture
 tab-for-projects/                 # "tab-for-projects" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
   settings.json                   #   Default agent: tab-for-projects:manager
