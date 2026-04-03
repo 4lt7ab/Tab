@@ -1,106 +1,63 @@
 ---
 name: refinement
-description: "Backlog refinement ceremony — review active tasks with the user to ensure they're fully understood and actionable before implementation. Triggers on /refinement or when the user wants to refine, groom, or review their backlog."
+description: "Backlog refinement ceremony — structured walkthrough of active tasks with the user to ensure they're understood, scoped, and actionable before implementation."
 argument-hint: "[project-name]"
 ---
 
 # Backlog Refinement
 
-You are the manager agent running a refinement session. This is a conversational ceremony — you and the user walk through the backlog together, making sure every task is understood, scoped, and actionable before anyone starts building.
+A structured ceremony for reviewing and improving the backlog collaboratively. The coordinator assesses; you and the user decide.
 
-**Your role:** Facilitate. Ask good questions. Spawn research when you hit unknowns. Keep the user in the decision seat.
+## Protocol
 
-## Starting the Session
+### Phase 1: Orient
 
-1. **Resolve the project.** If the user provided an argument, match it against `list_projects`. Otherwise follow the standard project resolution flow (check `list_projects`, check `CLAUDE.md`, ask if ambiguous).
+1. **Resolve the project.** If the user provided an argument, match it against `list_projects`. Otherwise follow standard resolution (check `list_projects`, check `CLAUDE.md`, ask if ambiguous).
 
-2. **Load the project context.** Call `get_project` to pull the goal, requirements, and design. You need this to evaluate whether tasks align with the project's intent.
+2. **Load project context.** Call `get_project` to pull the goal, requirements, and design.
 
-3. **List the active backlog.** Call `list_tasks` filtering for `status: "todo"` and `status: "in_progress"`. These are the candidates for refinement.
+3. **Spawn the coordinator for assessment.** Use `subagent_type: "tab-for-projects:coordinator"` with:
+   - The project ID and context
+   - Scope: `"full"`
+   - Mode: `"report"`
+   
+   Run in the background. While waiting, call `list_tasks` filtering for `status: "todo"` and `status: "in_progress"` to get the active backlog.
 
-4. **Present the session overview.** Show the user:
-   - The project name and goal (one line)
-   - How many tasks are in the backlog
-   - A scannable list: task title, effort, impact, category, and whether it has a plan
-   - Call out tasks that look under-specified (no description, no plan, no effort estimate)
+4. **Present the session overview.** When the coordinator returns, combine its assessment with the task list. Show the user:
+   - Project name and goal (one line)
+   - The coordinator's health summary and key findings
+   - A scannable task list: title, effort, impact, category, whether it has a plan
+   - Tasks the coordinator flagged as underspecified, stale, or misaligned
 
-Then ask the user how they want to proceed — walk through everything in order, focus on a specific group, or start with the tasks that need the most attention.
+Ask the user how they want to proceed — walk through everything, focus on flagged tasks, or start with a specific group.
 
-## The Refinement Loop
+### Phase 2: Refine
 
-For each task the user wants to refine, the flow is:
+For each task the user wants to refine, follow this loop:
 
-### 1. Present the Task
+**Present.** Call `get_task` for full details. Show: title, description, effort/impact, plan (if any), acceptance criteria (if any), and what's missing or unclear.
 
-Call `get_task` to pull full details. Show the user:
-- Title and description
-- Current effort/impact estimates
-- Category and group
-- Plan (if any)
-- Acceptance criteria (if any)
-- What's missing or unclear
+**Discuss.** Work through the task with the user:
+- Does the description capture *why* this task exists? Sharpen it together.
+- Is this one task or three? Too granular or too broad?
+- If unknowns exist, spawn an **Explore agent** in the background to research the codebase while you keep talking.
+- If effort is missing or feels wrong, discuss it.
+- If the user has opinions about what "done" looks like, capture acceptance criteria.
 
-### 2. Discuss and Research
+**Persist.** After discussion, call `update_task` immediately with everything that was clarified — refined description, updated effort/impact, acceptance criteria. Don't batch updates for the end of the session. If the session is interrupted, every decision already made should be saved.
 
-This is where the real value happens. Work through the task with the user:
+**Gate.** Before moving to the next task, confirm with the user: "Good on this one? Next?" This is the phase gate — the user explicitly closes each task's refinement.
 
-- **Clarify intent.** Does the description capture *why* this task exists? If it's vague, work with the user to sharpen it.
-- **Validate scope.** Is this one task or three? Is it too granular or too broad?
-- **Identify unknowns.** If the task touches parts of the codebase nobody's looked at, spawn an **Explore agent** in the background to research it. Don't guess — investigate.
-- **Check assumptions.** Does the task assume something about the current state of the code that might not be true? Spawn a research agent to verify.
-- **Estimate effort.** If effort is missing or feels wrong, discuss it. Use what you've learned from research to calibrate.
-- **Define "done."** If acceptance criteria are missing and the user has opinions about what done looks like, capture them.
+### Phase 3: Close
 
-**Spawning research agents:** When you hit something that requires codebase knowledge, spawn a background agent immediately. Don't wait until the end of the discussion. The agent researches while you and the user keep talking. When it comes back, fold the findings into the conversation.
+When the user is done or the backlog is fully refined:
 
-Example research prompts:
-- "Explore the codebase to understand how [feature X] currently works. Find the key files, data flow, and any tests. Report back with a summary."
-- "Search the codebase for all usages of [function/module Y]. How many callers are there? What would be affected by changing it?"
-- "Check whether [assumption Z] is true in the current codebase. Look at [likely area] and report what you find."
-
-### 3. Update the Task
-
-After discussion, update the task with everything that was clarified:
-- Refined description (if it changed)
-- Updated effort/impact estimates
-- Acceptance criteria (if defined)
-- Any notes captured during discussion
-
-Use `update_task` to persist changes. Don't wait until the end of the session — update as you go so nothing is lost if the session is interrupted.
-
-## What You're Optimizing For
-
-A refined task has:
-- A **description** that someone reading next week with zero context would understand
-- An **effort estimate** grounded in actual codebase research, not vibes
-- **Acceptance criteria** that make "done" unambiguous (when the user has opinions about this)
-- A **plan** or at least enough understanding that planning would be straightforward
-- No **hidden unknowns** — if something is uncertain, it's flagged, not ignored
-
-A refined backlog has:
-- Tasks ordered roughly by priority (high impact, reasonable effort first)
-- No duplicates or overlapping scope
-- Clear groupings where they exist
-- Gaps identified (spawn a **qa** agent (`subagent_type: "tab-for-projects:qa"`) if the user wants a thorough check)
-
-## Session Flow
-
-The session is conversational, not mechanical. Don't march through tasks like a checklist. Follow the user's energy:
-
-- If they want to dive deep on one task, dive deep.
-- If they want to skim through and flag the ones that need work, skim through.
-- If they realize the backlog is missing something entirely, help them capture it.
-- If they want to reorganize, regroup, or reprioritize, do it.
-
-**Keep the backlog updated in real time.** Every decision, every clarification, every estimate — write it to the MCP immediately. The refinement session should leave the backlog in a better state even if it's interrupted halfway through.
-
-## Ending the Session
-
-When the user is done (or the backlog is fully refined):
-
-1. Summarize what changed — how many tasks were refined, what was added, what's still pending research.
-2. Call out any tasks that still need attention (under-specified, waiting on research, blocked).
-3. If **planner** agents (`subagent_type: "tab-for-projects:planner"`) are still running, note which tasks are awaiting plans.
-4. If the user wants, spawn a **qa** agent (`subagent_type: "tab-for-projects:qa"`) to check for missing work across the refined backlog.
+1. **Summarize.** How many tasks were refined, what was added, what estimates changed.
+2. **Flag what's still open.** Tasks that need research (agents still running), tasks the user deferred, tasks that are still underspecified.
+3. **Offer follow-up.** If tasks need plans, offer to spawn the planner (`subagent_type: "tab-for-projects:planner"`). If the user wants a coverage check, offer to spawn QA (`subagent_type: "tab-for-projects:qa"`).
 
 Don't force a neat ending. If the user says "that's enough for now," that's enough.
+
+## What Makes This a Ceremony
+
+Refinement is not an assessment — the coordinator handles that. Refinement is a **decision-making session** where the user and the manager negotiate scope, priority, and clarity together. The coordinator's report seeds the conversation; the user's judgment shapes the backlog. Every task gets explicit attention and explicit closure before moving on.
