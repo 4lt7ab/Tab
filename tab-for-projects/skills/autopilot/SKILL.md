@@ -52,7 +52,7 @@ The user is opting out of the conversation loop. They want the system to assess 
 
    **Check for file conflicts within each wave.** Read the "Files to touch" sections of task plans. Tasks touching the same files within a wave must either be given to the same implementer agent or sequenced into sub-waves. Tasks touching disjoint files run in parallel.
 
-   **Spawn implementer agents.** For each parallelizable unit within a wave, spawn `subagent_type: "tab-for-projects:implementer"` with `run_in_background: true`. Pass:
+   **Spawn implementer agents.** For each parallelizable unit within a wave, spawn `subagent_type: "tab-for-projects:implementer"` with `run_in_background: true` and `isolation: "worktree"`. Each implementer runs in its own git worktree on an isolated branch — this prevents parallel agents from stepping on each other's files. Pass:
    - Project ID
    - Task IDs for the unit
    - Project context (goal, requirements, design)
@@ -60,9 +60,11 @@ The user is opting out of the conversation loop. They want the system to assess 
 
    Cap concurrent implementer agents at 3–5 per wave. If a wave has more parallelizable units than the cap, queue the overflow into sub-waves within the wave.
 
-   Wait for all agents in a wave to complete before starting the next wave.
+   Wait for all implementers in a wave to complete.
 
-   **Progress updates between waves.** Tell the user: "Wave N complete: X tasks implemented (task titles). Starting wave N+1: Y tasks." If any implementer reports failures or partial completions, report them before proceeding to the next wave.
+   **Merge step.** After all implementers in a wave finish, collect the branch names from their results. Spawn an ad-hoc merge agent (generic subagent, `run_in_background: true`) with a prompt to merge these branches into main sequentially and report any conflicts. Wait for the merge agent to complete before starting the next wave. If a merge fails, report the conflict in the progress update and skip any tasks in subsequent waves that depend on the failed task's output.
+
+   **Progress updates between waves.** Tell the user: "Wave N complete: X tasks implemented, branches merged (task titles). Starting wave N+1: Y tasks." If any implementer reports failures, partial completions, or merge conflicts, report them before proceeding to the next wave.
 
 9. **Phase 4: Post-implementation QA.** After all implementation waves complete, validate the newly implemented work.
 
@@ -90,6 +92,6 @@ The user is opting out of the conversation loop. They want the system to assess 
 
 Autopilot is a **permission structure**. Without it, the manager asks before it acts — that's its nature as a thinking partner. Autopilot explicitly says: "I trust the system to make good calls. Go."
 
-The multi-phase design makes the manager a team lead, not a delegator. Phase 1 sends the coordinator as an analyst — it reads the full project state, does what it can directly (status fixes, gap tasks, duplicate cleanup), and returns structured dispatch instructions for specialist work. Phase 2 has the manager spawn planner, QA, and documenter in parallel with the specific scoped work from the coordinator's findings. Phase 3 sends implementer agents to execute plans in dependency-ordered waves — respecting task dependencies and file conflicts. Phase 4 runs QA on the freshly implemented work to catch issues before the user sees them. The coordinator doesn't need to hold the spawn button; the manager does that based on precise instructions about what needs doing and why.
+The multi-phase design makes the manager a team lead, not a delegator. Phase 1 sends the coordinator as an analyst — it reads the full project state, does what it can directly (status fixes, gap tasks, duplicate cleanup), and returns structured dispatch instructions for specialist work. Phase 2 has the manager spawn planner, QA, and documenter in parallel with the specific scoped work from the coordinator's findings. Phase 3 sends implementer agents to execute plans in dependency-ordered waves — each implementer runs in an isolated git worktree so parallel agents never conflict, with an ad-hoc merge step between waves to integrate branches back into main. Phase 4 runs QA on the freshly implemented work to catch issues before the user sees them. The coordinator doesn't need to hold the spawn button; the manager does that based on precise instructions about what needs doing and why.
 
 The user should be able to type `/autopilot`, walk away, and come back to a project that's been triaged, planned, implemented, validated, and documented — with a clear summary of everything that happened.

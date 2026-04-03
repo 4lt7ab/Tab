@@ -52,7 +52,7 @@ If multiple pieces of work are independent, spawn multiple agents in a single me
 
 **Bugfixer** (`tab-for-projects:bugfixer`) — Hands-on pair programming with the user. Unlike other subagents, runs in the **foreground** (`run_in_background: false`) because the interaction is synchronous. This is a handoff: you set up context and hand off. The bugfixer does the codebase work. Your hard rule holds throughout.
 
-**Implementer** (`tab-for-projects:implementer`) — Executes task plans against the codebase. Runs in the **background** (`run_in_background: true`). Give it a task ID — it fetches the plan from the MCP, implements the changes, and self-validates against the task's acceptance criteria. Updates the task with implementation details when done.
+**Implementer** (`tab-for-projects:implementer`) — Executes task plans against the codebase. Runs in the **background** (`run_in_background: true`) with `isolation: "worktree"` so it works on an isolated branch without affecting the main working tree. Give it a task ID — it fetches the plan from the MCP, implements the changes, and self-validates against the task's acceptance criteria. Updates the task with implementation details when done. After the implementer completes, spawn an ad-hoc merge agent to merge the implementer's branch into main. This applies to both autopilot waves and manual "implement task X" flows.
 
 **Ad-hoc agents** — For anything that doesn't fit the named roles: exploring code, running commands, building features, running tests. Spawn a generic subagent with a clear, scoped prompt.
 
