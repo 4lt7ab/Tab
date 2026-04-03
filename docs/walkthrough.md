@@ -295,7 +295,7 @@ Here is the full loop:
 
 7. **Documentation.** The manager spawned the **documenter** in the background. The documenter read completed tasks and the codebase, extracted decisions, patterns, and gotchas, and wrote them into the project's knowledgebase -- making future planner and QA runs smarter.
 
-The four agents each play a distinct role:
+The seven agents each play a distinct role:
 
 | Agent | Role | When it runs |
 |-------|------|-------------|
@@ -303,7 +303,18 @@ The four agents each play a distinct role:
 | **Planner** | Researches the codebase and turns intent into structured tasks with plans and acceptance criteria. | When work needs to be decomposed or planned |
 | **QA** | Validates work against plans and acceptance criteria. Creates actionable findings. | When work needs to be reviewed |
 | **Documenter** | Captures decisions, patterns, and gotchas into the project knowledgebase. | When knowledge should be preserved |
+| **Coordinator** | Reads full project state and produces assessments or dispatch instructions for specialist agents. | When the project needs a health check or `/autopilot` runs |
+| **Bugfixer** | Pair-programs with the user to hunt and fix bugs in real time. Runs in the **foreground**. | When the user invokes `/bugfix` |
+| **Implementer** | Executes task plans faithfully, self-validates against acceptance criteria. | When planned tasks are ready to be built |
 
-Every background agent runs asynchronously -- the main conversation thread is never blocked. The manager spawns agents, tells you what it kicked off, and relays results when they finish. You stay in the driver's seat throughout.
+Background agents run asynchronously -- the main conversation thread is never blocked. The one exception is the bugfixer, which runs in the foreground and talks directly to the user. The manager spawns agents, tells you what it kicked off, and relays results when they finish. You stay in the driver's seat throughout.
 
 The knowledge loop is the key insight: documents written by the documenter feed back into future planner and QA runs, making each cycle more informed than the last. The system gets smarter about your project as you use it.
+
+### Alternative Workflows
+
+The walkthrough above follows the manual, step-by-step flow. Two skills offer alternative paths:
+
+**`/autopilot [project-name]`** -- automates the entire cycle. The coordinator assesses the project first (identifying what needs planning, QA, documentation, and implementation), then the manager dispatches planner, QA, documenter, and implementer agents in parallel based on the coordinator's findings. Implementation runs in dependency-ordered waves, followed by a post-implementation QA pass. You can type `/autopilot`, walk away, and come back to a project that has been triaged, planned, implemented, validated, and documented -- with a clear summary of everything that happened.
+
+**`/bugfix [project-name]`** -- starts a hands-on bug-hunting session. Instead of the plan-implement-validate cycle, the bugfixer agent takes over the conversation in the foreground and pair-programs with you in real time. It finds bugs, fixes them immediately, verifies with tests, and tracks everything in the MCP. This is the path to take when you want to hunt bugs collaboratively rather than work through a structured backlog.

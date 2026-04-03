@@ -12,6 +12,9 @@
 > - `/tab-for-projects/agents/planner.md` -- planner subagent
 > - `/tab-for-projects/agents/qa.md` -- QA subagent
 > - `/tab-for-projects/agents/documenter.md` -- documenter subagent
+> - `/tab-for-projects/agents/coordinator.md` -- coordinator subagent
+> - `/tab-for-projects/agents/bugfixer.md` -- bugfixer subagent (foreground)
+> - `/tab-for-projects/agents/implementer.md` -- implementer subagent
 
 This repository is a Claude Code plugin marketplace containing two plugins: **tab** and **tab-for-projects**. Both are defined entirely in markdown and JSON -- no compiled code, no runtime dependencies.
 
@@ -115,7 +118,12 @@ Tab auto-switches profiles based on context and briefly announces the shift. Use
 | Agent: planner | `/tab-for-projects/agents/planner.md` | Background subagent -- decomposes work into tasks with plans and acceptance criteria |
 | Agent: qa | `/tab-for-projects/agents/qa.md` | Background subagent -- validates work against plans, finds gaps, creates findings |
 | Agent: documenter | `/tab-for-projects/agents/documenter.md` | Background subagent -- captures knowledge from completed work into MCP documents |
+| Agent: coordinator | `/tab-for-projects/agents/coordinator.md` | Background subagent -- assesses project health, produces reports or dispatch instructions |
+| Agent: bugfixer | `/tab-for-projects/agents/bugfixer.md` | Foreground subagent -- pair-programs with the user to hunt and fix bugs |
+| Agent: implementer | `/tab-for-projects/agents/implementer.md` | Background subagent -- executes task plans, self-validates against acceptance criteria |
 | Skill: refinement | `/tab-for-projects/skills/refinement` | Backlog refinement ceremony for reviewing and grooming tasks |
+| Skill: bugfix | `/tab-for-projects/skills/bugfix` | Focused bugfix session -- hands off to the bugfixer agent |
+| Skill: autopilot | `/tab-for-projects/skills/autopilot` | Autonomous project coordination -- assess, plan, implement, validate, document |
 
 ### Architecture Pattern: Manager Delegates to Subagents
 
@@ -124,15 +132,21 @@ The manager agent is the only agent that talks to the user. It enforces a strict
 - **Manager** handles conversation and MCP operations (CRUD on projects, tasks, documents).
 - **Subagents** handle all codebase work (reading files, searching, running commands).
 
-Every subagent runs in the background (`run_in_background: true`) so the main conversation thread is never blocked. The manager spawns subagents with scoped prompts containing the relevant project context, task IDs, and knowledgebase document IDs. When a subagent completes, the manager summarizes the result for the user.
+Most subagents run in the background (`run_in_background: true`) so the main conversation thread is never blocked. The one exception is the bugfixer, which runs in the foreground and talks directly to the user. The manager spawns subagents with scoped prompts containing the relevant project context, task IDs, and knowledgebase document IDs. When a background subagent completes, the manager summarizes the result for the user.
 
-The three named subagents and their responsibilities:
+The six named subagents and their responsibilities:
 
 **Planner** (`tab-for-projects:planner`): Receives a work description or existing task IDs. Researches the codebase to ground its understanding, breaks work into right-sized tasks, writes implementation plans and acceptance criteria, and writes everything to the MCP via `create_task` or `update_task`.
 
 **QA** (`tab-for-projects:qa`): Receives a validation scope (specific task IDs, a group key, or "full" for the entire project). Inspects both MCP records and the actual codebase. Reaches a verdict per task (pass, pass-with-notes, fail-with-reasons). Creates new tasks with `group_key: "qa-findings"` for any gaps discovered, and resets failed tasks to `todo` status.
 
 **Documenter** (`tab-for-projects:documenter`): Receives completed task IDs. Reads the tasks and the actual codebase, extracts architectural decisions, patterns, and gotchas, then writes them into MCP knowledgebase documents. Updates existing documents when possible to avoid duplication. Attaches new documents to the project via `update_project`.
+
+**Coordinator** (`tab-for-projects:coordinator`): Receives a project ID, scope, and mode (report or coordinate). Reads the full project state — knowledgebase, backlog, goals — and synthesizes it into either a structured assessment (report mode) or a combination of direct MCP actions and dispatch instructions for specialist agents (coordinate mode). Does not touch the codebase; operates purely on MCP data.
+
+**Bugfixer** (`tab-for-projects:bugfixer`): Runs in the **foreground** (`run_in_background: false`) — the only subagent that talks directly to the user. Pair-programs to hunt and fix bugs in real time. Reads code, runs tests, writes fixes, and tracks findings in the MCP. Spawned via the `/bugfix` skill.
+
+**Implementer** (`tab-for-projects:implementer`): Receives task IDs with existing plans. Verifies plan assumptions against the current codebase, executes the plan, self-validates against acceptance criteria, and updates task status and implementation fields in the MCP. Does not write plans — if a task has no plan, it flags it and skips it.
 
 The manager can also spawn **ad-hoc subagents** for generic codebase work that does not fit the named roles.
 
@@ -183,8 +197,13 @@ marketplace.json
           |     +-- planner.md     (background subagent)
           |     +-- qa.md          (background subagent)
           |     +-- documenter.md  (background subagent)
+          |     +-- coordinator.md (background subagent)
+          |     +-- bugfixer.md    (foreground subagent)
+          |     +-- implementer.md (background subagent)
           +-- skills/
                 +-- refinement/
+                +-- bugfix/
+                +-- autopilot/
 ```
 
 ### tab-for-projects Internal Architecture
@@ -202,22 +221,35 @@ marketplace.json
 | - Conversation    |       |  |Project| | Task | |Doc| |
 | - MCP CRUD        |       |  +-------+ +------+ +---+ |
 | - Spawns agents   |       +---------------------------+
-+----+---------+----+
-     |         |
-     |  background subagents (run_in_background: true)
-     |         |
-     v         v
-+--------+ +--------+ +------------+
-| Planner| |   QA   | | Documenter |
-|        | |        | |            |
-| - Read | | - Read | | - Read     |
-|   code | | code   | |   code     |
-| - Write| | - Check| | - Write    |
-|   tasks| |   work | |   docs     |
-|   (MCP)| | - Write| | - Attach   |
-|        | |   tasks| |   to proj  |
-|        | |   (MCP)| |   (MCP)    |
-+--------+ +--------+ +------------+
++--+-----+-----+---+
+   |     |     |
+   |     |     +--- foreground (run_in_background: false)
+   |     |                |
+   |     |                v
+   |     |          +-----------+
+   |     |          | Bugfixer  |
+   |     |          |           |
+   |     |          | - Talks   |
+   |     |          |   to user |
+   |     |          | - Fix bugs|
+   |     |          | - Run     |
+   |     |          |   tests   |
+   |     |          +-----------+
+   |     |
+   |  background subagents (run_in_background: true)
+   |     |
+   v     v
++--------+ +--------+ +------------+ +-------------+ +-------------+
+| Planner| |   QA   | | Documenter | | Coordinator | | Implementer |
+|        | |        | |            | |             | |             |
+| - Read | | - Read | | - Read     | | - Read MCP  | | - Read code |
+|   code | |   code | |   code     | |   state     | | - Execute   |
+| - Write| | - Check| | - Write    | | - Assess    | |   plans     |
+|   tasks| |   work | |   docs     | |   health    | | - Self-     |
+|   (MCP)| | - Write| | - Attach   | | - Dispatch  | |   validate  |
+|        | |   tasks| |   to proj  | |   instrs    | | - Write MCP |
+|        | |   (MCP)| |   (MCP)    | |   (MCP)     | |             |
++--------+ +--------+ +------------+ +-------------+ +-------------+
 ```
 
 ---
@@ -236,12 +268,15 @@ A typical workflow from user request to completed, documented work:
 ```
 User --> Manager --> MCP (projects, tasks, documents)
               |
-              +--> Planner    --> writes tasks to MCP
-              +--> QA         --> validates work, writes findings to MCP
-              +--> Documenter --> writes knowledge docs to MCP
+              +--> Coordinator  --> assesses project, dispatches work
+              +--> Planner      --> writes tasks to MCP
+              +--> Implementer  --> executes plans, updates tasks in MCP
+              +--> QA           --> validates work, writes findings to MCP
+              +--> Documenter   --> writes knowledge docs to MCP
+              +--> Bugfixer     --> fixes bugs (foreground, talks to user)
                                        |
                                        v
-                              Future planner/QA runs
+                              Future planner/QA/coordinator runs
                               read these docs as context
 ```
 

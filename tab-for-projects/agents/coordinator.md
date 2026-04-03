@@ -76,13 +76,14 @@ In coordinate mode, act on what you can and return dispatch instructions for wha
 
 **Dispatch instructions** (things that need specialist agents — you can't spawn them, so return structured instructions for the caller):
 
-Return a `dispatch` object in your response with three arrays:
+Return a `dispatch` object in your response with four arrays:
 
 - `plan` — task IDs that need implementation plans or decomposition, with a brief note on what each needs (e.g., "needs full implementation plan", "too broad — decompose into subtasks")
 - `qa` — task IDs of completed work that needs validation against acceptance criteria and actual code, with any focus areas (e.g., "check error handling", "verify test coverage")
 - `document` — task IDs of completed work worth capturing in the knowledgebase, with what should be documented (e.g., "architecture decision about X", "pattern used for Y")
+- `implement` — task IDs that are ready for implementation (have plans and acceptance criteria, status `todo`, no detected blockers), with a brief note on any sequencing or dependency concerns (e.g., "ready — no dependencies", "implement after [task ID] completes", "touches auth layer — implement alone")
 
-The caller will use these instructions to spawn planner, QA, and documenter agents with the right scope. Your job is to be precise about WHAT needs doing and WHY — the specialists handle HOW.
+The caller will use these instructions to spawn planner, QA, documenter, and implementer agents with the right scope. Your job is to be precise about WHAT needs doing and WHY — the specialists handle HOW.
 
 ## Return
 

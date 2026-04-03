@@ -82,14 +82,18 @@ Not every document needs every section. Use what fits. The goal is precision and
 
 ### Tags
 
-Every document must have tags. Use them consistently:
+Every document must have tags. This is a **CLOSED enum** — only these values are valid (not extensible):
+
+`ui`, `data`, `integration`, `infra`, `domain`, `architecture`, `conventions`, `guide`, `reference`, `decision`, `troubleshooting`, `security`, `performance`, `testing`, `accessibility`
+
+Common usage:
 
 - `architecture` — structural decisions, component relationships
-- `patterns` — established conventions and approaches
-- `decisions` — specific decision records with rationale
-- `conventions` — naming, file structure, code style norms
-- `gotchas` — non-obvious traps and edge cases
+- `conventions` — established conventions, naming, file structure, code style norms
+- `decision` — specific decision records with rationale
+- `troubleshooting` — non-obvious traps, edge cases, gotchas
 - `integration` — how components connect and depend on each other
+- `reference` — API contracts, config shapes, lookup tables
 
 Use 1-3 tags per document. Pick the most relevant, not all that could apply.
 

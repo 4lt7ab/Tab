@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: "Autonomous project coordination — assess the backlog, plan unplanned tasks, validate completed work, and document findings without checking in at each step."
+description: "Autonomous project coordination — assess the backlog, plan unplanned tasks, implement ready work, validate results, and document findings without checking in at each step."
 argument-hint: "[project-name]"
 ---
 
@@ -38,11 +38,51 @@ The user is opting out of the conversation loop. They want the system to assess 
 
 7. **Update the user.** Brief status on what was dispatched: "Coordinator found 8 tasks needing plans, 3 needing QA, and 2 worth documenting. Planner, QA, and documenter are running now."
 
-8. **Collect and present results.** As agents complete, collect their results. When all are done, present the full summary:
+8. **Phase 3: Implementation.** After Phase 2 agents complete, identify tasks ready for implementation and spawn implementer agents in dependency-ordered waves.
+
+   **Identify implementable tasks.** Two sources:
+   - The coordinator's `implement` dispatch array — task IDs the coordinator flagged as ready for implementation (have plans, acceptance criteria, status `todo`).
+   - Newly-planned tasks — after the planner completes, call `list_tasks` to find tasks that now have `plan` and `acceptance_criteria` fields with status `todo`. The planner may have just created plans for tasks the coordinator flagged under `plan`.
+
+   If the coordinator's dispatch has no `implement` key (coordinator predates this phase), fall back to `list_tasks` to find implementable tasks manually.
+
+   If no implementable tasks exist from either source, skip this phase. Report "No tasks ready for implementation" in the final summary and proceed to step 10.
+
+   **Group tasks into waves.** Read each task's plan, the coordinator's `implement` notes, and any dependency signals (e.g., "implement after [task ID] completes", references to other tasks' outputs). Tasks with no upstream dependencies go in wave 1. Tasks depending on wave 1 outputs go in wave 2, and so on. When dependency order is uncertain, default to sequential — correctness over speed.
+
+   **Check for file conflicts within each wave.** Read the "Files to touch" sections of task plans. Tasks touching the same files within a wave must either be given to the same implementer agent or sequenced into sub-waves. Tasks touching disjoint files run in parallel.
+
+   **Spawn implementer agents.** For each parallelizable unit within a wave, spawn `subagent_type: "tab-for-projects:implementer"` with `run_in_background: true`. Pass:
+   - Project ID
+   - Task IDs for the unit
+   - Project context (goal, requirements, design)
+   - All knowledgebase document IDs
+
+   Cap concurrent implementer agents at 3–5 per wave. If a wave has more parallelizable units than the cap, queue the overflow into sub-waves within the wave.
+
+   Wait for all agents in a wave to complete before starting the next wave.
+
+   **Progress updates between waves.** Tell the user: "Wave N complete: X tasks implemented (task titles). Starting wave N+1: Y tasks." If any implementer reports failures or partial completions, report them before proceeding to the next wave.
+
+9. **Phase 4: Post-implementation QA.** After all implementation waves complete, validate the newly implemented work.
+
+   Collect task IDs that implementer agents completed (the implementer sets status to `done`). Tasks the implementer reported as incomplete or failed skip this phase — they appear in the final summary as needing attention.
+
+   If there are completed tasks to validate, spawn QA (`subagent_type: "tab-for-projects:qa"`) with those task IDs. Run in the background.
+
+   When QA completes, check results:
+   - **Failures**: Report to the user in the final summary. Do NOT automatically re-implement or retry. The autopilot is autonomous but bounded — no retry loops.
+   - **Passes**: Continue to results summary.
+
+   If no tasks were implemented (Phase 3 was skipped or all implementations failed), skip this phase.
+
+10. **Collect and present results.** As agents complete, collect their results. When all are done, present the full summary:
    - What the coordinator assessed and what direct actions it took (status fixes, new tasks, archives)
    - What the planner produced (plans, acceptance criteria, new tasks from decomposition)
-   - What QA found (pass/fail verdicts, qa-findings tasks created)
+   - What Phase 2 QA found on pre-existing completed work (pass/fail verdicts, qa-findings tasks created)
    - What the documenter captured (documents created or updated)
+   - What was implemented — tasks completed, tasks that failed implementation, tasks skipped (with reasons)
+   - What Phase 4 QA found on newly implemented work — pass/fail verdicts, qa-findings tasks created. Clearly separated from Phase 2 QA results.
    - What the coordinator chose NOT to act on and why
    - Items that need the user's judgment
 
@@ -50,6 +90,6 @@ The user is opting out of the conversation loop. They want the system to assess 
 
 Autopilot is a **permission structure**. Without it, the manager asks before it acts — that's its nature as a thinking partner. Autopilot explicitly says: "I trust the system to make good calls. Go."
 
-The two-phase design makes the manager a team lead, not a delegator. Phase 1 sends the coordinator as an analyst — it reads the full project state, does what it can directly (status fixes, gap tasks, duplicate cleanup), and returns structured dispatch instructions for specialist work. Phase 2 has the manager spawn planner, QA, and documenter in parallel with the specific scoped work from the coordinator's findings. The coordinator doesn't need to hold the spawn button; the manager does that based on precise instructions about what needs doing and why.
+The multi-phase design makes the manager a team lead, not a delegator. Phase 1 sends the coordinator as an analyst — it reads the full project state, does what it can directly (status fixes, gap tasks, duplicate cleanup), and returns structured dispatch instructions for specialist work. Phase 2 has the manager spawn planner, QA, and documenter in parallel with the specific scoped work from the coordinator's findings. Phase 3 sends implementer agents to execute plans in dependency-ordered waves — respecting task dependencies and file conflicts. Phase 4 runs QA on the freshly implemented work to catch issues before the user sees them. The coordinator doesn't need to hold the spawn button; the manager does that based on precise instructions about what needs doing and why.
 
-The user should be able to type `/autopilot`, walk away, and come back to a project that's been triaged, planned, validated, and documented — with a clear summary of everything that happened.
+The user should be able to type `/autopilot`, walk away, and come back to a project that's been triaged, planned, implemented, validated, and documented — with a clear summary of everything that happened.

@@ -40,7 +40,7 @@ For each task the user wants to refine, follow this loop:
 **Discuss.** Work through the task with the user:
 - Does the description capture *why* this task exists? Sharpen it together.
 - Is this one task or three? Too granular or too broad?
-- If unknowns exist, spawn an **Explore agent** in the background to research the codebase while you keep talking.
+- If unknowns exist, spawn a **background agent** to research the codebase while you keep talking.
 - If effort is missing or feels wrong, discuss it.
 - If the user has opinions about what "done" looks like, capture acceptance criteria.
 

@@ -1,12 +1,30 @@
 ---
 name: draw-dino
-description: "Use when the user asks for a dinosaur, dino, ASCII art dinosaur, or says things like 'rawr', 'show me a dino', 'draw a T-Rex', or references any dinosaur species."
+description: "Draw ASCII art dinosaurs — a fun, low-stakes creative skill."
 argument-hint: "[species]"
 ---
 
 ## What This Skill Does
 
 This skill draws ASCII art dinosaurs. It supports multiple species and styles.
+
+## When to Trigger
+
+Activate this skill when the user expresses **explicit intent to see or create a dinosaur drawing**. Look for requests like:
+
+- "Draw me a dinosaur" / "draw a T-Rex" / "show me a dino"
+- "Can you make an ASCII dinosaur?"
+- "I want to see a brontosaurus"
+- Any clear request to **draw, show, or create** a dinosaur or dino-related ASCII art
+
+**Do NOT trigger on:**
+
+- Incidental mentions of dinosaurs in conversation (e.g., "dinosaurs went extinct 66 million years ago")
+- The word "rawr" used as an exclamation or greeting without drawing intent
+- Discussions about dinosaur facts, movies, or paleontology unless the user asks for art
+- Metaphorical dinosaur references (e.g., "this codebase is a dinosaur")
+
+The bar is low — the user does not need to say `/draw-dino` or use precise language. But there must be a clear signal that they want to **see** a dinosaur, not just **talk about** one.
 
 ## Instructions
 
@@ -19,10 +37,63 @@ When invoked, pick an appropriate dinosaur based on the user's request. If no sp
 - If the user asks for something **scary** or **fierce**, use the T-Rex or Velociraptor.
 - If the user asks for something **big** or **gentle**, use the Brontosaurus.
 
+## Reference Templates
+
+The following are quality anchors — use them as inspiration and starting points, but feel free to freestyle your own. Aim for **8-15 lines tall** so the art is substantial without overwhelming the chat.
+
+### T-Rex
+
+```
+            __
+           / _)
+    _.----/ /
+   /         \
+__/ (  |  (  |
+/__.-'|_|--|_|
+```
+
+### Brontosaurus
+
+```
+                  .       .
+                 / `.   .' \
+         .---.  <    > <    >  .---.
+         |    \  \ - ~ ~ - /  /    |
+          ~-..-~             ~-..-~
+      \~~~\.'                    `./~~~/
+       \__/                        \__/
+        /                  .-    .  \
+ _._ _.-    .-~ ~-.       /       }   \/~~~/
+|     `\~~~`-.      `-.  |        }    \__/
+ \    .'  `\   ~-._    `-|     ._ }
+  `\.___.'   `-.__  ~--._}   .---'
+                  `-._ _}--'
+```
+
+### Stegosaurus
+
+```
+                  .  .
+                 / \/ \
+                (  . .  )
+               _/  ()  \_
+              / /| .--. |\ \
+             / / |/    \| \ \
+            / /   \    /   \ \
+        _.-'  /    \  /     \  '-._
+    _.-'     /  /\  \/  /\   \     '-._
+   {        / ./  \    /  \.\  \        }
+    '-._   /    __/\  /\__  \   \ _.-'
+        '-./   /    \/    \  \.-'
+            '-'            '-'
+```
+
+These templates set a quality bar. You can modify, embellish, or draw entirely original dinosaurs — the point is that the output should feel **crafted**, not minimal.
+
 ## Workflow
 
 1. Note the type of dinosaur and prompt customization, if one is given. Choose a classic if one is not.
-2. Freestyle draw your own dinosaur.
+2. Draw the dinosaur — use a reference template as a starting point or freestyle your own. Aim for 8-15 lines tall.
 3. After drawing, add a short fun dinosaur fact related to the species you drew.
 
 ## Principles

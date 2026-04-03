@@ -1,6 +1,6 @@
 ---
 name: bugfix
-description: "Focused bugfix session — pair-program with the user to hunt bugs, review tests, and fix issues in real time."
+description: "Focused bugfix session — hand off to the bugfixer agent for pair-programming with the user in real time."
 argument-hint: "[project-name]"
 ---
 

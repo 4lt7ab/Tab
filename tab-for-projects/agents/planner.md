@@ -71,7 +71,7 @@ A good plan includes:
 - **Edge cases and risks** — anything the implementer should watch out for.
 - **Testing** — what needs to be tested and how. Reference existing test patterns if they exist.
 
-A good plan does NOT include code snippets or pseudocode (the implementer will write the code), vague hand-waving ("update the relevant files"), scope creep (plan what the task asks for, not what you think it should ask for), or the task description restated as a plan.
+A good plan does NOT include full implementation code — the implementer writes the code. However, showing a function signature, interface definition, config shape, or structural example is appropriate when it clarifies the contract the implementation must satisfy. A good plan also does NOT include vague hand-waving ("update the relevant files"), scope creep (plan what the task asks for, not what you think it should ask for), or the task description restated as a plan.
 
 ## Write Acceptance Criteria
 

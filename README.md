@@ -8,7 +8,7 @@ Tab is a Claude Code plugin repository containing two packages:
 
 - **tab** -- a sharp, warm thinking partner personality. It changes how Claude shows up: more direct, more collaborative, more opinionated when it matters. The entire persona is defined in markdown files (agents and skills) with zero runtime dependencies.
 
-- **tab-for-projects** -- project workflow tracking through conversational agents. It provides a set of specialized agents (manager, planner, QA, documenter) and skills that integrate with the Tab for Projects MCP server for capturing decisions, tracking tasks, and managing project context.
+- **tab-for-projects** -- project workflow tracking through conversational agents. It provides a set of specialized agents (manager, planner, QA, documenter, coordinator, bugfixer, implementer) and skills that integrate with the Tab for Projects MCP server for capturing decisions, tracking tasks, and managing project context.
 
 Both packages are distributed as Claude Code plugins through AltTab's marketplace.
 
@@ -39,8 +39,11 @@ The marketplace configuration at `.claude-plugin/marketplace.json` defines both 
 | --- | --- |
 | [CLAUDE.md](./CLAUDE.md) | Agent context and project conventions |
 | [docs/architecture.md](./docs/architecture.md) | Repository structure and design decisions |
-| [tab/docs/](./tab/docs/) | Tab personality package documentation |
-| [tab-for-projects/docs/](./tab-for-projects/docs/) | Tab for Projects package documentation |
+| [docs/tab-agent.md](./docs/tab-agent.md) | Tab personality package documentation |
+| [docs/project-agents.md](./docs/project-agents.md) | Tab for Projects agents documentation |
+| [docs/skills.md](./docs/skills.md) | Skills documentation |
+| [docs/setup.md](./docs/setup.md) | Setup guide |
+| [docs/walkthrough.md](./docs/walkthrough.md) | Walkthrough guide |
 
 ## Trademark
 

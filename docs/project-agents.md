@@ -1,16 +1,19 @@
 # Project Agents
 
-Tab for Projects uses a hierarchy of four agents to manage project work. The **manager** is the entry point — it owns the conversation with the user and delegates all codebase work to three background agents: the **planner**, **QA**, and **documenter**. Every background agent runs asynchronously so the main conversation thread is never blocked.
+Tab for Projects uses a hierarchy of seven agents to manage project work. The **manager** is the entry point — it owns the conversation with the user and delegates work to six specialist agents: the **planner**, **QA**, **documenter**, **coordinator**, **bugfixer**, and **implementer**. Most agents run asynchronously in the background so the main conversation thread is never blocked — the one exception is the bugfixer, which runs in the foreground and talks directly to the user.
 
 ```
 User <--> Manager <--> MCP (projects, tasks, documents)
               |
-              +--> Planner   (background)
-              +--> QA        (background)
-              +--> Documenter (background)
+              +--> Planner      (background)
+              +--> QA           (background)
+              +--> Documenter   (background)
+              +--> Coordinator  (background)
+              +--> Implementer  (background)
+              +--> Bugfixer     (foreground — talks to user)
 ```
 
-The manager never touches the codebase. The background agents never talk to the user. All communication between layers flows through the manager, and all persistent state lives in the MCP.
+The manager never touches the codebase. Background agents never talk to the user — they return results to the manager, which summarizes them. The bugfixer is the exception: it runs in the foreground and pair-programs with the user directly. All communication between layers flows through the manager, and all persistent state lives in the MCP.
 
 ---
 
@@ -45,7 +48,7 @@ When work needs to happen in the codebase, the manager:
 2. **Tells the user** briefly what was kicked off — one line, not a ceremony.
 3. **Summarizes the result** when the subagent completes.
 
-Independent work items are spawned as parallel background agents in a single message. The manager also supports ad-hoc subagents for generic codebase work (exploring code, running commands, building features) that does not fit the three named agent roles.
+Independent work items are spawned as parallel background agents in a single message. The manager also supports ad-hoc subagents for generic codebase work (exploring code, running commands, building features) that does not fit the six named agent roles.
 
 When passing knowledgebase documents to subagents, the manager passes document IDs only — it does not fetch document content into the main thread, since documents can be up to 100k characters. The subagent fetches what it needs. The exception is when the user explicitly asks to see a document, in which case the manager calls `get_document` directly.
 
@@ -235,6 +238,147 @@ It always runs in the background.
 
 ---
 
+## Coordinator
+
+### Purpose
+
+The coordinator is a headless agent that reads a project's full state — knowledgebase, backlog, and goals — and synthesizes it into actionable intelligence. Where the manager's input is the user, the coordinator's input is the project itself. It assesses what needs attention, identifies gaps and misalignment, and either reports its findings or acts directly on what it can.
+
+The coordinator operates in two modes. In **report mode**, it analyzes the project and returns a structured assessment — the caller decides what to do with it. In **coordinate mode**, it analyzes, takes direct MCP actions on what it can (archiving duplicates, fixing statuses, creating tasks for gaps), and returns dispatch instructions for specialist work that requires other agents.
+
+### When It Runs
+
+The manager spawns the coordinator (`subagent_type: "tab-for-projects:coordinator"`) when:
+
+- The project needs an overall health assessment (backlog quality, knowledgebase coverage, goal alignment).
+- The `/autopilot` skill is invoked — the coordinator runs first in coordinate mode to assess and triage before other agents are dispatched.
+- The manager needs to understand what work is ready, stale, or missing before making recommendations to the user.
+
+It always runs in the background.
+
+### Input
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Project ID | Yes | The project to assess. |
+| Scope | Yes | One of: `"full"` (entire project), a **group key**, specific **task IDs**, or a **question** (e.g., "what's stale?", "what's ready for implementation?"). |
+| Mode | Yes | `"report"` (analysis only) or `"coordinate"` (analysis plus direct action and dispatch instructions). |
+| Project context | No | Goal, requirements, design. If absent, the coordinator fetches it from the MCP. |
+| Knowledgebase document IDs | No | Documents to read for context. If not provided, the coordinator discovers them via `list_documents`. |
+
+### What It Does
+
+1. **Loads context.** Fetches project details, reads knowledgebase documents (unlike the manager, the coordinator reads document content freely — documents are its primary input), and pulls the full backlog.
+
+2. **Builds a mental model.** Synthesizes what the project wants to be, what has been done, what is planned, and where the gaps are between intent and reality.
+
+3. **Assesses project health.** Evaluates backlog health (underspecified tasks, stale work, duplicates, missing work), knowledgebase health (undocumented decisions, stale docs, knowledge gaps), alignment (does the backlog deliver the project goal?), and readiness (which tasks are ready to implement, which need planning, which need QA, which need documentation).
+
+4. **Acts or reports.** In report mode, returns a structured assessment with a summary, prioritized findings, concrete recommendations, and a readiness snapshot. In coordinate mode, takes direct MCP actions (archiving duplicates, fixing statuses, creating gap tasks) and returns a `dispatch` object with four arrays — `plan`, `qa`, `document`, and `implement` — each containing task IDs and context for the specialist agents that should handle them.
+
+### Output
+
+- **Report mode:** A structured assessment with summary, findings, recommendations, and readiness snapshot. References specific task IDs and document titles.
+- **Coordinate mode:** A summary of direct actions taken (tasks created, statuses fixed, duplicates archived) plus a `dispatch` object with instructions for planner, QA, documenter, and implementer agents. The caller uses these instructions to spawn the right agents with the right scope.
+
+---
+
+## Bugfixer
+
+### Purpose
+
+The bugfixer is a foreground agent that pair-programs with the user to hunt and fix bugs in real time. Unlike every other subagent, the bugfixer talks directly to the user — it runs in the foreground, not the background. It reads code, runs tests, writes fixes, hunts edge cases, and tracks everything in the MCP.
+
+The bugfixer is designed to make bug hunting feel productive and fun. It operates in a tight find-fix-verify loop: find a bug, fix it right there, verify the fix with tests, and move on. Bugs that are too big to fix in-session get logged as MCP tasks so they are not lost.
+
+### When It Runs
+
+The manager spawns the bugfixer (`subagent_type: "tab-for-projects:bugfixer"`) when:
+
+- The user invokes the `/bugfix` skill.
+- The user explicitly wants a collaborative bug-hunting session.
+
+It runs in the **foreground** (`run_in_background: false`) — the bugfixer takes over the conversation and talks directly to the user.
+
+### Input
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Project ID | Yes | The project context for the session. |
+| Task IDs | No | Known bugs or areas of concern to investigate. |
+| Project context | No | Goal, requirements, design. |
+| Knowledgebase document IDs | No | Architecture docs and prior analysis that reveal where bugs are likely hiding. |
+| Focus area | No | What the user wants to focus on (e.g., "auth module", "the retry logic"). |
+
+### What It Does
+
+1. **Orients.** Fetches knowledgebase documents and task details from the MCP. Assesses the codebase: what is the test setup, what framework, where do tests live, what is the current test baseline (passing, failing). Shares findings with the user briefly.
+
+2. **Sets up the toolkit.** Checks for a `.local/` directory for test scripts, repro helpers, and coverage tools. Creates it if it does not exist. Builds helpers as needed during the session.
+
+3. **Runs the bugfix loop.** A tight, conversational cycle:
+   - **Find** — runs tests, reads business logic, checks error handling, follows the user's hunches, reviews test coverage for gaps.
+   - **Fix** — fixes bugs immediately rather than deferring. Explains what changed and why.
+   - **Verify** — runs relevant tests after every fix. Writes new tests for bugs that lacked them.
+   - **Track** — keeps a running tally of bugs found, fixed, and tests added. Creates MCP tasks for anything too big to fix in-session, tagged with `category: "bugfix"`.
+
+4. **Ends the session.** Summarizes bugs found, bugs fixed, tests added, and tools built. Lists deferred items. Notes what is in `.local/` for future reuse. Offers to capture findings in the knowledgebase via the documenter.
+
+### Output
+
+- Bug fixes applied directly to the codebase.
+- New tests written for each fix.
+- MCP tasks created for bugs too large to fix in-session.
+- A session summary covering bugs found, fixed, tests added, tools built, and deferred items.
+
+---
+
+## Implementer
+
+### Purpose
+
+The implementer is a headless agent that turns task plans into working code. It is the bridge between "what we'll build" and "what we built." The plan is the contract — the implementer executes it faithfully, but verifies assumptions against the current codebase first. It self-validates against acceptance criteria before reporting completion.
+
+The implementer does not write plans. If a task has no plan, it flags it and skips it. It does not expand scope — adjacent improvements are reported as suggestions, not applied as code changes.
+
+### When It Runs
+
+The manager spawns the implementer (`subagent_type: "tab-for-projects:implementer"`) when:
+
+- Tasks have implementation plans and acceptance criteria and are ready to be built.
+- The `/autopilot` skill reaches its implementation phase — the coordinator identifies ready tasks and the manager dispatches implementer agents in dependency-ordered waves.
+
+It always runs in the background.
+
+### Input
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Project ID | Yes | The project the tasks belong to. |
+| Task IDs | Yes | Tasks with existing plans to implement. |
+| Project context | No | Goal, requirements, design. If absent, the implementer fetches it from the MCP. |
+| Knowledgebase document IDs | No | Architecture decisions, conventions, and patterns that inform how to implement correctly. |
+
+### What It Does
+
+1. **Loads context.** Fetches project details, pulls full task records (the `plan` field is its primary input, `acceptance_criteria` is what it validates against), reads knowledgebase documents, and lists surrounding tasks to understand integration context.
+
+2. **Researches the codebase.** Reads the files referenced in the plan, understands patterns in adjacent code, verifies the plan's assumptions against the current state (code may have changed since planning), and identifies callers, consumers, and tests that would be affected.
+
+3. **Implements the plan.** Follows the plan's sequence and approach, respects codebase conventions, makes targeted changes (no "while I'm here" refactors), and resolves ambiguity from acceptance criteria. When implementing multiple tasks, sequences them by dependency and handles file conflicts.
+
+4. **Self-validates.** Goes through each acceptance criterion and verifies the implementation satisfies it. Runs existing tests for changed code. Flags anything uncertain — this is a smoke check, not full QA.
+
+5. **Updates the MCP.** Sets task status to `in_progress` at start, then to `done` on completion. Fills the `implementation` field with what was actually done: files changed, approach taken, deviations from plan and why.
+
+### Output
+
+- Code changes applied to the codebase following the task plans.
+- Updated MCP task records with `status: "done"` and filled `implementation` fields.
+- A summary returned to the manager covering: tasks completed, tasks partially completed, tasks not started (with reasons), deviations from plans, issues discovered, self-validation results, and scope suggestions.
+
+---
+
 ## Agent Interaction Flow
 
 A typical lifecycle from idea to documented work:
@@ -249,7 +393,7 @@ A typical lifecycle from idea to documented work:
 
 5. **Manager relays the plan.** Summarizes what the planner created — task count, groupings, any open questions or risks. The user reviews, discusses, and adjusts.
 
-6. **Implementation happens.** The user (or a subagent) works through the tasks. Task statuses move from `todo` to `in_progress` to `done`. The `implementation` field gets filled with what was actually done.
+6. **Implementation happens.** The user works through the tasks directly, or the manager spawns the **implementer** in the background to execute task plans. The implementer follows each plan, self-validates against acceptance criteria, and updates task statuses and implementation fields in the MCP. Task statuses move from `todo` to `in_progress` to `done`.
 
 7. **Manager spawns QA.** Provides the project ID, task IDs (or group key, or "full"), project context, and any focus areas. QA runs in the background.
 
@@ -262,3 +406,9 @@ A typical lifecycle from idea to documented work:
 11. **Documenter captures knowledge.** Reads completed tasks and the codebase, extracts decisions, patterns, and gotchas, creates or updates knowledgebase documents, and attaches new documents to the project. Returns a summary to the manager.
 
 12. **Knowledge feeds future work.** The documents the documenter wrote are now available to the planner and QA on the next cycle — making their research richer and their outputs more grounded in project history.
+
+### Alternative Paths
+
+**Coordinator-driven assessment.** The manager can spawn the coordinator at any point to assess project health, identify stale or missing work, and produce dispatch instructions for other agents. The `/autopilot` skill uses this as its first phase — the coordinator assesses the full project in coordinate mode, takes direct MCP actions, and returns structured dispatch instructions that the manager uses to spawn planner, QA, documenter, and implementer agents in parallel.
+
+**Bugfix sessions.** When the user wants to hunt bugs rather than follow the plan-implement-validate cycle, the `/bugfix` skill spawns the bugfixer in the foreground. The bugfixer pair-programs with the user directly — finding, fixing, and verifying bugs in real time. This is an alternative path that bypasses the normal delegation pattern: the bugfixer talks to the user, not the manager.

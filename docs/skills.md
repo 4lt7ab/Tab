@@ -138,3 +138,53 @@ When the user is done or the backlog is fully refined, Tab:
 2. Calls out tasks that still need attention (under-specified, waiting on research, blocked).
 3. Notes any background agents still running.
 4. Optionally spawns a QA agent to check for missing work across the refined backlog, if the user wants it.
+
+---
+
+## bugfix
+
+**Package:** tab-for-projects
+**Invocation:** `/bugfix [project-name]`
+
+A focused bugfix session. The manager sets up project context and hands off to the bugfixer agent, which runs in the foreground and pair-programs with the user to hunt and fix bugs in real time.
+
+### How it works
+
+1. **Resolve the project.** Match the argument against the project list, or follow the standard resolution flow.
+2. **Load project context.** Fetch the project's goal, requirements, and design.
+3. **Gather knowledgebase context.** List the project's documents and identify architecture docs, conventions, or prior analysis that might help locate bugs.
+4. **Check for relevant tasks.** Look for tasks with `category: "bugfix"` or `status: "todo"` to find known bugs or areas of concern.
+5. **Spawn the bugfixer in the foreground.** The bugfixer agent (`tab-for-projects:bugfixer`) takes over the conversation with `run_in_background: false`. It receives the project ID, knowledgebase document IDs, relevant task IDs, and the user's focus area.
+6. **After the session.** The manager summarizes what was accomplished and offers to spawn the documenter to capture findings in the knowledgebase.
+
+### Design principles
+
+- The bugfixer is the only subagent that runs in the foreground and talks directly to the user. This is intentional -- bug hunting is collaborative and conversational.
+- The find-fix-verify loop is tight: find a bug, fix it immediately, verify with a test, move on. Bugs that are too large for the session get tracked as MCP tasks.
+- Every fix gets a test. A bug without a test is a bug that comes back.
+- The `.local/` directory accumulates reusable tools (test runners, repro scripts, coverage helpers) across sessions.
+
+---
+
+## autopilot
+
+**Package:** tab-for-projects
+**Invocation:** `/autopilot [project-name]`
+
+Autonomous project coordination. The system assesses the project, identifies what needs doing, and does it -- without asking for permission at each step. The user can type `/autopilot`, walk away, and come back to a project that has been triaged, planned, implemented, validated, and documented.
+
+### How it works
+
+1. **Resolve the project** and load full context (goal, requirements, design, knowledgebase documents).
+2. **Phase 1 -- Assessment.** Spawn the coordinator in coordinate mode with full project scope. The coordinator reads the entire project state, takes direct MCP actions (fixing statuses, archiving duplicates, creating tasks for gaps), and returns structured dispatch instructions identifying which tasks need planning, QA, documentation, and implementation.
+3. **Phase 2 -- Dispatch.** Based on the coordinator's dispatch instructions, spawn planner, QA, and documenter agents in parallel -- each with the specific task IDs and context from the coordinator's findings. Only agents with work to do are spawned.
+4. **Phase 3 -- Implementation.** After Phase 2 completes, identify tasks ready for implementation (from the coordinator's `implement` dispatch array and newly-planned tasks). Group them into dependency-ordered waves, respecting file conflicts. Spawn implementer agents in parallel within each wave (capped at 3--5 concurrent agents). Wait for each wave to complete before starting the next.
+5. **Phase 4 -- Post-implementation QA.** Validate the newly implemented work by spawning QA on all tasks that implementers completed. Failures are reported but not automatically retried -- the autopilot is autonomous but bounded.
+6. **Results.** Present a full summary: what the coordinator assessed and acted on, what the planner produced, what QA found (both pre-existing and post-implementation), what the documenter captured, what was implemented (successes, failures, skips), and items that need the user's judgment.
+
+### Design principles
+
+- Autopilot is a permission structure. Without it, the manager asks before acting. Autopilot says: "Go."
+- The multi-phase design makes the manager a team lead: the coordinator is the analyst, the planner/QA/documenter/implementer are the specialists. The coordinator does not spawn agents itself -- it returns instructions, and the manager dispatches.
+- Implementation runs in waves to respect dependencies and avoid file conflicts between concurrent implementers.
+- No retry loops. If implementation or QA fails, it is reported and left for the user to address.
