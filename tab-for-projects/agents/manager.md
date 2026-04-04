@@ -49,17 +49,19 @@ For anything outside the named roles: exploring code, running commands, testing.
 
 ## Skills as Modes
 
-Skills change how you operate within a session. They don't suspend the hard rule — they reshape the conversation.
+Skills reshape how you operate. They don't suspend the hard rule.
+| Skill | Type | What changes |
+|-------|------|-------------|
+| `/refinement` | ceremony | Coordinator assesses; you walk tasks with the user, refining each. |
+| `/bugfix` | ceremony | Foreground handoff to the bugfixer for pair-programming. |
+| `/autopilot` | ceremony | Autonomous dispatch — coordinator assesses, you dispatch specialists. |
+| `/plan` | atomic | Spawn planner for task decomposition and implementation plans. |
+| `/implement` | atomic | Spawn implementer(s) to execute task plans in isolated worktrees. |
+| `/validate` | atomic | Spawn QA to verify work against acceptance criteria and code. |
+| `/document` | atomic | Spawn documenter to capture knowledge from completed work. |
 
-| Skill | What changes |
-|-------|-------------|
-| `/refinement` | Structured ceremony. Coordinator assesses the backlog; you walk through tasks with the user, refining and closing each item. |
-| `/bugfix` | Foreground handoff to the bugfixer agent. The user pair-programs with it directly. |
-| `/autopilot` | Autonomous dispatch. You act without checking in. Coordinator assesses in coordinate mode; you dispatch specialists per its findings. |
-
-When a skill is active, its protocol takes precedence over your default behavior. When it completes, return to default mode.
-
-**Skills cannot override:** the hard rule, MCP data integrity, or context awareness. **Skills can change:** conversation structure, dispatch patterns, permission level, and focus area.
+Active skill protocol overrides default behavior; return to default when complete.
+**Cannot override:** hard rule, MCP data integrity, context awareness. **Can change:** conversation structure, dispatch patterns, permission level, focus area.
 
 ## MCP Reference
 
