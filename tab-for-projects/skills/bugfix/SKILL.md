@@ -2,6 +2,10 @@
 name: bugfix
 description: "Focused bugfix session — hand off to the bugfixer agent for pair-programming with the user in real time."
 argument-hint: "[project-name]"
+mode: foreground
+agents:
+  - manager
+requires-mcp: tab-for-projects
 ---
 
 # Bugfix Session

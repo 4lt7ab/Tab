@@ -2,6 +2,10 @@
 name: autopilot
 description: "Autonomous project coordination — assess the backlog, plan unplanned tasks, implement ready work, validate results, and document findings without checking in at each step."
 argument-hint: "[project-name]"
+mode: headless
+agents:
+  - manager
+requires-mcp: tab-for-projects
 ---
 
 # Autopilot

@@ -2,6 +2,10 @@
 name: refinement
 description: "Backlog refinement ceremony — structured walkthrough of active tasks with the user to ensure they're understood, scoped, and actionable before implementation."
 argument-hint: "[project-name]"
+mode: conversational
+agents:
+  - manager
+requires-mcp: tab-for-projects
 ---
 
 # Backlog Refinement
