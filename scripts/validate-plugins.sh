@@ -2,6 +2,19 @@
 #
 # validate-plugins.sh — lightweight consistency checks for the Tab plugin marketplace.
 # Run from the repo root. Requires jq.
+#
+# Checks performed:
+#   1. Agent paths — every path in plugin.json agents[] resolves to an existing file
+#   2. Agent frontmatter — each agent has name + description
+#   3. Skills directory — exists and contains at least one SKILL.md
+#   3b. Skill frontmatter — each SKILL.md has name + description
+#       Optional fields (validated only when present):
+#         - mode: must be one of headless, conversational, foreground
+#         - requires-mcp: must be non-empty
+#         - agents: each value should match an agent name in the same plugin (warn only)
+#         - inputs: must be non-empty
+#   4. Version sync — marketplace version matches plugin.json version
+#   5. Settings agent reference — settings.json agent ref points to a valid agent name
 
 set -euo pipefail
 
@@ -16,6 +29,7 @@ fi
 
 pass() { printf "  \033[32mPASS\033[0m  %s\n" "$1"; }
 fail() { printf "  \033[31mFAIL\033[0m  %s\n" "$1"; ERRORS=$((ERRORS + 1)); }
+warn() { printf "  \033[33mWARN\033[0m  %s\n" "$1"; }
 
 # Extract a YAML frontmatter field from a markdown file.
 # Handles: name: value / name: "value" / name: 'value'
@@ -29,6 +43,68 @@ frontmatter_field() {
       gsub(/^["'\'']|["'\'']$/, "")
       print
       exit
+    }
+  ' "$file"
+}
+
+# Check whether a YAML frontmatter field key exists at all (returns 0 if present, 1 if not).
+frontmatter_field_exists() {
+  local field="$1" file="$2"
+  awk -v field="$field" '
+    BEGIN { in_fm=0 }
+    /^---$/ { if (!in_fm) { in_fm=1; next } else { exit } }
+    in_fm && $0 ~ "^" field ":" { print "yes"; exit }
+  ' "$file" | grep -q "yes"
+}
+
+# Extract YAML list values from frontmatter. Handles:
+#   field: [a, b, c]         — inline list
+#   field: value              — scalar (treated as single-element list)
+#   field:                    — multi-line list (subsequent - item lines)
+#     - a
+#     - b
+# Outputs one value per line, with quotes stripped.
+frontmatter_list_field() {
+  local field="$1" file="$2"
+  awk -v field="$field" '
+    BEGIN { in_fm=0; found=0 }
+    /^---$/ {
+      if (!in_fm) { in_fm=1; next }
+      else { exit }
+    }
+    !in_fm { next }
+    found && /^[[:space:]]+- / {
+      val = $0
+      sub(/^[[:space:]]+- [[:space:]]*/, "", val)
+      gsub(/^["'"'"']|["'"'"']$/, "", val)
+      print val
+      next
+    }
+    found { exit }
+    $0 ~ "^" field ":" {
+      val = $0
+      sub("^" field ":[[:space:]]*", "", val)
+      # Inline list: [a, b, c]
+      if (val ~ /^\[/) {
+        gsub(/[\[\]]/, "", val)
+        n = split(val, items, ",")
+        for (i = 1; i <= n; i++) {
+          v = items[i]
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+          gsub(/^["'"'"']|["'"'"']$/, "", v)
+          if (v != "") print v
+        }
+        exit
+      }
+      # Scalar value (single item)
+      if (val != "") {
+        gsub(/^["'"'"']|["'"'"']$/, "", val)
+        print val
+        exit
+      }
+      # Empty value — expect multi-line list on subsequent lines
+      found = 1
+      next
     }
   ' "$file"
 }
@@ -118,6 +194,70 @@ for (( i=0; i<PLUGIN_COUNT; i++ )); do
             fail "Skill $skill_rel missing frontmatter 'description'"
             ALL_SKILL_FM_OK=false
           fi
+
+          # ── Optional: mode ──
+          if frontmatter_field_exists "mode" "$skill_file"; then
+            fm_mode="$(frontmatter_field "mode" "$skill_file")"
+            case "$fm_mode" in
+              headless|conversational|foreground)
+                pass "Skill $skill_rel mode valid ($fm_mode)"
+                ;;
+              *)
+                fail "Skill $skill_rel has invalid mode '$fm_mode' (must be headless, conversational, or foreground)"
+                ALL_SKILL_FM_OK=false
+                ;;
+            esac
+          fi
+
+          # ── Optional: requires-mcp ──
+          if frontmatter_field_exists "requires-mcp" "$skill_file"; then
+            fm_mcp="$(frontmatter_field "requires-mcp" "$skill_file")"
+            if [[ -z "$fm_mcp" ]]; then
+              fail "Skill $skill_rel has 'requires-mcp' but value is empty"
+              ALL_SKILL_FM_OK=false
+            else
+              pass "Skill $skill_rel requires-mcp valid ($fm_mcp)"
+            fi
+          fi
+
+          # ── Optional: agents ──
+          if frontmatter_field_exists "agents" "$skill_file"; then
+            agent_names=()
+            while IFS= read -r _aname; do
+              [[ -n "$_aname" ]] && agent_names+=("$_aname")
+            done < <(frontmatter_list_field "agents" "$skill_file")
+            if [[ ${#agent_names[@]} -gt 0 ]]; then
+              for aname in "${agent_names[@]}"; do
+                agent_matched=false
+                for agent_path in "${AGENT_PATHS[@]}"; do
+                  resolved_agent="$PLUGIN_DIR/$agent_path"
+                  [[ ! -f "$resolved_agent" ]] && continue
+                  ref_name="$(frontmatter_field "name" "$resolved_agent")"
+                  if [[ "$ref_name" == "$aname" ]]; then
+                    agent_matched=true
+                    break
+                  fi
+                done
+                if $agent_matched; then
+                  pass "Skill $skill_rel agent '$aname' found in plugin"
+                else
+                  warn "Skill $skill_rel agent '$aname' not found in plugin '$PLUGIN'"
+                fi
+              done
+            fi
+          fi
+
+          # ── Optional: inputs ──
+          if frontmatter_field_exists "inputs" "$skill_file"; then
+            fm_inputs="$(frontmatter_field "inputs" "$skill_file")"
+            if [[ -z "$fm_inputs" ]]; then
+              fail "Skill $skill_rel has 'inputs' but value is empty"
+              ALL_SKILL_FM_OK=false
+            else
+              pass "Skill $skill_rel inputs field present"
+            fi
+          fi
+
         done < <(find "$SKILLS_DIR" -name "SKILL.md")
         if $ALL_SKILL_FM_OK; then
           pass "All skill frontmatter valid"
