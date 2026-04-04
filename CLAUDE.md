@@ -34,22 +34,26 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   agents/coordinator.md           #   Coordinator agent
   agents/bugfixer.md              #   Bugfixer agent
   agents/implementer.md           #   Implementer agent
+  skills/plan/SKILL.md             #   /plan — decompose work into implementable tasks
+  skills/implement/SKILL.md       #   /implement — execute task plans against the codebase
+  skills/validate/SKILL.md        #   /validate — verify work against acceptance criteria
+  skills/document/SKILL.md        #   /document — capture knowledge from completed work
+  skills/autopilot/SKILL.md       #   /autopilot — autonomous project coordination
   skills/refinement/SKILL.md      #   /refinement — backlog refinement ceremony
   skills/bugfix/SKILL.md          #   /bugfix — focused bugfix session
-  skills/autopilot/SKILL.md       #   /autopilot — autonomous project coordination
 ```
 
 ## Package Architecture
 
 - **tab** is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** extends the ecosystem with six specialized agents and three skills (`/refinement`, `/bugfix`, `/autopilot`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
+- **tab-for-projects** extends the ecosystem with six specialized agents and seven skills (`/plan`, `/implement`, `/validate`, `/document`, `/autopilot`, `/refinement`, `/bugfix`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
 - Each package is independently installable. `settings.json` at each package root sets the default agent via `{"agent": "<plugin>:<agent>"}`.
 
 ## Conventions
 
 **Agents** are markdown files with YAML frontmatter (`name`, `description`). The body is the system prompt. Registered in `plugin.json` under `"agents"` as relative paths.
 
-**Skills** live in `skills/<skill-name>/SKILL.md`. Frontmatter fields: `name`, `description`, `argument-hint`. The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference).
+**Skills** live in `skills/<skill-name>/SKILL.md`. Frontmatter fields: `name`, `description`, `argument-hint`. Extended frontmatter fields for workflow skills: `inputs` (structured argument spec), `mode` (headless/conversational/foreground), `agents` (which agent runs the skill), `requires-mcp` (MCP dependency). The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference).
 
 **Plugin metadata** lives in `<package>/.claude-plugin/plugin.json` with fields: `name`, `description`, `version`, `author`, `license`, `agents` (array of paths), `skills` (directory path).
 
@@ -69,6 +73,8 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 | `tab-for-projects/agents/bugfixer.md` | Bugfixer agent |
 | `tab-for-projects/agents/implementer.md` | Implementer agent — executes task plans |
 | `tab-for-projects/agents/CONVENTIONS.md` | Shared agent conventions |
+| `tab-for-projects/skills/plan/SKILL.md` | /plan skill — decompose work into tasks |
+| `tab-for-projects/skills/implement/SKILL.md` | /implement skill — execute task plans |
 | `tab/settings.json` | Tab default agent config |
 | `tab-for-projects/settings.json` | Tab for Projects default agent config |
 | `docs/` | Project documentation (architecture, setup, skills, agents, walkthrough) |
