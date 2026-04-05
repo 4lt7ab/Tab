@@ -10,6 +10,7 @@ README.md                         # Project README
 LICENSE                           # Apache-2.0 license
 scripts/validate-plugins.sh       # Plugin validation script
 docs/                             # Documentation
+  agent-teams.md                  #   Agent team structure and roles
   architecture.md                 #   Repository structure and design decisions
   project-agents.md               #   Project agents documentation
   setup.md                        #   Setup guide
@@ -25,27 +26,19 @@ tab/                              # "tab" plugin package
   skills/brainstorm/SKILL.md      #   /brainstorm — conversational idea capture
 tab-for-projects/                 # "tab-for-projects" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-  settings.json                   #   Default agent: tab-for-projects:manager
-  agents/CONVENTIONS.md           #   Shared agent conventions
-  agents/manager.md               #   Project manager agent
-  agents/planner.md               #   Planning agent
-  agents/qa.md                    #   QA agent
-  agents/documenter.md            #   Documentation agent
-  agents/coordinator.md           #   Coordinator agent
-  agents/bugfixer.md              #   Bugfixer agent
-  agents/implementer.md           #   Implementer agent
-  skills/plan/SKILL.md             #   /plan — decompose work into implementable tasks
-  skills/implement/SKILL.md       #   /implement — execute task plans against the codebase
-  skills/validate/SKILL.md        #   /validate — verify work against acceptance criteria
+  agents/manager.md               #   Project manager agent (default)
+  agents/architect.md             #   Architect agent — system design and requirements
+  agents/planner.md               #   Planning agent — task decomposition
+  agents/developer.md             #   Developer agent — implements task plans
   skills/document/SKILL.md        #   /document — capture knowledge from completed work
-  skills/refinement/SKILL.md      #   /refinement — backlog refinement ceremony
-  skills/bugfix/SKILL.md          #   /bugfix — focused bugfix session
+  skills/mcp-reference/SKILL.md   #   /mcp-reference — Tab for Projects MCP reference
+  skills/prompt-reference/SKILL.md #  /prompt-reference — prompt quality conventions
 ```
 
 ## Package Architecture
 
 - **tab** is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** extends the ecosystem with five specialized agents and six skills (`/plan`, `/implement`, `/validate`, `/document`, `/refinement`, `/bugfix`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
+- **tab-for-projects** extends the ecosystem with four specialized agents and three skills (`/document`, `/mcp-reference`, `/prompt-reference`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
 - Each package is independently installable. `settings.json` at each package root sets the default agent via `{"agent": "<plugin>:<agent>"}`.
 
 ## Conventions
@@ -68,12 +61,11 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 | `tab-for-projects/.claude-plugin/plugin.json` | Tab for Projects plugin manifest |
 | `tab/agents/tab.md` | Tab agent — personality, profiles, settings |
 | `tab-for-projects/agents/manager.md` | Project manager agent (default for tab-for-projects) |
-| `tab-for-projects/agents/coordinator.md` | Coordinator agent |
-| `tab-for-projects/agents/bugfixer.md` | Bugfixer agent |
-| `tab-for-projects/agents/implementer.md` | Implementer agent — executes task plans |
-| `tab-for-projects/agents/CONVENTIONS.md` | Shared agent conventions |
-| `tab-for-projects/skills/plan/SKILL.md` | /plan skill — decompose work into tasks |
-| `tab-for-projects/skills/implement/SKILL.md` | /implement skill — execute task plans |
+| `tab-for-projects/agents/architect.md` | Architect agent — system design and requirements |
+| `tab-for-projects/agents/planner.md` | Planner agent — task decomposition |
+| `tab-for-projects/agents/developer.md` | Developer agent — implements task plans |
+| `tab-for-projects/skills/document/SKILL.md` | /document skill — capture knowledge from completed work |
+| `tab-for-projects/skills/mcp-reference/SKILL.md` | /mcp-reference skill — MCP tool reference |
+| `tab-for-projects/skills/prompt-reference/SKILL.md` | /prompt-reference skill — prompt quality conventions |
 | `tab/settings.json` | Tab default agent config |
-| `tab-for-projects/settings.json` | Tab for Projects default agent config |
 | `docs/` | Project documentation (architecture, setup, skills, agents, walkthrough) |
