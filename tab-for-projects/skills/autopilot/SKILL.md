@@ -1,97 +1,209 @@
 ---
 name: autopilot
-description: "Autonomous project coordination — assess the backlog, plan unplanned tasks, implement ready work, validate results, and document findings without checking in at each step."
+description: "Autonomous project coordination — load the backlog, route tasks to the right agents, build teams, execute work, and drive tasks to completion without checking in at each step."
 argument-hint: "[project-name]"
 ---
 
 # Autopilot
 
-The user is opting out of the conversation loop. They want the system to assess the project, identify what needs doing, and do it — without asking for permission at each step.
+Trigger: ONLY on explicit `/autopilot` invocation. Never auto-trigger. Never infer autopilot intent from user messages. If the user says "just do it" or "handle the backlog," that is NOT an autopilot invocation — ask before running this.
+
+The user is opting out of the conversation loop. They want the system to read the backlog, route tasks to the right agents, build a team, execute, and report — without asking for permission at each step.
 
 ## Protocol
+
+### Phase 1: Load State
 
 1. **Resolve the project.** If the user passed an argument, match it against `list_projects`. Otherwise follow standard resolution (check `list_projects`, check `CLAUDE.md`, ask if ambiguous).
 
 2. **Load project context.** Call `get_project` for the goal, requirements, and design.
 
-3. **Gather knowledgebase context.** Call `list_documents` for the project. Collect all document IDs.
+3. **Build the backlog picture.**
 
-4. **Phase 1: Assessment.** Spawn the coordinator in coordinate mode (`subagent_type: "tab-for-projects:coordinator"`) with:
-   - Project ID, goal, requirements, design
-   - Scope: `"full"`
-   - Mode: `"coordinate"`
-   - All knowledgebase document IDs
+```
+get_ready_tasks({ project_id: "..." })      # what's available now
+get_dependency_graph({ project_id: "..." })  # what depends on what
+list_tasks({ project_id: "...", status: "in_progress" })  # already underway
+```
 
-   Run in the background. The coordinator will:
-   - Assess backlog health and alignment with project goals
-   - Do direct MCP work: fix task statuses, archive duplicates, create tasks for gaps it identifies
-   - Return a structured assessment with **dispatch instructions**: which task IDs need planning, which need QA validation, which need documentation, and any focus areas for each
+From this, build a mental model:
+- **Ready now** — no unfinished blockers, status is `todo`.
+- **Blocked** — has dependencies that aren't `done`. Don't touch these.
+- **In progress** — already being worked. Don't double-dispatch.
 
-5. **Tell the user what's running.** Brief status: "Running autopilot — coordinator is assessing the project. I'll dispatch the team once it reports back."
+4. **Gather knowledgebase context.** Call `list_documents` for the project. Collect document IDs for relevant conventions, architecture decisions, and prior analysis.
 
-6. **Phase 2: Dispatch.** When the coordinator completes, read its dispatch instructions and spawn agents in parallel:
-   - **Planner** (`subagent_type: "tab-for-projects:planner"`) — for tasks the coordinator flagged as needing plans or decomposition. Pass the specific task IDs and any context the coordinator provided about what needs planning.
-   - **QA** (`subagent_type: "tab-for-projects:qa"`) — for completed tasks the coordinator flagged as needing validation. Pass task IDs and any focus areas.
-   - **Documenter** (`subagent_type: "tab-for-projects:documenter"`) — for completed work the coordinator flagged as needing knowledge capture. Pass task IDs and existing document IDs to avoid duplication.
+### Phase 2: Route
 
-   Only spawn agents that have work to do. If the coordinator found nothing for QA, don't spawn QA. All spawned agents run in the background, in parallel.
+Read each ready task's `category`, `effort`, `description`, and `plan` to decide which agent type handles it.
 
-7. **Update the user.** Brief status on what was dispatched: "Coordinator found 8 tasks needing plans, 3 needing QA, and 2 worth documenting. Planner, QA, and documenter are running now."
+| Signal | Routes to | Why |
+|--------|-----------|-----|
+| category: `feature`, `bugfix`, `refactor`, `chore` with implementation work | **developer** | Code changes needed |
+| category: `design` or description indicates architectural decisions | **architect** | System design, not implementation |
+| category: `research` or description indicates requirements gaps | **analyst** | Needs elicitation, not execution |
+| category: `documentation` or description indicates knowledge capture | **knowledge-writer** | Document store work, not code |
 
-8. **Phase 3: Implementation.** After Phase 2 agents complete, identify tasks ready for implementation and spawn implementer agents in dependency-ordered waves.
+Category alone isn't sufficient. A `feature` task whose plan says "design the API contract" routes to architect, not developer. A `chore` task that says "update the README" routes to knowledge-writer. **Read the task** — don't just pattern-match the category field.
 
-   **Identify implementable tasks.** Two sources:
-   - The coordinator's `implement` dispatch array — task IDs the coordinator flagged as ready for implementation (have plans, acceptance criteria, status `todo`).
-   - Newly-planned tasks — after the planner completes, call `list_tasks` to find tasks that now have `plan` and `acceptance_criteria` fields with status `todo`. The planner may have just created plans for tasks the coordinator flagged under `plan`.
+When routing is ambiguous, prefer the agent whose role produces the task's primary artifact: code -> developer, document -> knowledge-writer or architect, structured requirements -> analyst.
 
-   If the coordinator's dispatch has no `implement` key (coordinator predates this phase), fall back to `list_tasks` to find implementable tasks manually.
+**Ceremony scaling.** Effort level determines how much ceremony a task gets:
 
-   If no implementable tasks exist from either source, skip this phase. Report "No tasks ready for implementation" in the final summary and proceed to step 10.
+- **Trivial / Low:** Update status, assign, mark done. No gap analysis. Fast path.
+- **Medium:** Check for related documentation. Include relevant context. Verify implementation field on completion.
+- **High / Extreme:** Gap analysis first — if a high-effort implementation task has no corresponding test task, create one as a dependency before dispatching. Include relevant document IDs. Verify implementation field describes what changed and why.
 
-   **Group tasks into waves.** Read each task's plan, the coordinator's `implement` notes, and any dependency signals (e.g., "implement after [task ID] completes", references to other tasks' outputs). Tasks with no upstream dependencies go in wave 1. Tasks depending on wave 1 outputs go in wave 2, and so on. When dependency order is uncertain, default to sequential — correctness over speed.
+**Gap identification.** Before dispatching high-effort tasks, check for missing work:
 
-   **Check for file conflicts within each wave.** Read the "Files to touch" sections of task plans. Tasks touching the same files within a wave must either be given to the same implementer agent or sequenced into sub-waves. Tasks touching disjoint files run in parallel.
+- **Missing test coverage.** Create a test task and add it as a blocker for the implementation task.
+- **Missing design.** A high-effort feature with no architecture context and complex interactions — create a design task routed to architect.
+- Only create gap tasks for clear, mechanical gaps. Don't invent speculative work.
 
-   **Spawn implementer agents.** For each parallelizable unit within a wave, spawn `subagent_type: "tab-for-projects:implementer"` with `run_in_background: true` and `isolation: "worktree"`. Each implementer runs in its own git worktree on an isolated branch — this prevents parallel agents from stepping on each other's files. Pass:
-   - Project ID
-   - Task IDs for the unit
-   - Project context (goal, requirements, design)
-   - All knowledgebase document IDs
+**Blocking gaps.** When a task has ambiguous requirements, contradictory constraints, or missing human context — flag it and move on:
 
-   Cap concurrent implementer agents at 3–5 per wave. If a wave has more parallelizable units than the cap, queue the overflow into sub-waves within the wave.
+```
+update_task({ items: [{
+  id: "...",
+  status: "todo",
+  implementation: "BLOCKED: [what's missing and who needs to provide it]"
+}] })
+```
 
-   Wait for all implementers in a wave to complete.
+Do not attempt tasks with unresolvable ambiguity. Continue with other ready work.
 
-   **Merge step.** After all implementers in a wave finish, collect the branch names from their results. Spawn an ad-hoc merge agent (generic subagent, `run_in_background: true`) with a prompt to merge these branches into main sequentially and report any conflicts. Wait for the merge agent to complete before starting the next wave. If a merge fails, report the conflict in the progress update and skip any tasks in subsequent waves that depend on the failed task's output.
+### Phase 3: Team Creation
 
-   **Progress updates between waves.** Tell the user: "Wave N complete: X tasks implemented, branches merged (task titles). Starting wave N+1: Y tasks." If any implementer reports failures, partial completions, or merge conflicts, report them before proceeding to the next wave.
+Build the agent team based on routed tasks.
 
-9. **Phase 4: Post-implementation QA.** After all implementation waves complete, validate the newly implemented work.
+**When to create a team:**
+- 2+ independent tasks are ready simultaneously
+- Tasks span multiple roles (developer + architect, developer + knowledge-writer)
+- Cross-cutting concerns exist where teammates benefit from direct communication
 
-   Collect task IDs that implementer agents completed (the implementer sets status to `done`). Tasks the implementer reported as incomplete or failed skip this phase — they appear in the final summary as needing attention.
+**When individual subagents are better:**
+- A single task in isolation — no coordination needed
+- Trivial/low effort tasks where team overhead isn't justified
+- Tasks that are purely sequential with no parallelism
 
-   If there are completed tasks to validate, spawn QA (`subagent_type: "tab-for-projects:qa"`) with those task IDs. Run in the background.
+**Team sizing:**
+- Start with 3-5 teammates. More adds coordination overhead with diminishing returns.
+- One teammate per independent workstream, not one per task.
+- Aim for 5-6 tasks per teammate when batching related work.
+- Cap at 5 teammates total.
 
-   When QA completes, check results:
-   - **Failures**: Report to the user in the final summary. Do NOT automatically re-implement or retry. The autopilot is autonomous but bounded — no retry loops.
-   - **Passes**: Continue to results summary.
+**File ownership.** For developer teammates, explicitly assign file ownership. Two teammates editing the same file is the primary failure mode. Break work so each developer owns different files.
 
-   If no tasks were implemented (Phase 3 was skipped or all implementations failed), skip this phase.
+**Developer teammate brief:**
 
-10. **Collect and present results.** As agents complete, collect their results. When all are done, present the full summary:
-   - What the coordinator assessed and what direct actions it took (status fixes, new tasks, archives)
-   - What the planner produced (plans, acceptance criteria, new tasks from decomposition)
-   - What Phase 2 QA found on pre-existing completed work (pass/fail verdicts, qa-findings tasks created)
-   - What the documenter captured (documents created or updated)
-   - What was implemented — tasks completed, tasks that failed implementation, tasks skipped (with reasons)
-   - What Phase 4 QA found on newly implemented work — pass/fail verdicts, qa-findings tasks created. Clearly separated from Phase 2 QA results.
-   - What the coordinator chose NOT to act on and why
+```
+You are a developer teammate working on project [name].
+
+Tasks assigned:
+1. [title] (ID: [id], effort: [effort])
+   Description: [description]
+   Plan: [plan]
+   Acceptance criteria: [from description/plan]
+
+Domain context: [frontend/backend/infra/data — conventions and patterns]
+Relevant documents: [IDs of attached project docs]
+File ownership: [which files/directories this teammate owns]
+
+Follow the developer agent workflow: gather context, implement
+(tests first for high effort), verify, commit from the worktree.
+
+When done with each task, message the lead with:
+- Task ID
+- What changed (files modified, approach taken)
+- Any issues discovered that affect other teammates
+
+If you discover something that affects another teammate's work,
+message them directly — don't wait for the lead to relay it.
+```
+
+**Non-developer teammate brief:**
+
+```
+You are the [architect/analyst/knowledge-writer] teammate.
+
+Tasks assigned:
+1. [title] (ID: [id])
+   Description: [description]
+   [Task-specific context and instructions]
+
+When done, message the lead with:
+- Task ID
+- What you produced
+- Any findings that affect other teammates' work
+```
+
+**Brief quality rules:**
+- **Complete context.** Teammates don't inherit conversation history. Include everything needed.
+- **File ownership boundaries.** Explicit for developer teammates.
+- **Communication expectations.** When to message each other vs. when to message the lead.
+- **No micro-management.** State what needs doing and what constraints apply. Don't prescribe how.
+
+### Phase 4: Execution Management
+
+**Dual task lists.** Two systems are in play — keep them distinct:
+
+| System | Purpose | Authority |
+|--------|---------|-----------|
+| **MCP task list** | Backlog, dependency graph, status, implementation records | Project state — durable record |
+| **Team task list** | In-flight coordination, assignments, blocking/unblocking | Session coordination — ephemeral |
+
+The MCP task list is the authority. When a teammate completes work, update MCP:
+
+```
+update_task({ items: [{
+  id: "[task-id]",
+  status: "done",
+  implementation: "[what the teammate reported]"
+}] })
+```
+
+**Status management:**
+
+| Transition | When |
+|-----------|------|
+| `todo` -> `in_progress` | Teammate is assigned this task |
+| `in_progress` -> `done` | Teammate reports completion (lead updates MCP) |
+| remains `todo` | Task is flagged as blocked by a gap |
+
+**Cross-teammate communication.** Teammates message each other directly for:
+- API contract discovery — agreeing on interfaces
+- Architecture questions — developer asks architect instead of waiting for the lead
+- Documentation gaps — architect flags something for knowledge-writer
+- Conflict detection — overlapping file ownership
+
+**When to intervene as lead:**
+- A teammate is idle or stuck for too long — send guidance or reassign
+- Cross-teammate communication has stalled — mediate
+- A teammate is working outside its file ownership without coordination
+- New tasks become ready (blockers completed) — assign to available teammates
+
+**Backlog refresh.** After tasks complete, check if previously blocked tasks are now ready. Assign new work to available teammates or spawn additional ones.
+
+### Phase 5: Completion
+
+1. **Clean up the team.** When no more work remains, shut down all teammates.
+2. **Update MCP status.** Ensure every completed task has its MCP status and implementation field updated.
+3. **Report.** Present to the user:
+   - Tasks completed — what was done and by whom
+   - Tasks flagged — blocked gaps, ambiguous requirements
+   - Gap tasks created — test coverage, design tasks
+   - Tasks still blocked or in progress
    - Items that need the user's judgment
+4. **Stop when done.** When no ready tasks remain (all done, all blocked, or all flagged), the run is complete. Don't loop indefinitely.
 
-## What Makes This a Skill
+## Constraints
 
-Autopilot is a **permission structure**. Without it, the manager asks before it acts — that's its nature as a thinking partner. Autopilot explicitly says: "I trust the system to make good calls. Go."
-
-The multi-phase design makes the manager a team lead, not a delegator. Phase 1 sends the coordinator as an analyst — it reads the full project state, does what it can directly (status fixes, gap tasks, duplicate cleanup), and returns structured dispatch instructions for specialist work. Phase 2 has the manager spawn planner, QA, and documenter in parallel with the specific scoped work from the coordinator's findings. Phase 3 sends implementer agents to execute plans in dependency-ordered waves — each implementer runs in an isolated git worktree so parallel agents never conflict, with an ad-hoc merge step between waves to integrate branches back into main. Phase 4 runs QA on the freshly implemented work to catch issues before the user sees them. The coordinator doesn't need to hold the spawn button; the manager does that based on precise instructions about what needs doing and why.
-
-The user should be able to type `/autopilot`, walk away, and come back to a project that's been triaged, planned, implemented, validated, and documented — with a clear summary of everything that happened.
+- **Don't implement directly.** Autopilot reads task state, routes work, and manages the team. It never touches the codebase.
+- **Don't author documents.** Route document tasks to knowledge-writer or architect teammates.
+- **Never commit code.** The developer teammate owns commits. Autopilot owns task state.
+- **Respect the dependency graph.** Never assign a task whose blockers aren't `done`. No exceptions.
+- **Don't over-create.** Gap tasks are for clear mechanical gaps (missing tests, missing design). Don't invent speculative work.
+- **Avoid file conflicts.** The most important team creation decision. Each developer teammate owns different files.
+- **MCP is the authority.** The team task list coordinates in-session. The MCP task list is the durable project record. Always update MCP on completion.
+- **Flag ambiguous tasks.** If a task can't be routed or has unresolvable ambiguity, flag it and skip it — don't guess.
+- **Cap at 5 teammates.** More adds coordination overhead without proportional throughput gain.
