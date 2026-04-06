@@ -8,12 +8,10 @@
   "license": "Apache-2.0",
   "agents": [
     "./agents/manager.md",
+    "./agents/designer.md",
     "./agents/planner.md",
-    "./agents/qa.md",
-    "./agents/documenter.md",
-    "./agents/bugfixer.md",
-    "./agents/coordinator.md",
-    "./agents/implementer.md"
+    "./agents/developer.md",
+    "./agents/tech-lead.md"
   ],
   "skills": "./skills/"
 }
