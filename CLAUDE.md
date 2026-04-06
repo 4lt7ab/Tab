@@ -21,29 +21,29 @@ tab/                              # "tab" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
   settings.json                   #   Default agent: tab:Tab
   agents/tab.md                   #   Tab personality agent
-  skills/listen/SKILL.md          #   /listen — deliberate listening mode
   skills/draw-dino/SKILL.md       #   /draw-dino skill
+  skills/listen/SKILL.md          #   /listen — deliberate listening mode
+  skills/teach/SKILL.md           #   /teach — teaching and explanation mode
   skills/think/SKILL.md           #   /think — conversational idea capture
 tab-for-projects/                 # "tab-for-projects" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-  settings.json                   #   Default agent: tab-for-projects:manager
-  agents/CONVENTIONS.md           #   Shared agent conventions
   agents/manager.md               #   Project manager agent — orchestration layer
   agents/designer.md              #   Designer agent — system design and task planning
   agents/planner.md               #   Planner agent — task decomposition
   agents/developer.md             #   Developer agent — implementation and commits
   agents/tech-lead.md             #   Tech-lead agent — codebase truth, pattern docs, drift corrections
-  skills/refinement/SKILL.md      #   /refinement — backlog refinement ceremony
-  skills/bugfix/SKILL.md          #   /bugfix — focused bugfix session
-  skills/autopilot/SKILL.md       #   /autopilot — autonomous project coordination
+  skills/agentic-reference/SKILL.md   #   /agentic-reference — agent and skill authoring patterns
+  skills/document/SKILL.md            #   /document — knowledge extraction from completed work
   skills/document-reference/SKILL.md  #   /document-reference — advisory agent document discipline
+  skills/mcp-reference/SKILL.md       #   /mcp-reference — Tab for Projects MCP reference
+  skills/prompt-reference/SKILL.md    #   /prompt-reference — prompt quality conventions
 ```
 
 ## Package Architecture
 
 - **tab** is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** extends the ecosystem with five agents in a three-layer model (manager, designer, tech-lead, planner, developer) and four skills (`/refinement`, `/bugfix`, `/autopilot`, `/document-reference`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
-- Each package is independently installable. `settings.json` at each package root sets the default agent via `{"agent": "<plugin>:<agent>"}`.
+- **tab-for-projects** extends the ecosystem with five agents in a three-layer model (manager, designer, tech-lead, planner, developer) and five skills (`/agentic-reference`, `/document`, `/document-reference`, `/mcp-reference`, `/prompt-reference`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
+- Each package is independently installable. A `settings.json` at a package root can set the default agent via `{"agent": "<plugin>:<agent>"}`.
 
 ## Conventions
 
@@ -69,6 +69,5 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 | `tab-for-projects/agents/planner.md` | Planner agent — task decomposition |
 | `tab-for-projects/agents/developer.md` | Developer agent — implementation and commits |
 | `tab-for-projects/agents/tech-lead.md` | Tech-lead agent — codebase truth, pattern docs, drift corrections |
-| `tab-for-projects/agents/CONVENTIONS.md` | Shared agent conventions |
 | `tab/settings.json` | Tab default agent config |
 | `docs/` | Project documentation (architecture, setup, skills, agents, walkthrough) |

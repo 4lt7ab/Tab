@@ -6,7 +6,7 @@ argument-hint: "[project-name] [task-ids or focus area]"
 
 # Document
 
-Extract knowledge from completed work and write it into the project's knowledgebase. The goal is internal knowledge artifacts for future agents — planners, QA, coordinators, implementers. Not READMEs. Not user-facing docs.
+Extract knowledge from completed work and write it into the project's knowledgebase. The goal is internal knowledge artifacts for future agents — designers, planners, developers, tech-leads. Not READMEs. Not user-facing docs.
 
 ## Protocol
 

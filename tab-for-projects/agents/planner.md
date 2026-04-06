@@ -148,7 +148,7 @@ For each task, write three fields that make it self-contained:
 **`plan`** — How to approach the work. Not step-by-step instructions — a strategy:
 - What to look at first for deeper context.
 - Which existing patterns to follow.
-- Key decisions the implementer will need to make.
+- Key decisions the developer will need to make.
 - What to watch out for (edge cases, gotchas surfaced during exploration).
 
 **`acceptance_criteria`** — What "done" looks like. Derived from the project's requirements. Testable, specific, and scoped to this task alone. Each criterion should be verifiable without reading other tasks.

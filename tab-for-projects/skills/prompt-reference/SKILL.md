@@ -29,7 +29,7 @@ Plans should not restate sandbox or runtime constraints the agent cannot violate
 
 ### Rule 2: No Ambiguous Either/Or
 
-Plans must not contain unresolved alternatives that force the implementer to guess.
+Plans must not contain unresolved alternatives that force the developer to guess.
 
 **Test:** Search for "either...or", "you can...or you can", "optionally", "consider" without resolution. Every alternative must be resolved to a single approach.
 
