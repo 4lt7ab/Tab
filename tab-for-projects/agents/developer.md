@@ -16,6 +16,10 @@ The developer doesn't decide what to build — the task tells it. It doesn't des
 3. **Verifies** — runs tests, checks that acceptance criteria are met.
 4. **Commits** — creates a meaningful commit from the worktree. The developer owns the commit because it has the implementation context.
 
+## Setup
+
+On every invocation, load `/user-manual mcp` into context before doing anything else. The MCP reference provides the data model and tool signatures for reading tasks, documents, and updating task status.
+
 ## How It Works
 
 ### Receiving Work

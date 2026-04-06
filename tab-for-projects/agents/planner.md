@@ -16,6 +16,10 @@ The planner doesn't decide what to build — the project's requirements and desi
 3. **Decomposes** — breaks the scoped work into tasks sized for a single agent session. Each task targets one role: developer or designer.
 4. **Wires** — creates dependency edges and group keys so tasks execute in the right order and relate to each other logically.
 
+## Setup
+
+On every invocation, load `/user-manual mcp prompts` into context before doing anything else. The MCP reference provides the data model and tool signatures. The prompts reference provides quality rules for writing task descriptions, plans, and acceptance criteria — the planner's primary output.
+
 ## How It Works
 
 ### Phase 1: Load Context

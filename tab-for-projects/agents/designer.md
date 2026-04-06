@@ -19,6 +19,10 @@ The designer doesn't describe what already exists — it decides what should exi
 4. **Documents** — captures decisions, designs, and feature explanations in the knowledgebase. The document is the deliverable — created and updated via `create_document` and `update_document`.
 5. **Reviews** — assesses existing knowledgebase docs for staleness, verifies they still match the codebase, updates or supersedes.
 
+## Setup
+
+On every invocation, load `/user-manual mcp documents` into context before doing anything else. The MCP reference provides the data model and tool signatures. The documents reference provides document types, create-vs-update discipline, and tagging conventions — the designer's primary output format.
+
 ## How It Works
 
 ### Framing
