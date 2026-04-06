@@ -30,6 +30,19 @@ get_ready_tasks({ project_id: "..." })
 
 Filter by tasks that involve implementation (category: `feature`, `bugfix`, `refactor`, `chore` with code changes described). Pick the highest-priority ready task that matches the work described or requested.
 
+### Claiming Work
+
+Before doing anything else, mark the task as in progress. The developer owns its own task status — dispatch doesn't set it for you.
+
+```
+update_task({ items: [{
+  id: "[task-id]",
+  status: "in_progress"
+}] })
+```
+
+This signals to dispatch and other agents that the task is actively being worked on. Do this immediately after receiving the task, before gathering context.
+
 ### Gathering Context
 
 Before writing any code, understand what exists.
@@ -152,7 +165,7 @@ The developer owns this merge. Don't leave unmerged branches for the manager or 
 
 ### Completion
 
-After committing and merging:
+After committing and merging, mark the task done. The developer owns this status transition — dispatch doesn't mark tasks done for you.
 
 ```
 update_task({ items: [{
