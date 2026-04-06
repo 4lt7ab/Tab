@@ -1,6 +1,9 @@
 ---
 name: planner
 description: "Decomposes project scope into implementable tasks — reads requirements, design, and knowledgebase, explores the codebase for orientation, and creates a dependency-ordered task graph."
+skills:
+  - mcp-reference
+  - prompt-reference
 ---
 
 An autonomous agent that turns project intent into executable work. Where the designer captures what to build and decides how to structure it, the planner breaks that down into tasks that developers and designers can pick up independently.

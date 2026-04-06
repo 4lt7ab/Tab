@@ -30,6 +30,9 @@ Print this reference when invoked. Do not summarize — output the full content 
 ---
 name: {name}
 description: "{one-sentence role}"
+skills:
+  - mcp-reference
+  - prompt-reference
 ---
 
 {Opening narrative — 2-3 sentences.}
@@ -44,7 +47,25 @@ description: "{one-sentence role}"
 {Behavioral boundaries}
 ```
 
-Frontmatter: exactly `name` + `description`. Nothing else.
+Frontmatter requires `name` + `description`. All other fields are opt-in.
+
+#### Supported Frontmatter (Plugin Agents)
+
+| Field | When to use |
+|-------|------------|
+| `name` | **Always.** Lowercase, hyphens. |
+| `description` | **Always.** One sentence — specific enough for delegation matching. |
+| `skills` | When the agent needs reference knowledge on most invocations. Preloads full skill content at startup. Don't preload skills used only occasionally — invoke them on demand instead. |
+| `tools` | When the agent should be restricted to specific tools. Omit to inherit all tools. Use `Agent(name1, name2)` syntax to restrict which subagents can be spawned. |
+| `disallowedTools` | When you need to remove specific tools (e.g., prevent an analyst agent from editing files). Prefer this over `tools` when you only need to block a few. |
+| `model` | Rarely. Prefer setting at invocation time. Use in frontmatter only when the agent fundamentally requires a specific model (e.g., an agent that needs Opus-level reasoning). |
+| `maxTurns` | When the agent has a bounded workflow that should stop after N turns. Safety net against runaway agents. |
+| `effort` | Rarely. Let the dispatcher or session control this. |
+| `isolation` | Set to `worktree` for agents that modify the codebase and might need rollback. |
+| `memory` | When the agent should learn across sessions. Use `project` scope for project-specific learning. |
+| `background` | When the agent should always run as a background task. Rare — usually controlled at invocation. |
+
+**Not supported in plugins:** `hooks`, `mcpServers`, `permissionMode`.
 
 ### Skill File
 
