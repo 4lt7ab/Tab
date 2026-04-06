@@ -34,6 +34,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   agents/coordinator.md           #   Coordinator agent
   agents/bugfixer.md              #   Bugfixer agent
   agents/implementer.md           #   Implementer agent
+  agents/team-lead.md             #   Team-lead agent — ad-hoc requests and knowledgebase expertise
   skills/refinement/SKILL.md      #   /refinement — backlog refinement ceremony
   skills/bugfix/SKILL.md          #   /bugfix — focused bugfix session
   skills/autopilot/SKILL.md       #   /autopilot — autonomous project coordination
@@ -42,7 +43,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 ## Package Architecture
 
 - **tab** is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** extends the ecosystem with six specialized agents and three skills (`/refinement`, `/bugfix`, `/autopilot`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
+- **tab-for-projects** extends the ecosystem with seven specialized agents and three skills (`/refinement`, `/bugfix`, `/autopilot`). All agents interact with the Tab for Projects MCP for project/task/document CRUD.
 - Each package is independently installable. `settings.json` at each package root sets the default agent via `{"agent": "<plugin>:<agent>"}`.
 
 ## Conventions
@@ -68,6 +69,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 | `tab-for-projects/agents/coordinator.md` | Coordinator agent |
 | `tab-for-projects/agents/bugfixer.md` | Bugfixer agent |
 | `tab-for-projects/agents/implementer.md` | Implementer agent — executes task plans |
+| `tab-for-projects/agents/team-lead.md` | Team-lead agent — ad-hoc requests and knowledgebase expertise |
 | `tab-for-projects/agents/CONVENTIONS.md` | Shared agent conventions |
 | `tab/settings.json` | Tab default agent config |
 | `tab-for-projects/settings.json` | Tab for Projects default agent config |

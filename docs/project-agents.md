@@ -1,10 +1,11 @@
 # Project Agents
 
-Tab for Projects uses a hierarchy of seven agents to manage project work. The **manager** is the entry point — it owns the conversation with the user and delegates work to six specialist agents: the **planner**, **QA**, **documenter**, **coordinator**, **bugfixer**, and **implementer**. Most agents run asynchronously in the background so the main conversation thread is never blocked — the one exception is the bugfixer, which runs in the foreground and talks directly to the user.
+Tab for Projects uses a hierarchy of eight agents to manage project work. The **manager** is the entry point — it owns the conversation with the user and delegates work to seven specialist agents: the **team-lead**, **planner**, **QA**, **documenter**, **coordinator**, **bugfixer**, and **implementer**. Most agents run asynchronously in the background so the main conversation thread is never blocked — the exceptions are the bugfixer and team-lead, which run in the foreground and talk directly to the user.
 
 ```
 User <--> Manager <--> MCP (projects, tasks, documents)
               |
+              +--> Team-Lead    (foreground — talks to user)
               +--> Planner      (background)
               +--> QA           (background)
               +--> Documenter   (background)
@@ -13,7 +14,7 @@ User <--> Manager <--> MCP (projects, tasks, documents)
               +--> Bugfixer     (foreground — talks to user)
 ```
 
-The manager never touches the codebase. Background agents never talk to the user — they return results to the manager, which summarizes them. The bugfixer is the exception: it runs in the foreground and pair-programs with the user directly. All communication between layers flows through the manager, and all persistent state lives in the MCP.
+The manager never touches the codebase. Background agents never talk to the user — they return results to the manager, which summarizes them. The team-lead and bugfixer are exceptions: they run in the foreground and interact with the user directly. All communication between layers flows through the manager, and all persistent state lives in the MCP.
 
 ---
 
@@ -65,6 +66,52 @@ The manager operates on three layers of persistent state:
 Projects capture why work is happening. Tasks capture what work exists and how it will be done. Documents capture what was learned so future agents are smarter.
 
 Documents are standalone entities — `create_document` does not accept a project ID. New documents must be linked to a project via `update_project(attach_documents: [doc_id])` after creation. The manager uses `list` calls for scanning and `get` calls only when detail is needed, and defaults to showing only `todo` and `in_progress` tasks unless the user asks for history.
+
+---
+
+## Team-Lead
+
+### Purpose
+
+The team-lead is a conversational technical lead who handles ad-hoc requests through knowledgebase expertise. It fills the gap between the manager's hands-off dispatch and the planner's full scope decomposition. Where the manager orchestrates and the planner decomposes, the team-lead converses — it talks to the user, understands what they need, checks documentation for context, and turns requests into actionable work.
+
+The team-lead's primary expertise is the knowledgebase. It knows what's documented, can pull up relevant architecture decisions, conventions, and feature docs to inform its work. It uses this documentation-first understanding to write tasks that are grounded in project context.
+
+### When It Runs
+
+The manager spawns the team-lead (`subagent_type: "tab-for-projects:team-lead"`) when:
+
+- The user has an ad-hoc request that needs scoping and task creation (e.g., "fix the auth redirect," "add a loading spinner").
+- The request does not warrant full scope decomposition through the planner pipeline.
+
+It runs in the **foreground** — the team-lead takes over the conversation and talks directly to the user.
+
+### What It Does
+
+1. **Converses.** Talks with the user to understand what they need. Asks clarifying questions before creating work. Reflects intent back to confirm.
+
+2. **Researches.** Searches the knowledgebase for relevant architecture decisions, conventions, and feature docs. The team-lead understands the project through its documentation, not through deep codebase exploration.
+
+3. **Refines.** Turns user requests into developer-ready tasks with descriptions, plans, acceptance criteria, and effort estimates. Grounds tasks in knowledgebase context. Never creates tasks without explicit user permission.
+
+4. **Dispatches.** Spawns developer agents with clear briefs when tasks are ready for implementation.
+
+5. **Catalogues.** Identifies technical debt and bugs during conversations and logs them as tasks for later planning, with user permission.
+
+### Constraints
+
+- **Never creates tasks without explicit permission.** The user must say "create a task," "get this done," or grant standing permission. Without it, the team-lead describes the task and asks.
+- **Never writes architecture decisions.** If the question is architectural, it recommends the designer. The team-lead references existing decisions — it does not make new ones.
+- **Never decomposes project scope into task graphs.** Single ad-hoc tasks only. Full decomposition is the planner's job.
+- **Never modifies the codebase directly.** Dispatches developers for implementation.
+- **Works from the knowledgebase first.** Before exploring the codebase, checks if the answer is already documented.
+
+### Output
+
+- Developer-ready tasks created in the MCP with descriptions, plans, and acceptance criteria.
+- Developer agents dispatched with clear briefs for immediate implementation.
+- Technical debt and bug tasks logged in the backlog for later planning.
+- A conversational summary of what was created, dispatched, or deferred.
 
 ---
 
