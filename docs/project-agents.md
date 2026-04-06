@@ -1,11 +1,11 @@
 # Project Agents
 
-Tab for Projects uses a hierarchy of eight agents to manage project work. The **manager** is the entry point — it owns the conversation with the user and delegates work to seven specialist agents: the **team-lead**, **planner**, **QA**, **documenter**, **coordinator**, **bugfixer**, and **implementer**. Most agents run asynchronously in the background so the main conversation thread is never blocked — the exceptions are the bugfixer and team-lead, which run in the foreground and talk directly to the user.
+Tab for Projects uses a hierarchy of eight agents to manage project work. The **manager** is the entry point — it owns the conversation with the user and delegates work to seven specialist agents: the **tech-lead**, **planner**, **QA**, **documenter**, **coordinator**, **bugfixer**, and **implementer**. Most agents run asynchronously in the background so the main conversation thread is never blocked — the exceptions are the bugfixer, which runs in the foreground and talks directly to the user.
 
 ```
 User <--> Manager <--> MCP (projects, tasks, documents)
               |
-              +--> Team-Lead    (foreground — talks to user)
+              +--> Tech-Lead    (background — advisory)
               +--> Planner      (background)
               +--> QA           (background)
               +--> Documenter   (background)
@@ -14,7 +14,7 @@ User <--> Manager <--> MCP (projects, tasks, documents)
               +--> Bugfixer     (foreground — talks to user)
 ```
 
-The manager never touches the codebase. Background agents never talk to the user — they return results to the manager, which summarizes them. The team-lead and bugfixer are exceptions: they run in the foreground and interact with the user directly. All communication between layers flows through the manager, and all persistent state lives in the MCP.
+The manager never touches the codebase. Background agents never talk to the user — they return results to the manager, which summarizes them. The bugfixer is the exception: it runs in the foreground and interacts with the user directly. All communication between layers flows through the manager, and all persistent state lives in the MCP.
 
 ---
 
@@ -69,49 +69,52 @@ Documents are standalone entities — `create_document` does not accept a projec
 
 ---
 
-## Team-Lead
+## Tech-Lead
 
 ### Purpose
 
-The team-lead is a conversational technical lead who handles ad-hoc requests through knowledgebase expertise. It fills the gap between the manager's hands-off dispatch and the planner's full scope decomposition. Where the manager orchestrates and the planner decomposes, the team-lead converses — it talks to the user, understands what they need, checks documentation for context, and turns requests into actionable work.
+The tech-lead is a past-leaning advisory agent that maintains codebase truth in the knowledgebase. Where the designer looks forward and decides what should exist, the tech-lead looks backward and documents what does exist. It reads code to understand the patterns actually in use, verifies that KB documents still match codebase reality, identifies drift and gaps, and writes or updates documents when they don't match.
 
-The team-lead's primary expertise is the knowledgebase. It knows what's documented, can pull up relevant architecture decisions, conventions, and feature docs to inform its work. It uses this documentation-first understanding to write tasks that are grounded in project context.
+The tech-lead is the expert KB searcher. It knows what's documented, can assess whether it's still true, and can find the right document for any codebase question.
 
 ### When It Runs
 
-The manager spawns the team-lead (`subagent_type: "tab-for-projects:team-lead"`) when:
+The manager spawns the tech-lead (`subagent_type: "tab-for-projects:tech-lead"`) when:
 
-- The user has an ad-hoc request that needs scoping and task creation (e.g., "fix the auth redirect," "add a loading spinner").
-- The request does not warrant full scope decomposition through the planner pipeline.
+- Existing KB documents need verification against the codebase (drift check, documentation audit).
+- Completed work needs its patterns and decisions captured (post-implementation capture, dispatched with `/document` skill).
+- The advisory brain trust needs someone who can ground deliberation in codebase reality (agent team member).
+- A specific codebase question needs researching and documenting.
+- The KB needs curation (deduplication, tagging consistency, supersession chains).
 
-It runs in the **foreground** — the team-lead takes over the conversation and talks directly to the user.
+It always runs in the **background**. In agent teams, it communicates with teammates via document references.
 
 ### What It Does
 
-1. **Converses.** Talks with the user to understand what they need. Asks clarifying questions before creating work. Reflects intent back to confirm.
+1. **Reads code.** Explores the codebase to understand what patterns are actually in use. Reads implementation, not just interfaces. Spawns subagents for focused codebase investigation.
 
-2. **Researches.** Searches the knowledgebase for relevant architecture decisions, conventions, and feature docs. The team-lead understands the project through its documentation, not through deep codebase exploration.
+2. **Verifies documentation.** Compares KB documents against codebase reality. Flags drift, staleness, and inaccuracy.
 
-3. **Refines.** Turns user requests into developer-ready tasks with descriptions, plans, acceptance criteria, and effort estimates. Grounds tasks in knowledgebase context. Never creates tasks without explicit user permission.
+3. **Identifies gaps.** Finds undocumented patterns, missing conventions, refactor opportunities, and coupling issues.
 
-4. **Dispatches.** Spawns developer agents with clear briefs when tasks are ready for implementation.
+4. **Writes codebase documents.** Creates and updates pattern records, convention docs, drift corrections, and codebase reference docs. Every document traces back to code actually read. Follows `/document-reference` discipline — defaults to updating over creating.
 
-5. **Catalogues.** Identifies technical debt and bugs during conversations and logs them as tasks for later planning, with user permission.
+5. **Shares findings.** Passes document IDs to teammates with context: what the document contains and what it means for their work. Findings that need tasks go to the planner. Drift from designs goes to the designer.
 
 ### Constraints
 
-- **Never creates tasks without explicit permission.** The user must say "create a task," "get this done," or grant standing permission. Without it, the team-lead describes the task and asks.
-- **Never writes architecture decisions.** If the question is architectural, it recommends the designer. The team-lead references existing decisions — it does not make new ones.
-- **Never decomposes project scope into task graphs.** Single ad-hoc tasks only. Full decomposition is the planner's job.
-- **Never modifies the codebase directly.** Dispatches developers for implementation.
-- **Works from the knowledgebase first.** Before exploring the codebase, checks if the answer is already documented.
+- **Never modifies the codebase.** No file writes, no edits, no commits. The tech-lead's only output is knowledgebase documents.
+- **Never creates tasks.** Findings that need work go to the planner via document references.
+- **Never makes design decisions.** If a finding requires an architectural decision, it flags it for the designer.
+- **Evidence from code, not memory.** Every claim in a document traces back to files actually read.
+- **Defaults to updating.** Before creating any document, searches for existing ones on the same topic. Updates first, creates only when the topic is genuinely new.
 
 ### Output
 
-- Developer-ready tasks created in the MCP with descriptions, plans, and acceptance criteria.
-- Developer agents dispatched with clear briefs for immediate implementation.
-- Technical debt and bug tasks logged in the backlog for later planning.
-- A conversational summary of what was created, dispatched, or deferred.
+- New or updated knowledgebase documents (pattern records, convention docs, drift corrections, codebase references).
+- A summary of findings: what was documented, what drifted, what gaps exist.
+- Document IDs shared with teammates, with context on what each means for their work.
+- Items flagged for other agents: design decisions for the designer, task-worthy findings for the planner.
 
 ---
 

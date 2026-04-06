@@ -11,7 +11,7 @@
     "./agents/designer.md",
     "./agents/planner.md",
     "./agents/developer.md",
-    "./agents/team-lead.md"
+    "./agents/tech-lead.md"
   ],
   "skills": "./skills/"
 }

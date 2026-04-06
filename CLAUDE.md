@@ -35,7 +35,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   agents/coordinator.md           #   Coordinator agent
   agents/bugfixer.md              #   Bugfixer agent
   agents/implementer.md           #   Implementer agent
-  agents/team-lead.md             #   Team-lead agent — ad-hoc requests and knowledgebase expertise
+  agents/tech-lead.md             #   Tech-lead agent — codebase truth, pattern docs, drift corrections
   skills/refinement/SKILL.md      #   /refinement — backlog refinement ceremony
   skills/bugfix/SKILL.md          #   /bugfix — focused bugfix session
   skills/autopilot/SKILL.md       #   /autopilot — autonomous project coordination
@@ -70,7 +70,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 | `tab-for-projects/agents/coordinator.md` | Coordinator agent |
 | `tab-for-projects/agents/bugfixer.md` | Bugfixer agent |
 | `tab-for-projects/agents/implementer.md` | Implementer agent — executes task plans |
-| `tab-for-projects/agents/team-lead.md` | Team-lead agent — ad-hoc requests and knowledgebase expertise |
+| `tab-for-projects/agents/tech-lead.md` | Tech-lead agent — codebase truth, pattern docs, drift corrections |
 | `tab-for-projects/agents/CONVENTIONS.md` | Shared agent conventions |
 | `tab/settings.json` | Tab default agent config |
 | `docs/` | Project documentation (architecture, setup, skills, agents, walkthrough) |
