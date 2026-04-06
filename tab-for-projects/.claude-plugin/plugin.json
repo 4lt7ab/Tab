@@ -13,7 +13,8 @@
     "./agents/documenter.md",
     "./agents/bugfixer.md",
     "./agents/coordinator.md",
-    "./agents/implementer.md"
+    "./agents/implementer.md",
+    "./agents/team-lead.md"
   ],
   "skills": "./skills/"
 }
