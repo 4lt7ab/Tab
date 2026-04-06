@@ -32,8 +32,8 @@ After installation, confirm the Tab agent is active:
 ## Installing the tab-for-projects plugin
 
 The `tab-for-projects` plugin provides:
-- **Agents** — `manager`, `planner`, `qa`, `documenter`. The manager is the primary interface; the others run as background subagents.
-- **Skills** — `refinement` (backlog refinement ceremony).
+- **Agents** — `manager` (orchestration), `designer`, `tech-lead`, `planner` (advisory), `developer` (execution). The manager is the primary interface; the others are dispatched as needed.
+- **Skills** — `mcp-reference`, `document-reference`, `document`, `prompt-reference`, `agentic-reference`.
 
 ### Additional prerequisite
 
