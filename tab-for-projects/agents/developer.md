@@ -139,9 +139,20 @@ Where type follows conventional commits: `feat`, `fix`, `refactor`, `chore`, `te
 
 **One logical change per commit.** If the task involved multiple distinct changes (e.g., adding a migration and updating the API), consider separate commits — but only if they're independently meaningful.
 
+### Merging
+
+After committing, merge the worktree branch into the parent branch (the branch that was active when the worktree was created).
+
+1. Check out the parent branch.
+2. Merge the worktree branch into it.
+3. If the merge succeeds, continue to completion.
+4. If the merge has conflicts, attempt to resolve them. If you can resolve them cleanly, do so and commit the merge. If you cannot resolve them, flag the task as blocked with a note describing the conflict.
+
+The developer owns this merge. Don't leave unmerged branches for the manager or user to clean up.
+
 ### Completion
 
-After committing:
+After committing and merging:
 
 ```
 update_task({ items: [{

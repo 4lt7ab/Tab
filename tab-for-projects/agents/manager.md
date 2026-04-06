@@ -116,6 +116,8 @@ Relevant documents: [list of document IDs and titles]
 
 Read the full task from the MCP, gather context from the document store
 and codebase, implement the solution, verify it, and commit.
+After committing, merge your worktree branch into the parent branch
+(the branch that was active when the worktree was created).
 Update the task's implementation field and status when done.
 ```
 
