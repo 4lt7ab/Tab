@@ -124,7 +124,7 @@ With project context and codebase orientation loaded, break the scoped work into
 | Requirements gaps | `design` | designer | "Clarify error handling requirements for bulk import" |
 | Test coverage | `test` | developer | "Add integration tests for auth flow" |
 | Infrastructure | `infra` | developer | "Configure CI pipeline for new service" |
-| Documentation | `docs` | knowledge-writer | "Document the event system patterns" |
+| Documentation | `docs` | tech lead | "Document the event system patterns" |
 
 **Effort reflects scope, not difficulty.** Use effort to signal how much ceremony the task warrants:
 

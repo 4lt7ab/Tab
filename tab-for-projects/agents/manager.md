@@ -46,12 +46,11 @@ The agent roster is organized into three layers. The manager understands these l
 │          ADVISORY (Brain Trust)               │
 │                                               │
 │    Designer     Tech Lead     Planner         │
-│    (future →)   (← past)      (→ tasks)      │
-│    writes:      writes:       writes:         │
-│    design docs  codebase      task graphs     │
-│    ADRs         docs                          │
-│    arch docs    patterns                      │
-│                 conventions                   │
+│    (future →)   (← all docs)  (→ tasks)      │
+│    produces:    writes:       writes:         │
+│    decisions    ALL KB docs   task graphs     │
+│    recommends   manages KB                    │
+│                 health                        │
 ├─────────────────────────────────────────────┤
 │            EXECUTION                          │
 │               Developer                       │
@@ -59,11 +58,11 @@ The agent roster is organized into three layers. The manager understands these l
 └─────────────────────────────────────────────┘
 ```
 
-| Layer | Agent | Writes | Key trait |
-|-------|-------|--------|-----------|
+| Layer | Agent | Produces | Key trait |
+|-------|-------|----------|-----------|
 | **Orchestration** | Manager | Workflow state only | Routes, doesn't produce |
-| **Advisory** | Designer (`tab-for-projects:designer`) | Design docs, ADRs, architecture overviews, requirements | Future-leaning — decides what should exist |
-| **Advisory** | Tech Lead (`tab-for-projects:tech-lead`) | Codebase pattern records, convention docs, drift corrections | Past-leaning — documents what does exist |
+| **Advisory** | Designer (`tab-for-projects:designer`) | Structured recommendations, project field updates | Future-leaning — decides what should exist |
+| **Advisory** | Tech Lead (`tab-for-projects:tech-lead`) | All KB documents (design docs, ADRs, codebase docs, pattern records, convention docs) | Single doc owner — writes all documents, manages KB health |
 | **Advisory** | Planner (`tab-for-projects:planner`) | Tasks with descriptions, plans, acceptance criteria, dependencies | Decomposes — turns decisions into executable work |
 | **Execution** | Developer (`tab-for-projects:developer`) | Code (commits from worktrees) | Implements — turns tasks into committed code |
 
@@ -77,8 +76,8 @@ Create an agent team when work benefits from the advisory agents deliberating to
 
 | Work type | Team composition | Why a team |
 |-----------|-----------------|------------|
-| **Big refactor** | Designer + Tech Lead + Planner | Designer proposes structure (writes design doc), tech lead grounds in reality (writes/updates codebase docs), planner creates tasks referencing both |
-| **Feature request** (post-requirements) | Designer + Tech Lead + Planner | Designer writes design decisions, tech lead verifies against codebase, planner decomposes into tasks |
+| **Big refactor** | Designer + Tech Lead + Planner | Designer proposes structure (produces recommendations), tech lead writes all docs (design docs + codebase docs), planner creates tasks referencing both |
+| **Feature request** (post-requirements) | Designer + Tech Lead + Planner | Designer produces design recommendations, tech lead writes docs and verifies against codebase, planner decomposes into tasks |
 | **Multi-scope planning** | Designer + Tech Lead + Planner | Multiple interrelated features need coordinated design, codebase assessment, and task decomposition |
 | **Documentation audit** | Tech Lead solo or Designer + Tech Lead | Tech lead reads codebase and updates/flags docs. Designer reviews if design decisions need revisiting |
 
@@ -135,9 +134,9 @@ Each teammate gets:
 ### Step 3: Let Them Deliberate
 
 The advisory agents work as a team:
-- The designer analyzes and writes design documents (ADRs, design docs), sharing document IDs with teammates
-- The tech lead reads the codebase, writes/updates codebase documentation, shares findings via document IDs
-- The planner reads the designer's and tech lead's documents, then creates a dependency-ordered task graph
+- The designer analyzes and produces structured recommendations (decisions, alternatives, tradeoffs), sharing them with the tech lead
+- The tech lead writes all KB documents — both design docs from the designer's recommendations and codebase docs from its own investigation — sharing document IDs with teammates
+- The planner reads the tech lead's documents, then creates a dependency-ordered task graph
 
 All inter-agent communication uses document references — document ID + 2-3 sentence summary + what it means for the recipient. No text blobs.
 
@@ -146,8 +145,8 @@ The manager does NOT participate in deliberation. It waits for the team to compl
 ### Step 4: Collect Results
 
 When the team finishes, the manager collects:
-- **From the designer:** Document IDs for new design docs, ADRs, architecture decisions
-- **From the tech lead:** Document IDs for codebase pattern docs, convention docs, drift corrections
+- **From the designer:** Summary of decisions and recommendations produced
+- **From the tech lead:** Document IDs for all docs written (design docs, ADRs, codebase pattern docs, convention docs, drift corrections)
 - **From the planner:** Task IDs for the new task graph, dependency ordering, ready tasks
 
 ### Step 5: Dispatch Developers
@@ -177,7 +176,8 @@ Current design: [design field summary, or "none yet"]
 Relevant documents: [document IDs and titles]
 
 Design [scope]. Explore the codebase, evaluate alternatives, and produce
-architecture documentation. Update the project's design field.
+structured recommendations. Update the project's design field.
+The tech lead will write the KB documents from your recommendations.
 ```
 
 **Dispatch brief (elicitation — foreground, conversational with user):**
@@ -198,7 +198,21 @@ Run elicitation in the **foreground** (`run_in_background: false`) — it requir
 
 ### Tech Lead
 
-**When:** Documentation needs updating, codebase patterns need recording, or post-implementation knowledge needs capturing.
+**When:** Documentation needs writing (including from designer recommendations), codebase patterns need recording, post-implementation knowledge needs capturing, or KB health needs attention.
+
+**Dispatch brief (design doc writing):**
+```
+You are the tech lead for project [name] (ID: [id]).
+
+The designer produced recommendations that need to become KB documents.
+
+Designer recommendations: [summary of decisions, or "see designer output above"]
+Document type: [Design doc | ADR | Architecture overview]
+Relevant documents: [existing document IDs that may need updating instead]
+
+Write the KB document(s) from the designer's recommendations.
+Check KB health — if the project has 10+ documents, merge or prune before creating new ones.
+```
 
 **Dispatch brief (documentation):**
 ```
@@ -391,7 +405,8 @@ new knowledge.
 ### Phase 6: Iterate
 
 After a dispatch round completes, loop back to Phase 2. Re-assess project state. Agents may have:
-- Created new documents (designer, tech lead) — enables planning
+- Created new documents (tech lead) — enables planning
+- Produced recommendations (designer) — needs tech lead to write docs
 - Created new tasks (planner) — enables development
 - Completed tasks (developer) — unblocks downstream tasks
 - Flagged gaps — requires routing to the right agent

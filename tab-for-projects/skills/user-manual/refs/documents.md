@@ -86,44 +86,34 @@ Tags use a **closed enum**. Only these values are valid:
 
 ## Document Ownership
 
-Advisory agents write in their own domain. The domain boundaries determine who creates and updates each document type.
+The **tech lead is the single owner of all KB document output.** No other agent calls `create_document` or `update_document`. This centralized ownership ensures consistency, prevents duplication, and enables KB health management.
 
-### Designer (Forward-Looking)
+### Tech Lead — Single Document Owner
 
-The designer writes about **what should exist** — decisions, designs, requirements, architecture plans.
+The tech lead writes all document types:
 
-| Writes | Examples |
-|--------|----------|
-| ADRs | "Decision: Event-driven sync over polling" |
-| Design docs | "Design: Auth system restructure" |
-| Architecture overviews | "Architecture: Plugin marketplace" |
-| Requirements docs | "Requirements: Search API v2" |
+| Source | Document types | Examples |
+|--------|---------------|----------|
+| **From code investigation** | Pattern records, convention docs, drift corrections, codebase references | "Pattern: MCP tool handler structure", "Conventions: File naming in skills/" |
+| **From designer recommendations** | Design docs, ADRs, architecture overviews, feature docs | "Design: Auth system restructure", "ADR: Event-driven sync over polling" |
 
-The designer does NOT write about what currently exists in the codebase. That's the tech lead's domain.
+The tech lead's bias is toward **updating** over creating. Its primary job is keeping existing documentation accurate and the KB lean (soft cap: 10 documents per project).
 
-### Tech Lead (Backward-Looking)
+### Designer — Produces Recommendations, Not Documents
 
-The tech lead writes about **what does exist** — patterns found in code, conventions established by implementation, drift from documented designs.
+The designer analyzes, decides, and produces structured recommendations. It does NOT call `create_document` or `update_document`. Its output flows to the tech lead, who writes the KB documents.
 
-| Writes | Examples |
-|--------|----------|
-| Pattern records | "Pattern: MCP tool handler structure" |
-| Convention docs | "Conventions: File naming in skills/" |
-| Drift corrections | Updates to stale docs when code reality diverges |
-| Codebase reference docs | "Reference: Config shape for plugin.json" |
+The designer updates project fields (`requirements`, `design`) directly via `update_project`.
 
-The tech lead's bias is toward **updating** over creating. Its primary job is keeping existing documentation accurate.
+### Workflow Between Designer and Tech Lead
 
-### When Domains Overlap
-
-The agent closer to the source owns it:
-
-| Situation | Owner | Reasoning |
-|-----------|-------|-----------|
-| A design decision that has been implemented | **Designer** owns the decision doc, **tech lead** owns the implementation pattern doc | Decision rationale is forward-looking; implementation detail is backward-looking |
-| Codebase drifted from the documented design | **Tech lead** updates the codebase doc; flags the drift for the designer to review the design doc | Tech lead owns codebase truth |
-| New convention emerged from implementation | **Tech lead** creates the convention doc | Conventions are observed reality, not designed intent |
-| Architecture needs revisiting based on codebase findings | **Tech lead** documents findings; **designer** updates the architecture doc | Each writes in their domain |
+| Situation | Designer does | Tech lead does |
+|-----------|--------------|----------------|
+| New design decision needed | Researches, evaluates alternatives, produces recommendation | Writes the ADR or design doc from the recommendation |
+| Architecture overview needed | Analyzes system structure, produces overview content | Creates the architecture overview document |
+| Codebase drifted from design | N/A (flags for review if notified) | Detects drift, updates the document to match reality |
+| New convention emerged | N/A | Discovers the convention in code, creates convention doc |
+| Existing doc is stale | Reviews if design intent changed | Updates or supersedes the document |
 
 ---
 
