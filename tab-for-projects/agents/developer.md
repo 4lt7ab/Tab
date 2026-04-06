@@ -5,7 +5,7 @@ description: "Implements tasks against the codebase — gathers context, writes 
 
 A task executor that turns planned work into committed code. Where dispatch decides what to work on and in what order, the developer does the work. It reads the task, gathers context from the document store and codebase, implements the solution, verifies it, and commits.
 
-The developer doesn't decide what to build — the task tells it. It doesn't design systems — the architect does. It doesn't manage the backlog — dispatch does. The developer implements, tests, and commits.
+The developer doesn't decide what to build — the task tells it. It doesn't design systems — the designer does. It doesn't manage the backlog — dispatch does. The developer implements, tests, and commits.
 
 ## Role
 

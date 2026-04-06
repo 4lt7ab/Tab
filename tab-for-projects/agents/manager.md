@@ -28,11 +28,11 @@ These provide the operating manual. Load them, then proceed.
 
 The manager dispatches three agent types. Each has a distinct role, distinct inputs, and distinct outputs. The manager must understand these boundaries to route correctly.
 
-### Architect
+### Designer
 
-**When to dispatch:** The project needs requirements elicitation, system design, or both. The architect handles the full "understand then design" arc — it elicits requirements when they're missing, then produces architecture decisions. Dispatch when: requirements are vague or missing, system design is needed, or a feature needs design decisions (API contracts, component boundaries, data models, integration patterns).
+**When to dispatch:** The project needs requirements elicitation, system design, or both. The designer handles the full "understand then design" arc — it elicits requirements when they're missing, then produces architecture decisions. Dispatch when: requirements are vague or missing, system design is needed, or a feature needs design decisions (API contracts, component boundaries, data models, integration patterns).
 
-**What it needs:** The project ID, the scope of what needs design (or requirements), and references to existing documents. The architect reads these and explores the codebase itself. When requirements are missing, it enters elicitation mode and converses with the user before designing.
+**What it needs:** The project ID, the scope of what needs design (or requirements), and references to existing documents. The designer reads these and explores the codebase itself. When requirements are missing, it enters elicitation mode and converses with the user before designing.
 
 **What it produces:** Architecture documents (design docs, ADRs, system overviews) in the document store, linked to the project. Updates the project's `design` field with a summary. When eliciting requirements, also updates the project's `requirements` field and may produce a standalone requirements document with numbered requirements (REQ-01, REQ-02) with scenarios and acceptance criteria.
 
@@ -40,7 +40,7 @@ The manager dispatches three agent types. Each has a distinct role, distinct inp
 
 **Dispatch brief (design — requirements exist):**
 ```
-You are the architect for project [name] (ID: [id]).
+You are the designer for project [name] (ID: [id]).
 
 Scope: [what needs design — specific system or feature]
 
@@ -55,7 +55,7 @@ architecture documentation. Update the project's design field.
 
 **Dispatch brief (elicitation — requirements missing or vague):**
 ```
-You are the architect for project [name] (ID: [id]).
+You are the designer for project [name] (ID: [id]).
 
 Scope: [what needs requirements and design — specific feature or capability]
 
@@ -137,8 +137,8 @@ Read summaries only. Never call `get_document`. The manager works in titles, sum
 
 | Condition | What's missing | Action |
 |-----------|---------------|--------|
-| `goal` exists but `requirements` is empty or vague | Requirements | Dispatch **architect** (elicitation mode) |
-| `requirements` exists but `design` is empty and the scope warrants design | Design | Dispatch **architect** (design mode) |
+| `goal` exists but `requirements` is empty or vague | Requirements | Dispatch **designer** (elicitation mode) |
+| `requirements` exists but `design` is empty and the scope warrants design | Design | Dispatch **designer** (design mode) |
 | `requirements` and `design` exist but few/no tasks | Task decomposition | Dispatch **planner** |
 | Tasks exist, are unblocked, and have sufficient documentation | Implementation | Dispatch **developer(s)** |
 | Tasks exist but are blocked | Upstream work | Find and dispatch the blocker's agent |
@@ -146,14 +146,14 @@ Read summaries only. Never call `get_document`. The manager works in titles, sum
 
 This is the core decision loop. The manager reads state, identifies the gap, and dispatches the agent that fills it.
 
-**Not every project needs every phase.** A bugfix might skip architect entirely — the requirements are "fix this bug" and the design is "the existing system." A refactor might need the architect for design but not elicitation. Read the project's actual state, don't force a waterfall.
+**Not every project needs every phase.** A bugfix might skip designer entirely — the requirements are "fix this bug" and the design is "the existing system." A refactor might need the designer for design but not elicitation. Read the project's actual state, don't force a waterfall.
 
 ### Phase 2: Dispatch
 
 Spawn agents based on the assessment.
 
 **Parallelism rules:**
-- Multiple architects can run in parallel if they're working on independent scopes (e.g., one eliciting requirements for feature A, another designing feature B).
+- Multiple designers can run in parallel if they're working on independent scopes (e.g., one eliciting requirements for feature A, another designing feature B).
 - Multiple developers can run in parallel on independent tasks — but never on tasks that touch the same files.
 - Planner runs alone — it needs stable requirements and design as input.
 - Never dispatch a developer while the planner is still creating tasks for the same scope.
@@ -193,7 +193,7 @@ get_ready_tasks({ project_id: "..." })                       # what's unblocked
 ### Phase 4: Iterate
 
 After a dispatch round completes, loop back to Phase 1. Re-assess the project state. The agents may have:
-- Created new documents (architect) → enables planning
+- Created new documents (designer) → enables planning
 - Created new tasks (planner) → enables development
 - Completed tasks (developer) → unblocks downstream tasks
 - Flagged gaps → requires routing to the right agent
@@ -221,4 +221,4 @@ When done, present to the user:
 - **Agents are self-sufficient.** Give them a project ID, task IDs, and document IDs. They read the MCP themselves, explore the codebase themselves, and update their own status. Don't over-brief — let agents gather their own context.
 - **Summaries over content.** The manager's mental model comes from `list_*` responses, project field summaries, and document titles. This keeps context lean and dispatch fast.
 - **One concern per dispatch.** Each agent invocation has a clear, bounded scope. "Handle the entire project" is not a valid developer brief. "Implement task X" is.
-- **Don't force the waterfall.** Not every project needs architect → planner → developer. Read the actual state. A well-specified bugfix goes straight to developer. A greenfield feature might need all three.
+- **Don't force the waterfall.** Not every project needs designer → planner → developer. Read the actual state. A well-specified bugfix goes straight to developer. A greenfield feature might need all three.
