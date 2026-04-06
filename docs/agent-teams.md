@@ -253,7 +253,7 @@ Note: `skills` and `mcpServers` from the subagent definition are **not** applied
 ### Require plan approval
 
 ```
-Spawn a designer teammate to refactor the authentication module.
+Spawn a tech-lead teammate to refactor the authentication module.
 Require plan approval before they make any changes.
 ```
 

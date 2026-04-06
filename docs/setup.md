@@ -32,7 +32,7 @@ After installation, confirm the Tab agent is active:
 ## Installing the tab-for-projects plugin
 
 The `tab-for-projects` plugin provides:
-- **Agents** — `manager` (orchestration), `designer`, `tech-lead`, `planner` (advisory), `developer` (execution). The manager is the primary interface; the others are dispatched as needed.
+- **Agents** — `manager` (orchestration), `tech-lead`, `planner` (advisory), `developer` (execution). The manager is the primary interface; the others are dispatched as needed.
 - **Skills** — `user-manual` (unified reference router with modules for MCP tools, document discipline, prompt quality, and agent/skill authoring).
 
 ### Additional prerequisite

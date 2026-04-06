@@ -45,12 +45,12 @@ The agent roster is organized into three layers. The manager understands these l
 ├─────────────────────────────────────────────┤
 │          ADVISORY (Brain Trust)               │
 │                                               │
-│    Designer     Tech Lead     Planner         │
-│    (future →)   (← all docs)  (→ tasks)      │
-│    produces:    writes:       writes:         │
-│    decisions    ALL KB docs   task graphs     │
-│    recommends   manages KB                    │
-│                 health                        │
+│         Tech Lead          Planner            │
+│         (← all docs)      (→ tasks)           │
+│         writes:           writes:             │
+│         ALL KB docs       task graphs         │
+│         manages KB                            │
+│         health                                │
 ├─────────────────────────────────────────────┤
 │            EXECUTION                          │
 │               Developer                       │
@@ -61,7 +61,6 @@ The agent roster is organized into three layers. The manager understands these l
 | Layer | Agent | Produces | Key trait |
 |-------|-------|----------|-----------|
 | **Orchestration** | Manager | Workflow state only | Routes, doesn't produce |
-| **Advisory** | Designer (`tab-for-projects:designer`) | Structured recommendations, project field updates | Future-leaning — decides what should exist |
 | **Advisory** | Tech Lead (`tab-for-projects:tech-lead`) | All KB documents (design docs, ADRs, codebase docs, pattern records, convention docs) | Single doc owner — writes all documents, manages KB health |
 | **Advisory** | Planner (`tab-for-projects:planner`) | Tasks with descriptions, plans, acceptance criteria, dependencies | Decomposes — turns decisions into executable work |
 | **Execution** | Developer (`tab-for-projects:developer`) | Code (commits from worktrees) | Implements — turns tasks into committed code |
@@ -76,18 +75,16 @@ Create an agent team when work benefits from the advisory agents deliberating to
 
 | Work type | Team composition | Why a team |
 |-----------|-----------------|------------|
-| **Big refactor** | Designer + Tech Lead + Planner | Designer proposes structure (produces recommendations), tech lead writes all docs (design docs + codebase docs), planner creates tasks referencing both |
-| **Feature request** (post-requirements) | Designer + Tech Lead + Planner | Designer produces design recommendations, tech lead writes docs and verifies against codebase, planner decomposes into tasks |
-| **Multi-scope planning** | Designer + Tech Lead + Planner | Multiple interrelated features need coordinated design, codebase assessment, and task decomposition |
-| **Documentation audit** | Tech Lead solo or Designer + Tech Lead | Tech lead reads codebase and updates/flags docs. Designer reviews if design decisions need revisiting |
+| **Big refactor** | Tech Lead + Planner | Tech lead assesses codebase reality and writes docs, planner creates tasks referencing them |
+| **Feature request** (post-requirements) | Tech Lead + Planner | Tech lead writes docs and verifies against codebase, planner decomposes into tasks |
+| **Multi-scope planning** | Tech Lead + Planner | Multiple interrelated features need codebase assessment and task decomposition |
+| **Documentation audit** | Tech Lead solo | Tech lead reads codebase and updates/flags docs |
 
 ### When NOT to Create a Team
 
 | Work type | Route | Why no team |
 |-----------|-------|-------------|
 | **Implementation tasks ready to go** | Developer (worktree) | Tasks have plans, criteria — no deliberation needed |
-| **Single design question** | Designer solo | One question, one agent |
-| **Requirements elicitation** | Designer solo (conversational with user, foreground) | User conversation, not inter-agent deliberation |
 | **Simple bugfix with clear repro** | Developer (worktree) | Self-evident fix |
 | **Single doc update** | Tech Lead solo | Straightforward codebase documentation |
 | **Task decomposition with clear design** | Planner solo | Design docs exist, planner just decomposes |
@@ -111,16 +108,15 @@ Create a Claude Code agent team with the appropriate advisory agents as teammate
 Create an agent team for [scope description].
 
 Teammates:
-- Designer (tab-for-projects:designer): [what to design, which documents to read]
-- Tech Lead (tab-for-projects:tech-lead): [what codebase areas to investigate, which docs to verify]
-- Planner (tab-for-projects:planner): [what scope to decompose, wait for designer and tech lead output]
+- Tech Lead (tab-for-projects:tech-lead): [what codebase areas to investigate, which docs to write/verify]
+- Planner (tab-for-projects:planner): [what scope to decompose, wait for tech lead output]
 
 Project: [name] (ID: [id])
 Relevant documents: [document IDs with titles]
 
 The team should communicate via document IDs — write documents in your domain,
 then share the ID with teammates explaining what it means for their work.
-The planner should wait for design docs and codebase docs before creating tasks.
+The planner should wait for the tech lead's documents before creating tasks.
 ```
 
 ### Step 2: Assign Scope
@@ -134,8 +130,7 @@ Each teammate gets:
 ### Step 3: Let Them Deliberate
 
 The advisory agents work as a team:
-- The designer analyzes and produces structured recommendations (decisions, alternatives, tradeoffs), sharing them with the tech lead
-- The tech lead writes all KB documents — both design docs from the designer's recommendations and codebase docs from its own investigation — sharing document IDs with teammates
+- The tech lead investigates the codebase and writes all KB documents — design docs, ADRs, codebase docs, pattern records — sharing document IDs with teammates
 - The planner reads the tech lead's documents, then creates a dependency-ordered task graph
 
 All inter-agent communication uses document references — document ID + 2-3 sentence summary + what it means for the recipient. No text blobs.
@@ -145,7 +140,6 @@ The manager does NOT participate in deliberation. It waits for the team to compl
 ### Step 4: Collect Results
 
 When the team finishes, the manager collects:
-- **From the designer:** Summary of decisions and recommendations produced
 - **From the tech lead:** Document IDs for all docs written (design docs, ADRs, codebase pattern docs, convention docs, drift corrections)
 - **From the planner:** Task IDs for the new task graph, dependency ordering, ready tasks
 
@@ -161,58 +155,9 @@ After developers complete significant work, dispatch the tech lead for post-impl
 
 For straightforward work that doesn't need team deliberation, dispatch agents individually.
 
-### Designer
-
-**When:** Requirements need elicitation, or a specific design decision is needed.
-
-**Dispatch brief (design):**
-```
-You are the designer for project [name] (ID: [id]).
-
-Scope: [what needs design]
-Project goal: [goal field]
-Requirements summary: [requirements field]
-Current design: [design field summary, or "none yet"]
-Relevant documents: [document IDs and titles]
-
-Design [scope]. Explore the codebase, evaluate alternatives, and produce
-structured recommendations. Update the project's design field.
-The tech lead will write the KB documents from your recommendations.
-```
-
-**Dispatch brief (elicitation — foreground, conversational with user):**
-```
-You are the designer for project [name] (ID: [id]).
-
-Scope: [what needs requirements]
-Project goal: [goal field]
-Existing requirements: [requirements field, or "none yet"]
-Relevant documents: [document IDs and titles]
-
-Requirements are missing or vague for [scope]. Enter elicitation mode —
-ask the user focused questions to surface requirements, then design the
-solution. Update the project's requirements and design fields.
-```
-
-Run elicitation in the **foreground** (`run_in_background: false`) — it requires user conversation.
-
 ### Tech Lead
 
-**When:** Documentation needs writing (including from designer recommendations), codebase patterns need recording, post-implementation knowledge needs capturing, or KB health needs attention.
-
-**Dispatch brief (design doc writing):**
-```
-You are the tech lead for project [name] (ID: [id]).
-
-The designer produced recommendations that need to become KB documents.
-
-Designer recommendations: [summary of decisions, or "see designer output above"]
-Document type: [Design doc | ADR | Architecture overview]
-Relevant documents: [existing document IDs that may need updating instead]
-
-Write the KB document(s) from the designer's recommendations.
-Check KB health — if the project has 10+ documents, merge or prune before creating new ones.
-```
+**When:** Documentation needs writing, codebase patterns need recording, post-implementation knowledge needs capturing, or KB health needs attention.
 
 **Dispatch brief (documentation):**
 ```
@@ -316,7 +261,7 @@ Read summaries only. Never call `get_document`. The manager works in titles, sum
 
 | Task category | Route to |
 |--------------|----------|
-| `design` | Advisory team or Designer solo |
+| `design` | Advisory team or Tech Lead solo |
 | `feature`, `bugfix`, `refactor`, `chore`, `test`, `infra` | Developer (worktree) |
 | `docs` | Tech Lead solo |
 
@@ -324,15 +269,15 @@ Read summaries only. Never call `get_document`. The manager works in titles, sum
 
 | Condition | What's missing | Action |
 |-----------|---------------|--------|
-| `goal` exists but `requirements` is empty or vague | Requirements | Dispatch **designer** solo (elicitation mode, foreground) |
-| `requirements` exists but `design` is empty and scope warrants it | Design | Dispatch **designer** solo or create **advisory team** if scope is large |
+| `goal` exists but `requirements` is empty or vague | Requirements | Capture requirements in the project's `requirements` field directly, or dispatch **tech lead** for codebase assessment |
+| `requirements` exists but `design` is empty and scope warrants it | Design | Dispatch **tech lead** solo or create **advisory team** if scope is large |
 | `requirements` and `design` exist but few/no tasks | Task decomposition | Dispatch **planner** solo or create **advisory team** if scope needs multi-perspective input |
 | Tasks exist, are unblocked, and have sufficient documentation | Implementation | Dispatch **developer(s)** in worktrees |
-| Complex scope needing coordinated design + codebase analysis + planning | Full deliberation | Create **advisory team** (designer + tech lead + planner) |
+| Complex scope needing coordinated codebase analysis + planning | Full deliberation | Create **advisory team** (tech lead + planner) |
 | Tasks are `in_progress` | Work underway | Monitor — don't double-dispatch |
 | Tasks exist but are blocked | Upstream work | Find and dispatch the blocker's agent |
 
-**Not every project needs every phase.** A bugfix might skip the designer entirely. A refactor might need the tech lead for codebase assessment but not the designer. A well-specified feature with clear design goes straight to the planner or developer. Read the actual state — don't force a pipeline.
+**Not every project needs every phase.** A bugfix might go straight to a developer. A refactor might need the tech lead for codebase assessment. A well-specified feature with clear design goes straight to the planner or developer. Read the actual state — don't force a pipeline.
 
 ### Phase 3: Dispatch
 
@@ -406,7 +351,7 @@ new knowledge.
 
 After a dispatch round completes, loop back to Phase 2. Re-assess project state. Agents may have:
 - Created new documents (tech lead) — enables planning
-- Produced recommendations (designer) — needs tech lead to write docs
+- Written new documents (tech lead) — enables planning
 - Created new tasks (planner) — enables development
 - Completed tasks (developer) — unblocks downstream tasks
 - Flagged gaps — requires routing to the right agent
@@ -489,4 +434,4 @@ The knowledgebase layer. Documents are standalone entities linked to projects vi
 - **Agents are self-sufficient.** Give them a project ID, task IDs, and document IDs. They read the MCP, explore the codebase, and update their own status. Don't over-brief.
 - **Summaries over content.** The manager's mental model comes from `list_*` responses, project field summaries, and document titles. This keeps context lean and dispatch fast.
 - **One concern per dispatch.** Each agent invocation has a clear, bounded scope. "Handle the entire project" is not a valid brief. "Implement task X" is.
-- **Don't force the pipeline.** Not every project needs designer then planner then developer. Read the actual state. A well-specified bugfix goes straight to developer. A greenfield feature might need the full advisory team.
+- **Don't force the pipeline.** Not every project needs tech lead then planner then developer. Read the actual state. A well-specified bugfix goes straight to developer. A greenfield feature might need the full advisory team.

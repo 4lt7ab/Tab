@@ -220,7 +220,7 @@ The manager dispatches the tech lead (`tab-for-projects:tech-lead`) for knowledg
 > - **Created:** "Webhook retry conventions" -- exponential backoff parameters, max retry count, failure isolation per subscriber.
 > - **Updated:** "Event system architecture" -- added webhook integration points and delivery flow to the existing event system doc.
 
-These documents are now part of the project's knowledgebase. The next time the advisory brain trust runs, it will have access to them -- the designer can reference them in new design decisions, the tech lead can verify them against future code changes, and the planner can link them to new tasks. Every document makes future cycles smarter.
+These documents are now part of the project's knowledgebase. The next time the advisory brain trust runs, it will have access to them -- the tech lead can reference them in future design decisions and verify them against code changes, and the planner can link them to new tasks. Every document makes future cycles smarter.
 
 ---
 
@@ -234,7 +234,7 @@ Here is the full loop:
 
 2. **Project creation.** You described what you wanted to build. The manager captured it as a project with a goal and requirements.
 
-3. **Planning.** The manager dispatched the advisory brain trust. The designer wrote design documents, the tech lead verified against the codebase, and the planner created dependency-ordered tasks referencing both.
+3. **Planning.** The manager dispatched the advisory brain trust. The tech lead wrote design and codebase documents, and the planner created dependency-ordered tasks referencing them.
 
 4. **Refinement.** You walked through the backlog with the manager. Tasks were clarified, rescoped, and updated in real time.
 
@@ -242,13 +242,12 @@ Here is the full loop:
 
 6. **Knowledge capture.** The manager dispatched the tech lead for post-implementation capture. The tech lead read completed tasks and the codebase, extracted decisions, patterns, and gotchas, and wrote them into the project's knowledgebase -- making future advisory runs smarter.
 
-The five agents are organized into three layers:
+The four agents are organized into three layers:
 
 | Layer | Agent | Role | When it runs |
 |-------|-------|------|-------------|
 | **Orchestration** | **Manager** | Talks to the user and the MCP. Orchestrates agent teams, dispatches work. | Always active in the main thread |
-| **Advisory** | **Designer** | Writes design docs, ADRs, architecture overviews. Future-leaning. | When work needs design decisions |
-| **Advisory** | **Tech Lead** | Writes/updates codebase docs, patterns, conventions. Past-leaning. Handles knowledge capture. | When codebase truth needs documenting |
+| **Advisory** | **Tech Lead** | Writes all KB documents — design docs, ADRs, codebase patterns, conventions. Handles knowledge capture. | When design decisions or codebase truth needs documenting |
 | **Advisory** | **Planner** | Decomposes work into dependency-ordered task graphs with plans and acceptance criteria. | When work needs to be decomposed |
 | **Execution** | **Developer** | Implements tasks, tests, commits from worktrees. | When tasks are ready to be built |
 

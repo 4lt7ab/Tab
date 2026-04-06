@@ -132,7 +132,7 @@ When an agent makes a routing or branching decision, use a table:
 
 | Condition | Action |
 |-----------|--------|
-| Requirements exist but design is empty | Dispatch designer |
+| Requirements exist but design is empty | Dispatch tech lead |
 | Tasks exist and are unblocked | Dispatch developer |
 | Tasks are in_progress | Monitor — don't double-dispatch |
 

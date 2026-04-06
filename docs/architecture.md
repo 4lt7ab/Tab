@@ -9,8 +9,7 @@
 > - `/tab-for-projects/settings.json` -- tab-for-projects default agent setting
 > - `/tab/agents/tab.md` -- Tab agent definition
 > - `/tab-for-projects/agents/manager.md` -- manager agent (orchestration layer)
-> - `/tab-for-projects/agents/designer.md` -- designer agent (advisory layer, future-leaning)
-> - `/tab-for-projects/agents/tech-lead.md` -- tech lead agent (advisory layer, past-leaning)
+> - `/tab-for-projects/agents/tech-lead.md` -- tech lead agent (advisory layer, all KB documents)
 > - `/tab-for-projects/agents/planner.md` -- planner agent (advisory layer, task plans)
 > - `/tab-for-projects/agents/developer.md` -- developer agent (execution layer)
 
@@ -113,8 +112,7 @@ Tab auto-switches profiles based on context and briefly announces the shift. Use
 | Component | Path | Role |
 |-----------|------|------|
 | Agent: manager | `/tab-for-projects/agents/manager.md` | Orchestration -- workflows, agent teams, dispatch |
-| Agent: designer | `/tab-for-projects/agents/designer.md` | Advisory -- forward-looking design docs, ADRs, architecture |
-| Agent: tech-lead | `/tab-for-projects/agents/tech-lead.md` | Advisory -- backward-looking codebase docs, patterns, conventions |
+| Agent: tech-lead | `/tab-for-projects/agents/tech-lead.md` | Advisory -- all KB documents (design + codebase) |
 | Agent: planner | `/tab-for-projects/agents/planner.md` | Advisory -- decomposes work into dependency-ordered task graphs |
 | Agent: developer | `/tab-for-projects/agents/developer.md` | Execution -- implements tasks, commits from worktrees |
 | Skill: user-manual | `/tab-for-projects/skills/user-manual` | Unified reference router — MCP tools, document discipline, prompt quality, agent/skill authoring |
@@ -132,13 +130,11 @@ The tab-for-projects agents are organized into three layers: orchestration, advi
 ├─────────────────────────────────────────────┤
 │          ADVISORY (Brain Trust)               │
 │                                               │
-│    Designer     Tech Lead     Planner         │
-│    (future →)   (← past)      (→ tasks)      │
-│    writes:      writes:       writes:         │
-│    design docs  codebase      task graphs     │
-│    ADRs         docs                          │
-│    arch docs    patterns                      │
-│                 conventions                   │
+│         Tech Lead          Planner            │
+│         (← all docs)      (→ tasks)           │
+│         writes:           writes:             │
+│         all KB docs       task graphs         │
+│         (design + codebase)                   │
 ├─────────────────────────────────────────────┤
 │            EXECUTION                          │
 │               Developer                       │
@@ -148,13 +144,11 @@ The tab-for-projects agents are organized into three layers: orchestration, advi
 
 **Manager** (`tab-for-projects:manager`): The orchestration layer. Talks to the user and the MCP. Delegates work to advisory agents (individually or as agent teams for complex deliberation) and dispatches developers for implementation. Does not touch the codebase directly.
 
-**Designer** (`tab-for-projects:designer`): Advisory layer, future-leaning. Provides architectural judgment -- elicits requirements, evaluates alternatives, proposes architecture decisions. Writes design docs, ADRs, architecture overviews, and requirements docs. Passes document IDs to teammates. Loads `/user-manual documents` for document discipline.
+**Tech Lead** (`tab-for-projects:tech-lead`): Advisory layer, single owner of all KB documents. Provides both architectural judgment and codebase truth -- reads code to understand actual patterns, evaluates alternatives, writes design docs, ADRs, architecture overviews, codebase pattern records, convention docs, and drift corrections. Handles post-implementation knowledge capture and KB curation. Loads `/user-manual documents` for document discipline.
 
-**Tech Lead** (`tab-for-projects:tech-lead`): Advisory layer, past-leaning. Provides codebase judgment -- reads code to understand actual patterns, verifies KB docs against codebase reality, flags drift and staleness. Writes and updates codebase pattern records, convention docs, and drift corrections. Handles post-implementation knowledge capture and KB curation. Loads `/user-manual documents` for document discipline.
+**Planner** (`tab-for-projects:planner`): Advisory layer, task-focused. Reads tech lead documents, explores the codebase, and decomposes scope into dependency-ordered task graphs. Writes tasks with descriptions, plans, acceptance criteria, effort estimates, and dependency edges. Tasks reference advisory documents so developers get the full context chain.
 
-**Planner** (`tab-for-projects:planner`): Advisory layer, task-focused. Reads designer and tech lead documents, explores the codebase, and decomposes scope into dependency-ordered task graphs. Writes tasks with descriptions, plans, acceptance criteria, effort estimates, and dependency edges. Tasks reference advisory documents so developers get the full context chain.
-
-**Developer** (`tab-for-projects:developer`): The execution layer. Receives tasks with plans, gathers context from the document store and codebase, implements the solution, verifies with tests, and commits from worktrees. Benefits from the advisory layer indirectly -- tasks reference accurate KB documents maintained by the designer and tech lead.
+**Developer** (`tab-for-projects:developer`): The execution layer. Receives tasks with plans, gathers context from the document store and codebase, implements the solution, verifies with tests, and commits from worktrees. Benefits from the advisory layer indirectly -- tasks reference accurate KB documents maintained by the tech lead.
 
 ### The Three MCP Data Layers
 
@@ -164,7 +158,7 @@ The Tab for Projects MCP organizes data into three layers, each with list/get/cr
 
 **Tasks** -- the unit of trackable work. Tasks live inside a project and carry rich fields: title, description, plan, implementation, acceptance_criteria, effort (trivial through extreme), impact (trivial through extreme), category (feature, bugfix, refactor, etc.), group_key (flat grouping label), and status (todo, in_progress, done, archived).
 
-**Documents** -- the knowledgebase layer. Documents are independent top-level entities with a title, content (markdown, up to 100k characters), and tags. They are linked to projects via a many-to-many relationship managed through `update_project` (attach_documents / detach_documents). Documents are designed for agent consumption: architecture decisions, established patterns, gotchas, and integration notes that make future advisory runs more effective. The designer writes forward-looking design docs and ADRs; the tech lead writes backward-looking codebase docs, patterns, and conventions.
+**Documents** -- the knowledgebase layer. Documents are independent top-level entities with a title, content (markdown, up to 100k characters), and tags. They are linked to projects via a many-to-many relationship managed through `update_project` (attach_documents / detach_documents). Documents are designed for agent consumption: architecture decisions, established patterns, gotchas, and integration notes that make future advisory runs more effective. The tech lead writes all KB documents — design docs, ADRs, codebase patterns, and conventions.
 
 ---
 
@@ -202,8 +196,7 @@ marketplace.json
           +-- settings.json        (default agent: tab-for-projects:manager)
           +-- agents/
           |     +-- manager.md     (orchestration layer)
-          |     +-- designer.md    (advisory layer — future-leaning)
-          |     +-- tech-lead.md   (advisory layer — past-leaning)
+          |     +-- tech-lead.md   (advisory layer — all KB documents)
           |     +-- planner.md     (advisory layer — task plans)
           |     +-- developer.md   (execution layer)
           +-- skills/
@@ -234,20 +227,21 @@ marketplace.json
 | - Agent teams     |       +---------------------------+
 | - Dispatch        |
 +--+-----+-----+---+
-   |     |     |
+   |     |
    |  advisory layer (brain trust)
    |     |
    v     v
-+----------+ +-----------+ +---------+
-| Designer | | Tech Lead | | Planner |
-|          | |           | |         |
-| - Design | | - Read    | | - Read  |
-|   docs   | |   code    | |   docs  |
-| - ADRs   | | - Update  | | - Write |
-| - Arch   | |   docs    | |   tasks |
-|   docs   | | - Verify  | | - Plans |
-|          | |   KB      | | - Deps  |
-+----------+ +-----------+ +---------+
++-----------+ +---------+
+| Tech Lead | | Planner |
+|           | |         |
+| - Read    | | - Read  |
+|   code    | |   docs  |
+| - Write   | | - Write |
+|   all KB  | |   tasks |
+|   docs    | | - Plans |
+| - Verify  | | - Deps  |
+|   KB      | |         |
++-----------+ +---------+
    |
    |  execution layer
    |
@@ -272,16 +266,15 @@ A typical workflow from user request to completed, documented work:
 
 1. **User talks to the manager.** Describes work they want to track or execute.
 2. **Manager creates/updates project-level data** via the MCP (goal, requirements, design).
-3. **Manager assembles the advisory brain trust.** For complex work, the manager creates an agent team with the designer, tech lead, and planner (or a subset). For simpler work, it dispatches a single advisory agent directly.
-4. **Advisory agents deliberate.** The designer writes design docs and ADRs. The tech lead reads the codebase and writes/updates pattern and convention docs. The planner reads their documents and creates dependency-ordered tasks. All communication uses document IDs as the interface.
+3. **Manager assembles the advisory brain trust.** For complex work, the manager creates an agent team with the tech lead and planner (or dispatches one individually). For simpler work, it dispatches a single advisory agent directly.
+4. **Advisory agents deliberate.** The tech lead reads the codebase and writes all KB documents (design docs, ADRs, codebase patterns, conventions). The planner reads those documents and creates dependency-ordered tasks. All communication uses document IDs as the interface.
 5. **Manager dispatches developers** against ready tasks in worktrees. Developers gather context from the task plan and linked KB documents, implement, test, and commit.
 6. **Manager dispatches the tech lead** for post-implementation knowledge capture. The tech lead reads completed code, compares it to the task plan, and writes/updates documents about what was actually implemented.
 
 ```
 User --> Manager --> MCP (projects, tasks, documents)
               |
-              +--> Designer    --> writes design docs, ADRs (advisory)
-              +--> Tech Lead   --> writes/updates codebase docs (advisory)
+              +--> Tech Lead   --> writes all KB docs (design + codebase) (advisory)
               +--> Planner     --> writes task graphs (advisory)
               +--> Developer   --> implements tasks, commits (execution)
                                        |

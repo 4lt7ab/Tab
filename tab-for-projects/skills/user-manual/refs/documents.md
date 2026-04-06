@@ -95,25 +95,21 @@ The tech lead writes all document types:
 | Source | Document types | Examples |
 |--------|---------------|----------|
 | **From code investigation** | Pattern records, convention docs, drift corrections, codebase references | "Pattern: MCP tool handler structure", "Conventions: File naming in skills/" |
-| **From designer recommendations** | Design docs, ADRs, architecture overviews, feature docs | "Design: Auth system restructure", "ADR: Event-driven sync over polling" |
+| **From analysis and decisions** | Design docs, ADRs, architecture overviews, feature docs | "Design: Auth system restructure", "ADR: Event-driven sync over polling" |
 
 The tech lead's bias is toward **updating** over creating. Its primary job is keeping existing documentation accurate and the KB lean (soft cap: 10 documents per project).
 
-### Designer — Produces Recommendations, Not Documents
+### Tech Lead — Owns All Document Types
 
-The designer analyzes, decides, and produces structured recommendations. It does NOT call `create_document` or `update_document`. Its output flows to the tech lead, who writes the KB documents.
+The tech lead both analyzes systems for design decisions and investigates code for codebase truth. It writes all document types directly:
 
-The designer updates project fields (`requirements`, `design`) directly via `update_project`.
-
-### Workflow Between Designer and Tech Lead
-
-| Situation | Designer does | Tech lead does |
-|-----------|--------------|----------------|
-| New design decision needed | Researches, evaluates alternatives, produces recommendation | Writes the ADR or design doc from the recommendation |
-| Architecture overview needed | Analyzes system structure, produces overview content | Creates the architecture overview document |
-| Codebase drifted from design | N/A (flags for review if notified) | Detects drift, updates the document to match reality |
-| New convention emerged | N/A | Discovers the convention in code, creates convention doc |
-| Existing doc is stale | Reviews if design intent changed | Updates or supersedes the document |
+| Situation | Tech lead does |
+|-----------|----------------|
+| New design decision needed | Researches, evaluates alternatives, writes the ADR or design doc |
+| Architecture overview needed | Analyzes system structure, creates the architecture overview document |
+| Codebase drifted from design | Detects drift, updates the document to match reality |
+| New convention emerged | Discovers the convention in code, creates convention doc |
+| Existing doc is stale | Updates or supersedes the document |
 
 ---
 
