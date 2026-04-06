@@ -79,90 +79,44 @@ After the synthesis, Tab returns to normal mode. The listening context stays ava
 
 ---
 
-## refinement
+## tab-for-projects Skills
+
+The tab-for-projects plugin provides reference and procedural skills used by the advisory and execution agents.
+
+### mcp-reference
 
 **Package:** tab-for-projects
-**Invocation:** `/refinement [project-name]`
+**Invocation:** `/mcp-reference`
 
-An interactive backlog refinement ceremony. Tab acts as a facilitator, walking through the project's active tasks with the user to make sure every task is understood, scoped, and actionable before implementation begins.
+A reference skill that prints the complete Tab for Projects MCP documentation -- data model, tools, fields, and usage patterns. Loaded by all tab-for-projects agents to understand how to interact with the MCP.
 
-### Starting the session
-
-1. **Resolve the project.** If the user provided an argument, match it against the project list. Otherwise follow the standard project resolution flow.
-2. **Load project context.** Pull the goal, requirements, and design so Tab can evaluate whether tasks align with the project's intent.
-3. **List the active backlog.** Filter for tasks with status `todo` or `in_progress`.
-4. **Present the session overview:**
-   - Project name and goal (one line)
-   - Number of tasks in the backlog
-   - A scannable list showing each task's title, effort, impact, category, and whether it has a plan
-   - Call out tasks that look under-specified (no description, no plan, no effort estimate)
-
-Then ask the user how they want to proceed -- walk through everything in order, focus on a specific group, or start with the tasks that need the most attention.
-
-### Per-task refinement loop
-
-For each task the user wants to refine:
-
-1. **Present the task.** Show title, description, effort/impact estimates, category, group, plan, acceptance criteria, and what is missing or unclear.
-2. **Discuss and research.** Work through the task with the user:
-   - Clarify intent -- does the description capture *why* the task exists?
-   - Validate scope -- is this one task or three?
-   - Identify unknowns -- if the task touches unfamiliar parts of the codebase, spawn a background research agent to investigate rather than guessing.
-   - Check assumptions -- verify that assumptions about the current state of the code are actually true.
-   - Estimate effort -- discuss and calibrate using research findings.
-   - Define "done" -- capture acceptance criteria if the user has opinions about what done looks like.
-3. **Update the task.** Persist refined description, updated estimates, acceptance criteria, and notes immediately via the MCP. Updates happen as you go so nothing is lost if the session is interrupted.
-
-### What a refined task looks like
-
-- A description that someone with zero context would understand next week
-- An effort estimate grounded in codebase research, not vibes
-- Acceptance criteria that make "done" unambiguous (when the user has opinions)
-- Enough understanding that planning would be straightforward
-- No hidden unknowns -- uncertainty is flagged, not ignored
-
-### Session flow
-
-The session is conversational, not mechanical. Tab follows the user's energy:
-
-- If they want to dive deep on one task, dive deep.
-- If they want to skim and flag tasks that need work, skim.
-- If they realize the backlog is missing something, help capture it.
-- If they want to reorganize, regroup, or reprioritize, do it.
-
-### Ending the session
-
-When the user is done or the backlog is fully refined, Tab:
-
-1. Summarizes what changed -- how many tasks were refined, what was added, what is still pending.
-2. Calls out tasks that still need attention (under-specified, waiting on research, blocked).
-3. Notes any background agents still running.
-4. Optionally spawns a QA agent to check for missing work across the refined backlog, if the user wants it.
-
----
-
-## bugfix
+### document-reference
 
 **Package:** tab-for-projects
-**Invocation:** `/bugfix [project-name]`
+**Invocation:** `/document-reference`
 
-A focused bugfix session. The manager sets up project context and hands off to the bugfixer agent, which runs in the foreground and pair-programs with the user to hunt and fix bugs in real time.
+A reference skill that teaches advisory agents about document discipline. Loaded by the designer and tech lead. Covers document types and when to use them, create-vs-update discipline, tagging conventions, document ownership boundaries, and how to pass references between agents using document IDs.
 
-### How it works
+### document
 
-1. **Resolve the project.** Match the argument against the project list, or follow the standard resolution flow.
-2. **Load project context.** Fetch the project's goal, requirements, and design.
-3. **Gather knowledgebase context.** List the project's documents and identify architecture docs, conventions, or prior analysis that might help locate bugs.
-4. **Check for relevant tasks.** Look for tasks with `category: "bugfix"` or `status: "todo"` to find known bugs or areas of concern.
-5. **Spawn the bugfixer in the foreground.** The bugfixer agent (`tab-for-projects:bugfixer`) takes over the conversation with `run_in_background: false`. It receives the project ID, knowledgebase document IDs, relevant task IDs, and the user's focus area.
-6. **After the session.** The manager summarizes what was accomplished and offers to spawn the documenter to capture findings in the knowledgebase.
+**Package:** tab-for-projects
+**Invocation:** `/document [completed task IDs or description]`
 
-### Design principles
+A procedural skill for post-implementation knowledge capture. When the manager dispatches the tech lead (or another advisory agent) with this skill, the agent reads completed tasks and codebase, extracts decisions, patterns, and gotchas, and writes them into MCP knowledgebase documents.
 
-- The bugfixer is the only subagent that runs in the foreground and talks directly to the user. This is intentional -- bug hunting is collaborative and conversational.
-- The find-fix-verify loop is tight: find a bug, fix it immediately, verify with a test, move on. Bugs that are too large for the session get tracked as MCP tasks.
-- Every fix gets a test. A bug without a test is a bug that comes back.
-- The `.local/` directory accumulates reusable tools (test runners, repro scripts, coverage helpers) across sessions.
+### prompt-reference
+
+**Package:** tab-for-projects
+**Invocation:** `/prompt-reference`
+
+A reference skill for prompt quality conventions. Loaded by the planner to ensure tasks are written with clear descriptions, actionable plans, and testable acceptance criteria.
+
+### agentic-reference
+
+**Package:** tab-for-projects
+**Invocation:** `/agentic-reference`
+
+A reference skill for structural patterns and conventions when writing Claude Code agents and skills. Covers roles, workflows, constraints, triggers, and composition.
 
 ---
 

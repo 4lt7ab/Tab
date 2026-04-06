@@ -8,13 +8,11 @@
 > - `/tab/settings.json` -- tab default agent setting
 > - `/tab-for-projects/settings.json` -- tab-for-projects default agent setting
 > - `/tab/agents/tab.md` -- Tab agent definition
-> - `/tab-for-projects/agents/manager.md` -- manager agent (entry point, subagent protocol)
-> - `/tab-for-projects/agents/planner.md` -- planner subagent
-> - `/tab-for-projects/agents/qa.md` -- QA subagent
-> - `/tab-for-projects/agents/documenter.md` -- documenter subagent
-> - `/tab-for-projects/agents/coordinator.md` -- coordinator subagent
-> - `/tab-for-projects/agents/bugfixer.md` -- bugfixer subagent (foreground)
-> - `/tab-for-projects/agents/implementer.md` -- implementer subagent
+> - `/tab-for-projects/agents/manager.md` -- manager agent (orchestration layer)
+> - `/tab-for-projects/agents/designer.md` -- designer agent (advisory layer, future-leaning)
+> - `/tab-for-projects/agents/tech-lead.md` -- tech lead agent (advisory layer, past-leaning)
+> - `/tab-for-projects/agents/planner.md` -- planner agent (advisory layer, task plans)
+> - `/tab-for-projects/agents/developer.md` -- developer agent (execution layer)
 
 This repository is a Claude Code plugin marketplace containing two plugins: **tab** and **tab-for-projects**. Both are defined entirely in markdown and JSON -- no compiled code, no runtime dependencies.
 
@@ -114,41 +112,53 @@ Tab auto-switches profiles based on context and briefly announces the shift. Use
 
 | Component | Path | Role |
 |-----------|------|------|
-| Agent: manager | `/tab-for-projects/agents/manager.md` | Entry point -- talks to the user and the MCP, delegates codebase work |
-| Agent: planner | `/tab-for-projects/agents/planner.md` | Background subagent -- decomposes work into tasks with plans and acceptance criteria |
-| Agent: qa | `/tab-for-projects/agents/qa.md` | Background subagent -- validates work against plans, finds gaps, creates findings |
-| Agent: documenter | `/tab-for-projects/agents/documenter.md` | Background subagent -- captures knowledge from completed work into MCP documents |
-| Agent: coordinator | `/tab-for-projects/agents/coordinator.md` | Background subagent -- assesses project health, produces reports or dispatch instructions |
-| Agent: bugfixer | `/tab-for-projects/agents/bugfixer.md` | Foreground subagent -- pair-programs with the user to hunt and fix bugs |
-| Agent: implementer | `/tab-for-projects/agents/implementer.md` | Background subagent -- executes task plans, self-validates against acceptance criteria |
-| Skill: refinement | `/tab-for-projects/skills/refinement` | Backlog refinement ceremony for reviewing and grooming tasks |
-| Skill: bugfix | `/tab-for-projects/skills/bugfix` | Focused bugfix session -- hands off to the bugfixer agent |
+| Agent: manager | `/tab-for-projects/agents/manager.md` | Orchestration -- workflows, agent teams, dispatch |
+| Agent: designer | `/tab-for-projects/agents/designer.md` | Advisory -- forward-looking design docs, ADRs, architecture |
+| Agent: tech-lead | `/tab-for-projects/agents/tech-lead.md` | Advisory -- backward-looking codebase docs, patterns, conventions |
+| Agent: planner | `/tab-for-projects/agents/planner.md` | Advisory -- decomposes work into dependency-ordered task graphs |
+| Agent: developer | `/tab-for-projects/agents/developer.md` | Execution -- implements tasks, commits from worktrees |
+| Skill: mcp-reference | `/tab-for-projects/skills/mcp-reference` | Reference for the Tab for Projects MCP data model and tools |
+| Skill: document-reference | `/tab-for-projects/skills/document-reference` | Reference for document types, create-vs-update discipline, tagging |
+| Skill: document | `/tab-for-projects/skills/document` | Post-implementation knowledge capture procedure |
+| Skill: prompt-reference | `/tab-for-projects/skills/prompt-reference` | Prompt quality conventions and reference |
+| Skill: agentic-reference | `/tab-for-projects/skills/agentic-reference` | Conventions for writing Claude Code agents and skills |
 
 
-### Architecture Pattern: Manager Delegates to Subagents
+### Architecture Pattern: Three-Layer Model
 
-The manager agent is the only agent that talks to the user. It enforces a strict separation:
+The tab-for-projects agents are organized into three layers: orchestration, advisory, and execution.
 
-- **Manager** handles conversation and MCP operations (CRUD on projects, tasks, documents).
-- **Subagents** handle all codebase work (reading files, searching, running commands).
+```
+┌─────────────────────────────────────────────┐
+│            ORCHESTRATION                     │
+│               Manager                        │
+│    (workflows, agent teams, dispatch)         │
+├─────────────────────────────────────────────┤
+│          ADVISORY (Brain Trust)               │
+│                                               │
+│    Designer     Tech Lead     Planner         │
+│    (future →)   (← past)      (→ tasks)      │
+│    writes:      writes:       writes:         │
+│    design docs  codebase      task graphs     │
+│    ADRs         docs                          │
+│    arch docs    patterns                      │
+│                 conventions                   │
+├─────────────────────────────────────────────┤
+│            EXECUTION                          │
+│               Developer                       │
+│               (code)                          │
+└─────────────────────────────────────────────┘
+```
 
-Most subagents run in the background (`run_in_background: true`) so the main conversation thread is never blocked. The one exception is the bugfixer, which runs in the foreground and talks directly to the user. The manager spawns subagents with scoped prompts containing the relevant project context, task IDs, and knowledgebase document IDs. When a background subagent completes, the manager summarizes the result for the user.
+**Manager** (`tab-for-projects:manager`): The orchestration layer. Talks to the user and the MCP. Delegates work to advisory agents (individually or as agent teams for complex deliberation) and dispatches developers for implementation. Does not touch the codebase directly.
 
-The six named subagents and their responsibilities:
+**Designer** (`tab-for-projects:designer`): Advisory layer, future-leaning. Provides architectural judgment -- elicits requirements, evaluates alternatives, proposes architecture decisions. Writes design docs, ADRs, architecture overviews, and requirements docs. Passes document IDs to teammates. Loads `/document-reference` for document discipline.
 
-**Planner** (`tab-for-projects:planner`): Receives a work description or existing task IDs. Researches the codebase to ground its understanding, breaks work into right-sized tasks, writes implementation plans and acceptance criteria, and writes everything to the MCP via `create_task` or `update_task`.
+**Tech Lead** (`tab-for-projects:tech-lead`): Advisory layer, past-leaning. Provides codebase judgment -- reads code to understand actual patterns, verifies KB docs against codebase reality, flags drift and staleness. Writes and updates codebase pattern records, convention docs, and drift corrections. Handles post-implementation knowledge capture (dispatched with `/document` skill) and KB curation. Loads `/document-reference` for document discipline.
 
-**QA** (`tab-for-projects:qa`): Receives a validation scope (specific task IDs, a group key, or "full" for the entire project). Inspects both MCP records and the actual codebase. Reaches a verdict per task (pass, pass-with-notes, fail-with-reasons). Creates new tasks with `group_key: "qa-findings"` for any gaps discovered, and resets failed tasks to `todo` status.
+**Planner** (`tab-for-projects:planner`): Advisory layer, task-focused. Reads designer and tech lead documents, explores the codebase, and decomposes scope into dependency-ordered task graphs. Writes tasks with descriptions, plans, acceptance criteria, effort estimates, and dependency edges. Tasks reference advisory documents so developers get the full context chain.
 
-**Documenter** (`tab-for-projects:documenter`): Receives completed task IDs. Reads the tasks and the actual codebase, extracts architectural decisions, patterns, and gotchas, then writes them into MCP knowledgebase documents. Updates existing documents when possible to avoid duplication. Attaches new documents to the project via `update_project`.
-
-**Coordinator** (`tab-for-projects:coordinator`): Receives a project ID, scope, and mode (report or coordinate). Reads the full project state — knowledgebase, backlog, goals — and synthesizes it into either a structured assessment (report mode) or a combination of direct MCP actions and dispatch instructions for specialist agents (coordinate mode). Does not touch the codebase; operates purely on MCP data.
-
-**Bugfixer** (`tab-for-projects:bugfixer`): Runs in the **foreground** (`run_in_background: false`) — the only subagent that talks directly to the user. Pair-programs to hunt and fix bugs in real time. Reads code, runs tests, writes fixes, and tracks findings in the MCP. Spawned via the `/bugfix` skill.
-
-**Implementer** (`tab-for-projects:implementer`): Receives task IDs with existing plans. Verifies plan assumptions against the current codebase, executes the plan, self-validates against acceptance criteria, and updates task status and implementation fields in the MCP. Does not write plans — if a task has no plan, it flags it and skips it.
-
-The manager can also spawn **ad-hoc subagents** for generic codebase work that does not fit the named roles.
+**Developer** (`tab-for-projects:developer`): The execution layer. Receives tasks with plans, gathers context from the document store and codebase, implements the solution, verifies with tests, and commits from worktrees. Benefits from the advisory layer indirectly -- tasks reference accurate KB documents maintained by the designer and tech lead.
 
 ### The Three MCP Data Layers
 
@@ -158,7 +168,7 @@ The Tab for Projects MCP organizes data into three layers, each with list/get/cr
 
 **Tasks** -- the unit of trackable work. Tasks live inside a project and carry rich fields: title, description, plan, implementation, acceptance_criteria, effort (trivial through extreme), impact (trivial through extreme), category (feature, bugfix, refactor, etc.), group_key (flat grouping label), and status (todo, in_progress, done, archived).
 
-**Documents** -- the knowledgebase layer. Documents are independent top-level entities with a title, content (markdown, up to 100k characters), and tags. They are linked to projects via a many-to-many relationship managed through `update_project` (attach_documents / detach_documents). Documents are designed for agent consumption: architecture decisions, established patterns, gotchas, and integration notes that make future planner, QA, and documenter runs more effective.
+**Documents** -- the knowledgebase layer. Documents are independent top-level entities with a title, content (markdown, up to 100k characters), and tags. They are linked to projects via a many-to-many relationship managed through `update_project` (attach_documents / detach_documents). Documents are designed for agent consumption: architecture decisions, established patterns, gotchas, and integration notes that make future advisory runs more effective. The designer writes forward-looking design docs and ADRs; the tech lead writes backward-looking codebase docs, patterns, and conventions.
 
 ---
 
@@ -187,22 +197,25 @@ marketplace.json
     |     +-- skills/
     |           +-- draw-dino/
     |           +-- listen/
+    |           +-- think/
+    |           +-- teach/
     |
     +-- tab-for-projects/
           |
           +-- plugin.json          (name, agents, skills)
           +-- settings.json        (default agent: tab-for-projects:manager)
           +-- agents/
-          |     +-- manager.md     (entry point, user-facing)
-          |     +-- planner.md     (background subagent)
-          |     +-- qa.md          (background subagent)
-          |     +-- documenter.md  (background subagent)
-          |     +-- coordinator.md (background subagent)
-          |     +-- bugfixer.md    (foreground subagent)
-          |     +-- implementer.md (background subagent)
+          |     +-- manager.md     (orchestration layer)
+          |     +-- designer.md    (advisory layer — future-leaning)
+          |     +-- tech-lead.md   (advisory layer — past-leaning)
+          |     +-- planner.md     (advisory layer — task plans)
+          |     +-- developer.md   (execution layer)
           +-- skills/
-                +-- refinement/
-                +-- bugfix/
+                +-- mcp-reference/
+                +-- document-reference/
+                +-- document/
+                +-- prompt-reference/
+                +-- agentic-reference/
 
 ```
 
@@ -216,40 +229,41 @@ marketplace.json
          v
 +--------+----------+       +---------------------------+
 |     Manager       |<----->|   Tab for Projects MCP    |
-| (main thread)     |       |                           |
+| (orchestration)   |       |                           |
 |                   |       |  +-------+ +------+ +---+ |
 | - Conversation    |       |  |Project| | Task | |Doc| |
 | - MCP CRUD        |       |  +-------+ +------+ +---+ |
-| - Spawns agents   |       +---------------------------+
+| - Agent teams     |       +---------------------------+
+| - Dispatch        |
 +--+-----+-----+---+
    |     |     |
-   |     |     +--- foreground (run_in_background: false)
-   |     |                |
-   |     |                v
-   |     |          +-----------+
-   |     |          | Bugfixer  |
-   |     |          |           |
-   |     |          | - Talks   |
-   |     |          |   to user |
-   |     |          | - Fix bugs|
-   |     |          | - Run     |
-   |     |          |   tests   |
-   |     |          +-----------+
-   |     |
-   |  background subagents (run_in_background: true)
+   |  advisory layer (brain trust)
    |     |
    v     v
-+--------+ +--------+ +------------+ +-------------+ +-------------+
-| Planner| |   QA   | | Documenter | | Coordinator | | Implementer |
-|        | |        | |            | |             | |             |
-| - Read | | - Read | | - Read     | | - Read MCP  | | - Read code |
-|   code | |   code | |   code     | |   state     | | - Execute   |
-| - Write| | - Check| | - Write    | | - Assess    | |   plans     |
-|   tasks| |   work | |   docs     | |   health    | | - Self-     |
-|   (MCP)| | - Write| | - Attach   | | - Dispatch  | |   validate  |
-|        | |   tasks| |   to proj  | |   instrs    | | - Write MCP |
-|        | |   (MCP)| |   (MCP)    | |   (MCP)     | |             |
-+--------+ +--------+ +------------+ +-------------+ +-------------+
++----------+ +-----------+ +---------+
+| Designer | | Tech Lead | | Planner |
+|          | |           | |         |
+| - Design | | - Read    | | - Read  |
+|   docs   | |   code    | |   docs  |
+| - ADRs   | | - Update  | | - Write |
+| - Arch   | |   docs    | |   tasks |
+|   docs   | | - Verify  | | - Plans |
+|          | |   KB      | | - Deps  |
++----------+ +-----------+ +---------+
+   |
+   |  execution layer
+   |
+   v
++-----------+
+| Developer |
+|           |
+| - Read    |
+|   code    |
+| - Execute |
+|   plans   |
+| - Test    |
+| - Commit  |
++-----------+
 ```
 
 ---
@@ -260,24 +274,26 @@ A typical workflow from user request to completed, documented work:
 
 1. **User talks to the manager.** Describes work they want to track or execute.
 2. **Manager creates/updates project-level data** via the MCP (goal, requirements, design).
-3. **Manager spawns the planner** in the background with the project ID and work description. The planner researches the codebase, decomposes the work into tasks with plans and acceptance criteria, and writes them to the MCP.
-4. **User (or manager) triggers implementation.** Work happens on the tasks (via ad-hoc subagents or the user themselves).
-5. **Manager spawns QA** in the background with the task IDs to validate. QA reads the MCP records and the actual codebase, compares what was planned against what was built, and writes verdicts. Failed tasks are reset to `todo`; gaps become new tasks under `group_key: "qa-findings"`.
-6. **Manager spawns the documenter** in the background with completed task IDs. The documenter reads the tasks and codebase, extracts decisions and patterns, and writes them into MCP knowledgebase documents. These documents feed back into future planner and QA runs as additional context.
+3. **Manager assembles the advisory brain trust.** For complex work, the manager creates an agent team with the designer, tech lead, and planner (or a subset). For simpler work, it dispatches a single advisory agent directly.
+4. **Advisory agents deliberate.** The designer writes design docs and ADRs. The tech lead reads the codebase and writes/updates pattern and convention docs. The planner reads their documents and creates dependency-ordered tasks. All communication uses document IDs as the interface.
+5. **Manager dispatches developers** against ready tasks in worktrees. Developers gather context from the task plan and linked KB documents, implement, test, and commit.
+6. **Manager dispatches the tech lead** with the `/document` skill for post-implementation knowledge capture. The tech lead reads completed code, compares it to the task plan, and writes/updates documents about what was actually implemented.
 
 ```
 User --> Manager --> MCP (projects, tasks, documents)
               |
-              +--> Coordinator  --> assesses project, dispatches work
-              +--> Planner      --> writes tasks to MCP
-              +--> Implementer  --> executes plans, updates tasks in MCP
-              +--> QA           --> validates work, writes findings to MCP
-              +--> Documenter   --> writes knowledge docs to MCP
-              +--> Bugfixer     --> fixes bugs (foreground, talks to user)
+              +--> Designer    --> writes design docs, ADRs (advisory)
+              +--> Tech Lead   --> writes/updates codebase docs (advisory)
+              +--> Planner     --> writes task graphs (advisory)
+              +--> Developer   --> implements tasks, commits (execution)
                                        |
                                        v
-                              Future planner/QA/coordinator runs
-                              read these docs as context
+                              Tech Lead captures knowledge
+                              from completed work via /document
+                                       |
+                                       v
+                              Future advisory runs read these
+                              docs as context
 ```
 
-The knowledge loop is the key architectural insight: the documenter captures what was learned, and future planner and QA runs consume that knowledge to produce better plans and more grounded reviews.
+The knowledge loop is the key architectural insight: the tech lead captures what was learned after implementation, and future advisory runs consume that knowledge to produce better designs, more accurate codebase docs, and more grounded task plans.
