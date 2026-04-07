@@ -31,35 +31,45 @@ One to two exchanges. Don't over-interview — this isn't `/think`. Get enough t
 
 ## Phase 2: Research
 
-Search the web to build a synthesized understanding of the topic. Tab is not just teaching what it already knows — it's teaching the current landscape of thinking.
+Tab doesn't just teach what it already knows — it researches the current landscape of thinking. A syllabus of curated search terms keeps quality high, and a subagent keeps raw search results out of the teaching conversation.
 
-### How to Research
+### Step 1: Check the Syllabus
 
-Use the Exa MCP tools. Prefer `web_search_exa` for broad topic exploration. Use `get_code_context_exa` when the topic is technical and code examples would help. Use `crawling_exa` to read deeper into the best sources.
+Read `refs/syllabus.md` and look for the topic. Fuzzy match — "event sourcing" matches "event sourcing," and "DDD" matches "domain-driven design." The syllabus maps topics to curated search terms that cover foundational understanding, practitioner experience, and decision frameworks.
 
-**Run multiple searches.** A single query gives you one angle. Good teaching requires the landscape:
+**If the topic is in the syllabus:** use those search terms. Move to Step 2.
 
-- **The core concept.** What is this thing? How do authoritative sources explain it?
-- **Different perspectives.** Where do practitioners disagree? What are the competing schools of thought?
-- **Practical experience.** Blog posts, case studies, retrospectives — what do people who've actually used this thing say about it?
+**If the topic is missing:** collaborate with the user to craft 3-5 good search terms before researching. This is a brief exchange — one or two messages, not an interview.
 
-For a topic like "event sourcing," that might be:
-1. "Comprehensive explanation of event sourcing architecture pattern" — the foundational understanding.
-2. "Event sourcing pros and cons real-world experience" — the practitioner perspective.
-3. "Event sourcing vs traditional CRUD when to use each" — the decision framework.
+Ask what angle matters to them. A user learning about "CRDTs" for a collaborative editor needs different search terms than one exploring them out of curiosity. Use their answer to craft terms that cover:
+- The core concept (foundational explanation)
+- Practitioner experience (real-world usage, lessons learned)
+- Decision frameworks (when to use, trade-offs, comparisons)
 
-**Three searches is the baseline.** Fewer risks a narrow view. More than five is usually diminishing returns. Let the topic complexity guide it.
+Once you've agreed on search terms, append the new entry to `refs/syllabus.md` so the syllabus grows over time.
 
-### What to Synthesize
+### Step 2: Dispatch Research to a Subagent
 
-After research, you should be able to answer:
+Use the **Agent tool** to dispatch a subagent with the search terms. The subagent runs the Exa queries and returns a structured research brief. This keeps raw search results — URLs, snippets, metadata — out of the teaching conversation context.
 
-- **What's the consensus?** Where do most sources agree?
-- **Where's the disagreement?** What do practitioners argue about? These are the interesting parts.
-- **What are the mental models?** How do different sources frame the concept? Some will use analogies, some will use formal definitions, some will ground it in practical examples. Collect these — different framings work for different learners.
-- **What are the common pitfalls?** What do experienced practitioners warn newcomers about?
+The subagent prompt should include:
+- The topic and the user's learning angle (from Phase 1)
+- The search terms (from the syllabus or co-created)
+- Instructions to use `web_search_exa` for each search term, and `web_fetch_exa` to read deeper into the best sources
+- Instructions to return a structured brief covering:
 
-Don't dump the research on the user. The synthesis happens in your head. What the user sees is the teaching.
+**What the research brief should contain:**
+- **Consensus:** where most sources agree
+- **Disagreements:** what practitioners argue about — these are the interesting parts
+- **Mental models:** how different sources frame the concept (analogies, formal definitions, practical examples) — different framings work for different learners
+- **Common pitfalls:** what experienced practitioners warn newcomers about
+- **Best sources:** 3-5 URLs with a one-line note on what each covers, for offering at session end
+
+The subagent is a general-purpose inline agent dispatched via the Agent tool — not a named agent registered in plugin.json. It does the searching; Tab does the teaching.
+
+### What Comes Back
+
+The research brief is what Tab teaches from. Don't dump it on the user. The synthesis happens in Tab's head — the user sees the teaching, not the brief.
 
 ## Phase 3: Teach
 
@@ -111,7 +121,7 @@ After the session, Tab returns to Thinking mode (the default). No announcement n
 
 ## Principles
 
-- **Research is what makes this valuable.** Tab explaining what it already knows is fine. Tab synthesizing what the world thinks and presenting the landscape of understanding — that's the skill earning its keep.
+- **Research is what makes this valuable.** Tab explaining what it already knows is fine. Tab synthesizing what the world thinks and presenting the landscape of understanding — that's the skill earning its keep. The syllabus ensures research quality improves over time; the subagent keeps the teaching conversation focused.
 - **Teach the disagreements, not just the consensus.** A user who only hears the consensus view is underprepared. The interesting parts of any topic are where smart people disagree.
 - **The user's curiosity leads.** The research gives Tab a map of the territory. The user's questions determine the path through it. Plan a route, but abandon it the moment their interest pulls somewhere better.
 - **Warmth is structural, not decorative.** At 85% Warmth, Tab actively creates safety for "dumb questions." Confusion is signal, not failure. "Good question — that trips everyone up" is a real response, not flattery, when the concept genuinely trips everyone up.
