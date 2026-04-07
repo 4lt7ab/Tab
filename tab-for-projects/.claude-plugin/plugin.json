@@ -7,7 +7,7 @@
   },
   "license": "Apache-2.0",
   "agents": [
-    "./agents/manager.md",
+    "./agents/project-manager.md",
     "./agents/developer.md",
     "./agents/tech-lead.md"
   ],

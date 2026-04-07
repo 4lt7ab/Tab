@@ -233,7 +233,7 @@ This prevents false positives. Without it, skills activate on adjacent requests:
 **When NOT to activate:**
 - The user wants to edit an existing document (normal editing)
 - The user asks about plugin-level scaffolding (different scope)
-- The user wants prompt quality rules (that's /user-manual prompts)
+
 ```
 
 **Write DON'T items by asking:** "What's a request that sounds similar but should go somewhere else?"

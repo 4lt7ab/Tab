@@ -1,7 +1,7 @@
 ---
 name: user-manual
-description: "Unified reference for Tab for Projects — MCP tools, document discipline, prompt quality, agent/skill authoring, and agent roster. Pass a keyword to load a specific reference."
-argument-hint: "<mcp | documents | prompts | agents | roster>"
+description: "Unified reference for Tab for Projects — MCP tools, document discipline, agent/skill authoring, and agent roster. Pass a keyword to load a specific reference."
+argument-hint: "<mcp | documents | agents | roster>"
 ---
 
 # User Manual
@@ -12,8 +12,8 @@ A router skill that loads reference content on demand. Each reference lives in a
 
 **When to activate:**
 - The user runs `/user-manual` with or without a keyword
-- An agent needs reference material for MCP tools, document conventions, prompt quality, agent/skill authoring, or the agent roster
-- Any situation where the old `/mcp-reference`, `/document-reference`, `/prompt-reference`, or `/agentic-reference` would have activated
+- An agent needs reference material for MCP tools, document conventions, agent/skill authoring, or the agent roster
+- Any situation where the old `/mcp-reference`, `/document-reference`, or `/agentic-reference` would have activated
 
 **When NOT to activate:**
 - The user is asking about the Tab agent (standalone personality plugin) — different plugin entirely
@@ -25,7 +25,6 @@ A router skill that loads reference content on demand. Each reference lives in a
 |---------|---------|------|----------------|
 | `mcp` | `mcp-reference`, `tools`, `data-model` | `refs/mcp.md` | MCP data model, tool signatures, usage patterns |
 | `documents` | `document-reference`, `docs`, `kb` | `refs/documents.md` | Document types, create-vs-update, tagging, ownership |
-| `prompts` | `prompt-reference`, `quality`, `writing` | `refs/prompts.md` | Six prompt quality rules, clarity checklist |
 | `agents` | `agentic-reference`, `skills`, `authoring` | `refs/agents.md` | Agent/skill file anatomy, roles, workflows, constraints |
 | `roster` | `roles`, `team`, `who` | `refs/roster.md` | Agent roster — roles, layers, capabilities, ownership, handoff guide |
 
