@@ -115,6 +115,22 @@ A typical flow for a new feature:
 
 You don't have to follow this linearly. Jump in wherever makes sense. Start with the developer if you just want code written. Start with the tech lead if you need a design first. Start with the project manager if you want to organize your thinking.
 
+## Skills — Your Slash Commands
+
+Skills are workflows that orchestrate the agents for you. Instead of talking to each agent individually, you run a slash command and the right agents get dispatched in the right order.
+
+| Command | What it does | When to reach for it |
+|---------|-------------|---------------------|
+| `/kickoff` | Takes an idea and stands up a full project — goal, requirements, design, KB docs, and tasks. | You're starting something new. |
+| `/plan` | Designs a feature and decomposes it into implementation tasks within an existing project. | You know what to build next but need it broken into pieces. |
+| `/build` | Picks up ready tasks and implements them. Handles blockers, captures knowledge as it goes. | You want code written. The big one. |
+| `/status` | Quick health brief — what's ready, blocked, stale, and progressing. | You want to know where things stand. |
+| `/review` | Retrospective — compares what was built against what was planned, audits KB accuracy. | A batch of work just landed and you want an honest look-back. |
+| `/maintain` | Housekeeping sweep — cleans up task shape, curates the KB, freshens in-code docs. | Things feel messy or it's been a while since anyone tidied up. |
+| `/investigate` | Analyzes code and persists the findings as KB documentation. | You want to understand how something works *and* remember it next session. |
+
+You can also run `/user-manual` anytime to pull up this guide again.
+
 ## Creative Ways to Use It
 
 **As a memory layer.** Even if you're doing all the coding yourself, use the project manager to track what you're working on and the tech lead to document decisions. Next session, everything's still there.

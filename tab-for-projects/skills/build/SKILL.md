@@ -2,13 +2,6 @@
 name: build
 description: "Multi-task execution loop — implements ready tasks, reacts to blockers, captures knowledge. Use when the user wants to build, implement tasks, or invokes /build."
 argument-hint: "<task ID, or project ID to pick from ready tasks>"
-mode: headless
-agents:
-  - project-manager
-  - tech-lead
-  - developer
-requires-mcp:
-  - tab-for-projects
 ---
 
 # Build — Multi-Task Execution Loop
@@ -42,19 +35,31 @@ The execution play. The crown jewel. Picks up ready tasks, dispatches the Develo
    ```
    If no tasks are ready, exit immediately and tell the user — suggest `/plan` to create tasks or `/status` to diagnose blockers.
 
+2. **Group tasks by codebase affinity.** Read each ready task's description, plan, and group field. Cluster tasks that will touch the same areas of the codebase — same module, same subsystem, same files. The goal: a developer who scans an area once can implement several tasks there without rescanning.
+
+   Grouping heuristics (in priority order):
+   - **Explicit group match** — tasks with the same `group` field belong together.
+   - **File overlap** — tasks whose plans reference the same files or directories.
+   - **Domain affinity** — tasks in the same domain (frontend, backend, infrastructure, data) that lack stronger signals.
+   - **Dependency chains** — if task B depends on task A and both are ready, group them so the same developer handles A then B without context loss.
+
+   A single task that doesn't cluster with anything is its own group of one — that's fine.
+
+   **Group size limit:** Cap at 4-5 tasks per group. Beyond that, context bloat outweighs the scanning savings.
+
 ### Execution Loop
 
-2. **Pick the next task.** If the user specified a task, start there. Otherwise, take the next unblocked task from the ready list.
+3. **Pick the next group.** Take the next task group from the grouped list. If the user specified a single task ID, skip grouping — it's a group of one.
 
-3. **Dispatch Developer** in a worktree (implementation mode) with:
-   - `task_id`: the task to implement
+4. **Dispatch Developer** in a worktree (implementation mode) with:
+   - `task_ids`: the list of task IDs in this group (ordered by dependency, then effort — lightest first)
    - `project_id`: the project ID
-   - `document_ids`: IDs of relevant KB documents (search for docs matching the task's topic/group)
+   - `document_ids`: IDs of relevant KB documents (search for docs matching the group's topic area)
    - `domain_hint`: inferred from task context if obvious (frontend, backend, infrastructure, data)
 
-   The Developer claims the task (`in_progress`), implements it, runs tests, commits, merges, marks it `done`, and returns an implementation report.
+   The Developer claims all tasks (`in_progress`), implements them sequentially within a single session (benefiting from shared codebase context), runs tests, commits, merges, and returns an implementation report covering all tasks in the group.
 
-4. **Read the Developer's implementation report.** Branch based on the outcome:
+5. **Read the Developer's implementation report.** The report contains a per-task breakdown. Branch based on each task's outcome:
 
    ### If `done` — Success Path
 
@@ -74,7 +79,7 @@ The execution play. The crown jewel. Picks up ready tasks, dispatches the Develo
       - Collect them. Do NOT create tasks automatically.
       - Surface them in the final summary for the user to decide on.
 
-   c. **Proceed to step 5.**
+   c. **Proceed to step 6.**
 
    ### If `blocked` — Support Path
 
@@ -101,21 +106,18 @@ The execution play. The crown jewel. Picks up ready tasks, dispatches the Develo
 
    a. Record the failure reason.
    b. Do not retry. Surface the failure in the summary.
-   c. Proceed to step 5.
+   c. Proceed to step 6.
 
-5. **Check for next ready task.** Refresh the ready task list:
+6. **Check for next group.** If groups remain in the current batch, loop back to step 3. If all groups are exhausted, refresh the ready task list:
    ```
    get_ready_tasks({ project_id: "..." })
    ```
 
-   Completing a task may have unblocked new ones (dependency resolution).
-
-   - If ready tasks exist, loop back to step 2.
-   - If no ready tasks remain (all done, all blocked, or none exist), exit the loop.
+   Completing tasks may have unblocked new ones (dependency resolution). If new ready tasks appear, re-group them (step 2) and continue. If no ready tasks remain (all done, all blocked, or none exist), exit the loop.
 
 ### Summary
 
-6. **Present the build summary.**
+7. **Present the build summary.**
 
 ## Output
 
@@ -134,9 +136,11 @@ The execution play. The crown jewel. Picks up ready tasks, dispatches the Develo
 - **No ready tasks at start:** Exit immediately. Tell the user nothing is ready to build. Suggest `/status` to diagnose or `/plan` to create work.
 - **All tasks block:** After attempting support resolution for each, exit the loop. The summary should clearly explain what's stuck and why. Multiple tasks blocking on the same issue is a signal worth surfacing.
 - **Single task specified but it's blocked:** Don't silently pick another task. Tell the user their requested task is blocked, explain why, and ask if they want to build other ready tasks instead.
+- **Only one ready task:** Skip grouping. It's a group of one.
+- **Tasks span unrelated areas:** Don't force them into a group. Two unrelated tasks in separate groups (each with one developer) is better than one bloated group where the developer loses focus.
 - **Developer deviates from the plan:** Deviations are recorded in the implementation report. Surface them in the summary — they're information, not errors. The user should know when implementation diverged from the task plan.
 - **Long-running loop:** There's no artificial limit on iterations. The loop runs until ready tasks are exhausted. The user can interrupt at any time.
 
 ## Future Enhancement
 
-Parallel worktree dispatch — running multiple Developers simultaneously on independent tasks — is architecturally possible (worktrees provide isolation) but not implemented in this version. Start sequential, prove the loop, consider parallel later.
+Parallel worktree dispatch — running multiple Developer groups simultaneously in separate worktrees — is architecturally possible (worktrees provide isolation, groups are independent by design) but not implemented in this version. The current model dispatches groups sequentially. Parallel dispatch is the natural next step once the grouping model is proven.

@@ -2,12 +2,6 @@
 name: investigate
 description: "Understand how something works in the codebase and persist that understanding as knowledge. Use when the user wants to investigate, explore, or understand a module, pattern, or subsystem, or invokes /investigate."
 argument-hint: "<what to investigate — module, subsystem, pattern, or question>"
-mode: headless
-agents:
-  - developer
-  - tech-lead
-requires-mcp:
-  - tab-for-projects
 ---
 
 # Investigate — Code Understanding to KB

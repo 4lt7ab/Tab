@@ -2,12 +2,6 @@
 name: kickoff
 description: "Take an idea and stand up a fully-formed project ready to build. Use when the user has a new idea or wants to start a new project, or invokes /kickoff."
 argument-hint: "<idea description or path to IDEA.md>"
-mode: conversational
-agents:
-  - project-manager
-  - tech-lead
-requires-mcp:
-  - tab-for-projects
 ---
 
 # Kickoff — New Project Ceremony

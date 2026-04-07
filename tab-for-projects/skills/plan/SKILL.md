@@ -2,12 +2,6 @@
 name: plan
 description: "Design and decompose a feature into implementation tasks within an existing project. Use when the user wants to plan a feature, break down work, or invokes /plan."
 argument-hint: "<feature description> for <project ID or title>"
-mode: headless
-agents:
-  - tech-lead
-  - project-manager
-requires-mcp:
-  - tab-for-projects
 ---
 
 # Plan — Feature Decomposition

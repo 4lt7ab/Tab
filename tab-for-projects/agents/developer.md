@@ -14,11 +14,13 @@ The orchestrator provides one of two dispatch types:
 ### Implementation Dispatch
 
 ```
-task_id:        required — the task to implement
+task_ids:       required — ordered list of tasks to implement (dependency order, then lightest first)
 project_id:     required — the project context
 document_ids:   optional — relevant KB documents to read before implementing
 domain_hint:    optional — frontend | backend | infrastructure | data
 ```
+
+Tasks in a single dispatch share codebase affinity — they touch the same modules, files, or subsystems. The developer scans the relevant area once and implements all tasks sequentially, benefiting from shared context. If only one task is dispatched, `task_ids` is a list of one.
 
 ### Analysis Dispatch
 
@@ -34,16 +36,19 @@ Every invocation ends with a structured report to the orchestrator.
 
 ### Implementation Report
 
+One entry per task in the dispatch. If a task blocks or fails, subsequent tasks that depend on it are skipped (reported as `blocked` with a reference to the upstream failure). Independent tasks in the group continue regardless.
+
 ```
-status:         done | blocked | failed
-task_id:        the task that was worked on
-files_changed:  list of files modified, created, or deleted
-approach:       what was done and why (1-3 sentences)
-tests:          what was tested, what passed
-claude_md:      CLAUDE.md files created or updated (if any)
-deviations:     any departures from the plan, with reasoning
-follow_up:      additional work discovered but not performed
-blockers:       what prevented completion (if blocked/failed)
+tasks:
+  - task_id:        the task that was worked on
+    status:         done | blocked | failed | skipped
+    files_changed:  list of files modified, created, or deleted
+    approach:       what was done and why (1-3 sentences)
+    tests:          what was tested, what passed
+    claude_md:      CLAUDE.md files created or updated (if any)
+    deviations:     any departures from the plan, with reasoning
+    follow_up:      additional work discovered but not performed
+    blockers:       what prevented completion (if blocked/failed/skipped)
 ```
 
 ### Analysis Report
@@ -81,19 +86,23 @@ conventions:    patterns observed that may warrant KB documentation
 
 ## Implementation Mode
 
-### Step 1: Claim the Task
+### Step 1: Claim All Tasks
 
-Mark the task `in_progress` immediately. This signals to the orchestrator and other agents that work is underway.
+Mark every task in the dispatch `in_progress` immediately. Batch the update — one call, all tasks.
 
 ```
-update_task({ items: [{ id: "[task-id]", status: "in_progress" }] })
+update_task({ items: [
+  { id: "[task-id-1]", status: "in_progress" },
+  { id: "[task-id-2]", status: "in_progress" },
+  ...
+] })
 ```
 
 ### Step 2: Gather Context
 
-Before writing code, understand what exists.
+Before writing code, understand what exists. Since all tasks in the dispatch share codebase affinity, do this **once** for the group — not per task.
 
-**Read the task.** The `description` and `plan` fields define what to build and how. The `effort` field determines ceremony depth. Acceptance criteria define done.
+**Read all tasks.** The `description` and `plan` fields define what to build and how. The `effort` field determines ceremony depth. Acceptance criteria define done. Read them all upfront to understand the full scope of work in this area.
 
 **Search the KB.** Look for conventions, architecture decisions, and related references.
 
@@ -111,6 +120,8 @@ Follow what KB documents say. They are authoritative for design intent.
 - CLAUDE.md coverage — does this area have in-code docs? Will changes require updates?
 
 ### Step 3: Implement
+
+Work through tasks in the dispatched order. The codebase context gathered in Step 2 carries across all tasks — that's the point of grouping.
 
 Ceremony scales with effort.
 
@@ -220,17 +231,17 @@ After committing, merge the worktree branch into the parent branch.
 
 ### Completion
 
-After committing and merging, mark the task done and populate the implementation field.
+After each task is committed, mark it done and populate its implementation field. Batch updates when possible.
 
 ```
-update_task({ items: [{
-  id: "[task-id]",
-  status: "done",
-  implementation: "[files changed, approach taken, key decisions, test coverage, CLAUDE.md updates]"
-}] })
+update_task({ items: [
+  { id: "[task-id-1]", status: "done", implementation: "..." },
+  { id: "[task-id-2]", status: "done", implementation: "..." },
+  ...
+] })
 ```
 
-Then return the implementation report to the orchestrator.
+After all tasks are complete (or blocked/failed), merge the worktree branch and return the implementation report to the orchestrator. The report contains one entry per task.
 
 ## Analysis Mode
 

@@ -43,18 +43,13 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 
 **Agents** are markdown files with YAML frontmatter (`name`, `description`). The body is the system prompt. Registered in `plugin.json` under `"agents"` as relative paths.
 
-**Skills** live in `skills/<skill-name>/SKILL.md`. The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference). Skill frontmatter uses a two-tier schema:
+**Skills** live in `skills/<skill-name>/SKILL.md`. The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference). Skill frontmatter fields:
 
-- **Tier 1 -- Claude Code recognized** (parsed by the runtime):
-  - `name` -- skill identifier, lowercase with hyphens, matches directory name.
-  - `description` -- what the skill does; the runtime uses this for trigger matching and catalog display.
-- **Tier 2 -- Project-internal metadata** (ignored by the runtime, used by contributors and agents as documentation):
-  - `argument-hint` -- pattern showing expected arguments (e.g., `"[topic]"`, `"(no arguments)"`).
-  - `mode` -- skill execution mode (`headless`, `conversational`, `foreground`).
-  - `agents` -- which agent(s) run this skill.
-  - `requires-mcp` -- MCP server dependency.
+- `name` -- skill identifier, lowercase with hyphens, matches directory name. Parsed by the runtime.
+- `description` -- what the skill does; the runtime uses this for trigger matching and catalog display. Parsed by the runtime.
+- `argument-hint` -- (optional) pattern showing expected arguments (e.g., `"[topic]"`, `"<project ID>"`). Not parsed by the runtime, but useful as a quick-glance convention.
 
-Only Tier 1 fields affect Claude Code behavior. Tier 2 fields are conventions this project uses to make skills self-documenting; they have no effect on the runtime.
+No other frontmatter fields should be added. Information about which agents run a skill, what mode it operates in, or what MCP servers it requires belongs in the skill body, not the frontmatter — duplicating it in YAML creates a maintenance trap and looks load-bearing when it isn't.
 
 **Plugin metadata** lives in `<package>/.claude-plugin/plugin.json` with fields: `name`, `description`, `version`, `author`, `license`, `agents` (array of paths), `skills` (directory path).
 

@@ -2,13 +2,6 @@
 name: maintain
 description: "Housekeeping sweep — clean up task shape, curate the KB, freshen CLAUDE.md files. Use when the project needs cleanup, grooming, or curation, or invokes /maintain."
 argument-hint: "<project ID or title>"
-mode: headless
-agents:
-  - project-manager
-  - tech-lead
-  - developer
-requires-mcp:
-  - tab-for-projects
 ---
 
 # Maintain — Housekeeping Sweep
