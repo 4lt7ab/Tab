@@ -33,7 +33,6 @@ After installation, confirm the Tab agent is active:
 
 The `tab-for-projects` plugin provides:
 - **Agent** — `developer` (codebase owner, implementation, analysis, in-code docs).
-- **Skills** — project management and KB curation are handled inline by skills. `user-manual` provides a unified reference router with modules for MCP tools, document discipline, prompt quality, and agent/skill authoring.
 
 ### Additional prerequisite
 

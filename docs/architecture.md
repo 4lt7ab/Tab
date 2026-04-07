@@ -109,18 +109,10 @@ Tab auto-switches profiles based on context and briefly announces the shift. Use
 | Component | Path | Role |
 |-----------|------|------|
 | Agent: developer | `/tab-for-projects/agents/developer.md` | Codebase owner -- implementation, analysis, in-code docs |
-| Skill: kickoff | `/tab-for-projects/skills/kickoff` | Take an idea and stand up a fully-formed project |
-| Skill: plan | `/tab-for-projects/skills/plan` | Design and decompose a feature into tasks |
-| Skill: build | `/tab-for-projects/skills/build` | Multi-task execution loop |
-| Skill: investigate | `/tab-for-projects/skills/investigate` | Understand how something works in the codebase |
-| Skill: status | `/tab-for-projects/skills/status` | Quick project health brief |
-| Skill: maintain | `/tab-for-projects/skills/maintain` | Housekeeping sweep -- task shape, KB curation |
-| Skill: review | `/tab-for-projects/skills/review` | Retrospective -- did we build what we planned? |
-| Skill: user-manual | `/tab-for-projects/skills/user-manual` | Quickstart guide to using the plugin |
 
 ### Architecture
 
-The plugin has one agent (developer) and multiple skills. Skills handle project management, planning, KB curation, and other workflow concerns inline -- there are no separate orchestration or advisory agents. The developer agent owns the codebase: it receives tasks with plans, gathers context from KB documents and the codebase, implements the solution, maintains in-code documentation (CLAUDE.md files), verifies with tests, and commits from worktrees.
+The plugin has one agent (developer). The developer agent owns the codebase: it receives tasks with plans, gathers context from KB documents and the codebase, implements the solution, maintains in-code documentation (CLAUDE.md files), verifies with tests, and commits from worktrees.
 
 ### The Three MCP Data Layers
 
@@ -166,50 +158,29 @@ marketplace.json
           |
           +-- plugin.json          (name, agents, skills)
           +-- agents/
-          |     +-- developer.md        (codebase owner)
-          +-- skills/
-                +-- kickoff/       (new project ceremony)
-                +-- plan/          (feature decomposition)
-                +-- build/         (multi-task execution)
-                +-- investigate/   (codebase understanding)
-                +-- status/        (project health brief)
-                +-- maintain/      (housekeeping sweep)
-                +-- review/        (retrospective)
-                +-- user-manual/   (quickstart guide)
+                +-- developer.md        (codebase owner)
 
 ```
 
 ### tab-for-projects Internal Architecture
 
-Skills handle project management, planning, KB curation, and workflow concerns inline. The developer agent is dispatched for codebase work.
+The developer agent is the sole component. It interacts directly with the Tab for Projects MCP for project, task, and document operations, and owns all codebase work.
 
 ```
 +-------------------+
 |      User         |
 +--------+----------+
          |
-         | invokes skill (e.g., /build, /kickoff)
          v
 +--------+----------+       +---------------------------+
-|   Skill (runner)  |<----->|   Tab for Projects MCP    |
+|    Developer      |<----->|   Tab for Projects MCP    |
 |                   |       |                           |
-| handles project   |       |  +-------+ +------+ +---+ |
-| mgmt inline,      |       |  |Project| | Task | |Doc| |
-| dispatches dev    |       |  +-------+ +------+ +---+ |
-+--------+----------+       +---------------------------+
-         |
-         v
-   +-----------+
-   | Developer |
-   |           |
-   | - Read    |
-   |   code    |
-   | - Implement|
-   | - Test    |
-   | - Commit  |
-   | - CLAUDE  |
-   |   .md     |
-   +-----------+
+| - Read code       |       |  +-------+ +------+ +---+ |
+| - Implement       |       |  |Project| | Task | |Doc| |
+| - Test            |       |  +-------+ +------+ +---+ |
+| - Commit          |       +---------------------------+
+| - CLAUDE.md       |
++-------------------+
 ```
 
 ---
@@ -218,26 +189,20 @@ Skills handle project management, planning, KB curation, and workflow concerns i
 
 A typical workflow from user request to completed, documented work:
 
-1. **User invokes a skill** (e.g., `/kickoff`, `/build`, `/plan`). The skill handles project management, planning, and KB concerns inline.
-2. **Skill manages project health** -- checks task shape, project fields, progress signals.
-3. **Skill reads the codebase and writes KB documents** (design docs, ADRs, codebase patterns, conventions). For planning work, decomposes scope into dependency-ordered task graphs.
-4. **Developer implements ready tasks** in worktrees. Gathers context from the task plan and linked KB documents, implements, tests, and commits.
-5. **Skill captures knowledge** from completed work -- reads implemented code, compares to the plan, and updates KB documents.
+1. **User describes work** to the developer agent. The agent manages project context, task shape, and KB concerns via the MCP.
+2. **Developer reads the codebase and writes KB documents** (design docs, ADRs, codebase patterns, conventions). For planning work, decomposes scope into dependency-ordered task graphs.
+3. **Developer implements ready tasks** in worktrees. Gathers context from the task plan and linked KB documents, implements, tests, and commits.
+4. **Developer captures knowledge** from completed work -- reads implemented code, compares to the plan, and updates KB documents.
 
 ```
-User --> Skill --> MCP (projects, tasks, documents)
-           |
-           +--> manages project health, task shape (inline)
-           +--> writes KB docs, decomposes tasks (inline)
-           +--> Developer --> implements tasks, commits
-                                       |
-                                       v
-                              Skill captures knowledge
-                              from completed work
-                                       |
-                                       v
-                              Future runs read these docs
-                              as context
+User --> Developer --> MCP (projects, tasks, documents)
+              |
+              +--> manages project health, task shape
+              +--> writes KB docs, decomposes tasks
+              +--> implements tasks, commits
+              |
+              v
+         Future runs read these docs as context
 ```
 
-The knowledge loop is the key architectural insight: skills capture what was learned after implementation, and future runs consume that knowledge to produce better designs, more accurate codebase docs, and more grounded task plans.
+The knowledge loop is the key architectural insight: knowledge captured after implementation feeds future runs, producing better designs, more accurate codebase docs, and more grounded task plans.

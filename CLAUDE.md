@@ -1,6 +1,6 @@
 # Tab
 
-Claude Code plugin marketplace containing two plugins: **tab** (a standalone personality/thinking-partner agent) and **tab-for-projects** (a developer agent and project management skills that talk to the Tab for Projects MCP). Published via `.claude-plugin/marketplace.json`.
+Claude Code plugin marketplace containing two plugins: **tab** (a standalone personality/thinking-partner agent) and **tab-for-projects** (a developer agent that talks to the Tab for Projects MCP). Published via `.claude-plugin/marketplace.json`.
 
 ## Repository Structure
 
@@ -28,13 +28,12 @@ tab/                              # "tab" plugin package
 tab-for-projects/                 # "tab-for-projects" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
   agents/developer.md             #   Developer agent — codebase owner, implementation, analysis, in-code docs
-  skills/user-manual/SKILL.md          #   /user-manual — quickstart guide to using the plugin
 ```
 
 ## Package Architecture
 
 - **tab** is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** extends the ecosystem with one agent (developer) and skills that handle project and KB management inline. The developer agent and skills interact with the Tab for Projects MCP for project/task/document CRUD.
+- **tab-for-projects** extends the ecosystem with one agent (developer) that interacts with the Tab for Projects MCP for project/task/document CRUD.
 - Each package is independently installable. A `settings.json` at a package root can set the default agent via `{"agent": "<plugin>:<agent>"}`.
 
 ## Conventions

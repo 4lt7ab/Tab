@@ -1,6 +1,6 @@
 ---
 name: user-manual
-description: "Quickstart guide to tab-for-projects — what it is, how the agents work together, and how to make the most of it. Use when the user is new, asks how tab-for-projects works, or invokes /user-manual."
+description: "Quickstart guide to tab-for-projects — what it is, how skills and the Developer agent work, and how to make the most of it. Use when the user is new, asks how tab-for-projects works, or invokes /user-manual."
 ---
 
 # Tab for Projects — User Manual

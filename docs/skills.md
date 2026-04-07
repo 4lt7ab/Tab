@@ -79,29 +79,9 @@ After the synthesis, Tab returns to normal mode. The listening context stays ava
 
 ---
 
-## tab-for-projects Skills
+## tab-for-projects
 
-The tab-for-projects plugin provides one unified reference skill used by the developer agent.
-
-### user-manual
-
-**Package:** tab-for-projects
-**Invocation:** `/user-manual <mcp | documents | prompts | agents>`
-
-A router skill that loads reference content on demand. When invoked with a keyword, it reads the matching reference file from its `refs/` subdirectory and prints the full content. When invoked without a keyword, it prints a lookup table so the caller can choose.
-
-The router replaces four former standalone skills (`/mcp-reference`, `/document-reference`, `/prompt-reference`, `/agentic-reference`) with a single entry point. All agents preload the router (~40 lines), and load specific references on demand rather than injecting all reference content at startup.
-
-**Reference modules:**
-
-| Keyword | File | What it covers |
-|---------|------|----------------|
-| `mcp` | `refs/mcp.md` | MCP data model, tool signatures, usage patterns |
-| `documents` | `refs/documents.md` | Document types, create-vs-update discipline, tagging, ownership |
-| `prompts` | `refs/prompts.md` | Prompt quality rules, clarity checklist |
-| `agents` | `refs/agents.md` | Agent/skill file anatomy, roles, workflows, constraints |
-
-Each keyword also accepts aliases from the old skill names (e.g., `mcp-reference`, `document-reference`, `prompt-reference`, `agentic-reference`).
+The tab-for-projects plugin does not currently provide any skills. The developer agent handles all project management and codebase work directly.
 
 ---
 

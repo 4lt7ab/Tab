@@ -56,7 +56,7 @@ If you share more context -- design constraints, technical preferences, scope li
 
 ## Step 3 -- Planning
 
-You ask to break the work down. You can use the `/plan` skill or just describe what you want.
+You ask to break the work down.
 
 > **You:** Yeah, let's break this into tasks. We'll need registration, delivery, retry logic, and a management UI.
 >
@@ -64,7 +64,7 @@ You ask to break the work down. You can use the `/plan` skill or just describe w
 
 **Behind the scenes:**
 
-The `/plan` skill handles decomposition inline. It:
+The developer agent handles decomposition. It:
 
 1. **Gathers context.** Reads the project details, fetches any knowledgebase documents, and lists existing tasks to avoid creating duplicates.
 2. **Researches the codebase.** This is the most important step. It finds where the change lives (specific files, modules, layers), understands how things work today (current behavior, data flow, architecture), identifies what touches the affected area (callers, consumers, tests), looks at existing patterns and conventions, and flags what could go wrong. It reads actual code -- plans built on shallow understanding create false confidence.
@@ -175,7 +175,7 @@ The task's status is updated to `done` and the `implementation` field records wh
 
 ## Step 6 -- Knowledge Capture
 
-Once the work is complete, you capture what was learned. Skills handle knowledge capture inline.
+Once the work is complete, you capture what was learned. The developer agent handles knowledge capture inline.
 
 > **You:** The webhook core is done. Let's capture what we learned.
 >
@@ -183,7 +183,7 @@ Once the work is complete, you capture what was learned. Skills handle knowledge
 
 **Behind the scenes:**
 
-Knowledge capture proceeds inline:
+Knowledge capture proceeds as follows:
 
 1. **Gathers context.** Fetches full task records -- the `plan` and `implementation` fields are the richest source, showing what was intended versus what actually happened. Scans the existing knowledgebase to understand what is already captured.
 2. **Reads the codebase.** Reads the files that were changed, looks for patterns (naming, module structure, conventions), decisions (where implementation diverged from plan and why), gotchas (non-obvious constraints, things that would trip someone up), and integration seams. The code is the source of truth -- task records are summaries.
@@ -199,7 +199,7 @@ Knowledge capture proceeds inline:
 > - **Created:** "Webhook retry conventions" -- exponential backoff parameters, max retry count, failure isolation per subscriber.
 > - **Updated:** "Event system architecture" -- added webhook integration points and delivery flow to the existing event system doc.
 
-These documents are now part of the project's knowledgebase. The next time you plan or build, the developer agent and skills will have access to them -- referencing them in future design decisions, verifying them against code changes, and linking them to new tasks. Every document makes future cycles smarter.
+These documents are now part of the project's knowledgebase. The next time you plan or build, the developer agent will have access to them -- referencing them in future design decisions, verifying them against code changes, and linking them to new tasks. Every document makes future cycles smarter.
 
 ---
 
@@ -213,7 +213,7 @@ Here is the full loop:
 
 2. **Project creation.** You described what you wanted to build. The developer agent captured it as a project with a goal and requirements.
 
-3. **Planning.** The `/plan` skill decomposed the work into dependency-ordered tasks with plans and acceptance criteria, reading the codebase and KB documents inline.
+3. **Planning.** The developer agent decomposed the work into dependency-ordered tasks with plans and acceptance criteria, reading the codebase and KB documents.
 
 4. **Refinement.** You walked through the backlog with the developer agent. Tasks were clarified, rescoped, and updated in real time.
 
@@ -221,6 +221,6 @@ Here is the full loop:
 
 6. **Knowledge capture.** Post-implementation capture extracted decisions, patterns, and gotchas from completed tasks and the codebase, writing them into the project's knowledgebase -- making future runs smarter.
 
-The plugin has one agent (developer) and multiple skills. Skills handle project management, planning, KB curation, and workflow concerns inline. The developer agent owns the codebase. You stay in the driver's seat throughout.
+The plugin has one agent (developer) that handles project management, planning, KB curation, and codebase work. You stay in the driver's seat throughout.
 
 The knowledge loop is the key insight: knowledge captured after implementation feeds future runs, producing better designs, more accurate codebase docs, and more grounded task plans. The system gets smarter about your project as you use it.
