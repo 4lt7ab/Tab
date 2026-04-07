@@ -211,12 +211,15 @@ for (( i=0; i<PLUGIN_COUNT; i++ )); do
 
           # ── Optional: requires-mcp ──
           if frontmatter_field_exists "requires-mcp" "$skill_file"; then
-            fm_mcp="$(frontmatter_field "requires-mcp" "$skill_file")"
-            if [[ -z "$fm_mcp" ]]; then
+            mcp_values=()
+            while IFS= read -r _mcp; do
+              [[ -n "$_mcp" ]] && mcp_values+=("$_mcp")
+            done < <(frontmatter_list_field "requires-mcp" "$skill_file")
+            if [[ ${#mcp_values[@]} -eq 0 ]]; then
               fail "Skill $skill_rel has 'requires-mcp' but value is empty"
               ALL_SKILL_FM_OK=false
             else
-              pass "Skill $skill_rel requires-mcp valid ($fm_mcp)"
+              pass "Skill $skill_rel requires-mcp valid (${mcp_values[*]})"
             fi
           fi
 
