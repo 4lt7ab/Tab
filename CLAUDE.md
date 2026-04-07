@@ -43,7 +43,18 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 
 **Agents** are markdown files with YAML frontmatter (`name`, `description`). The body is the system prompt. Registered in `plugin.json` under `"agents"` as relative paths.
 
-**Skills** live in `skills/<skill-name>/SKILL.md`. Frontmatter fields: `name`, `description`, `argument-hint`. Extended frontmatter fields for workflow skills: `inputs` (structured argument spec), `mode` (headless/conversational/foreground), `agents` (which agent runs the skill), `requires-mcp` (MCP dependency). The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference).
+**Skills** live in `skills/<skill-name>/SKILL.md`. The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference). Skill frontmatter uses a two-tier schema:
+
+- **Tier 1 -- Claude Code recognized** (parsed by the runtime):
+  - `name` -- skill identifier, lowercase with hyphens, matches directory name.
+  - `description` -- what the skill does; the runtime uses this for trigger matching and catalog display.
+- **Tier 2 -- Project-internal metadata** (ignored by the runtime, used by contributors and agents as documentation):
+  - `argument-hint` -- pattern showing expected arguments (e.g., `"[topic]"`, `"(no arguments)"`).
+  - `mode` -- skill execution mode (`headless`, `conversational`, `foreground`).
+  - `agents` -- which agent(s) run this skill.
+  - `requires-mcp` -- MCP server dependency.
+
+Only Tier 1 fields affect Claude Code behavior. Tier 2 fields are conventions this project uses to make skills self-documenting; they have no effect on the runtime.
 
 **Plugin metadata** lives in `<package>/.claude-plugin/plugin.json` with fields: `name`, `description`, `version`, `author`, `license`, `agents` (array of paths), `skills` (directory path).
 
