@@ -4,9 +4,9 @@ description: "Housekeeping sweep — clean up task shape, curate the KB, freshen
 argument-hint: "<project ID or title>"
 mode: headless
 agents:
-  - tab-for-projects:project-manager
-  - tab-for-projects:tech-lead
-  - tab-for-projects:developer
+  - project-manager
+  - tech-lead
+  - developer
 requires-mcp:
   - tab-for-projects
 ---

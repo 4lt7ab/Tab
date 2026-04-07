@@ -4,7 +4,7 @@ description: "Quick project health brief — what's ready, blocked, stale, and p
 argument-hint: "<project ID or title>"
 mode: headless
 agents:
-  - tab-for-projects:project-manager
+  - project-manager
 requires-mcp:
   - tab-for-projects
 ---

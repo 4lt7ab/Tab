@@ -4,9 +4,9 @@ description: "Multi-task execution loop — implements ready tasks, reacts to bl
 argument-hint: "<task ID, or project ID to pick from ready tasks>"
 mode: headless
 agents:
-  - tab-for-projects:project-manager
-  - tab-for-projects:tech-lead
-  - tab-for-projects:developer
+  - project-manager
+  - tech-lead
+  - developer
 requires-mcp:
   - tab-for-projects
 ---

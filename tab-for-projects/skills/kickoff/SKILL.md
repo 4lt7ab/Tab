@@ -4,8 +4,8 @@ description: "Take an idea and stand up a fully-formed project ready to build."
 argument-hint: "<idea description or path to IDEA.md>"
 mode: conversational
 agents:
-  - tab-for-projects:project-manager
-  - tab-for-projects:tech-lead
+  - project-manager
+  - tech-lead
 requires-mcp:
   - tab-for-projects
 ---

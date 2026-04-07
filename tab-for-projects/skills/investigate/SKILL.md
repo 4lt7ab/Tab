@@ -4,8 +4,8 @@ description: "Understand how something works in the codebase and persist that un
 argument-hint: "<what to investigate — module, subsystem, pattern, or question>"
 mode: headless
 agents:
-  - tab-for-projects:developer
-  - tab-for-projects:tech-lead
+  - developer
+  - tech-lead
 requires-mcp:
   - tab-for-projects
 ---

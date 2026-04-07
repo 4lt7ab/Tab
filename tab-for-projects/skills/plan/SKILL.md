@@ -4,8 +4,8 @@ description: "Design and decompose a feature into implementation tasks within an
 argument-hint: "<feature description> for <project ID or title>"
 mode: headless
 agents:
-  - tab-for-projects:tech-lead
-  - tab-for-projects:project-manager
+  - tech-lead
+  - project-manager
 requires-mcp:
   - tab-for-projects
 ---

@@ -4,8 +4,8 @@ description: "Retrospective — did we build what we planned? Is the KB accurate
 argument-hint: "<project ID or title>"
 mode: headless
 agents:
-  - tab-for-projects:project-manager
-  - tab-for-projects:tech-lead
+  - project-manager
+  - tech-lead
 requires-mcp:
   - tab-for-projects
 ---
