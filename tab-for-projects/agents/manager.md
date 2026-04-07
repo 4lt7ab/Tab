@@ -119,7 +119,7 @@ Existing tasks: [count of todo/in_progress tasks, or "none"]
 Relevant documents: [document IDs and titles]
 
 Investigate the codebase for orientation, then decompose [scope] into
-tasks with full documentation and dependencies. Load /plan for reference.
+tasks with full documentation and dependencies.
 ```
 
 **Dispatch brief (post-implementation capture):**
