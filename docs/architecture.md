@@ -6,7 +6,6 @@
 > - `/tab/.claude-plugin/plugin.json` -- tab plugin manifest
 > - `/tab-for-projects/.claude-plugin/plugin.json` -- tab-for-projects plugin manifest
 > - `/tab/settings.json` -- tab default agent setting
-> - `/tab-for-projects/settings.json` -- tab-for-projects default agent setting
 > - `/tab/agents/tab.md` -- Tab agent definition
 > - `/tab-for-projects/agents/manager.md` -- manager agent (entry point, subagent protocol)
 > - `/tab-for-projects/agents/planner.md` -- planner subagent
@@ -54,12 +53,11 @@ The `agents` array is how Claude Code discovers which agents a plugin provides. 
 
 ### Settings
 
-Each plugin has a `settings.json` at its root that sets the default agent:
+The `tab` plugin has a `settings.json` at its root that sets the default agent:
 
 - **tab:** `{ "agent": "tab:Tab" }`
-- **tab-for-projects:** `{ "agent": "tab-for-projects:manager" }`
 
-The format is `plugin-name:agent-name`.
+The format is `plugin-name:agent-name`. The `tab-for-projects` plugin does not have a `settings.json`.
 
 ---
 
@@ -74,6 +72,8 @@ The format is `plugin-name:agent-name`.
 | Agent: Tab | `/tab/agents/tab.md` | The sole agent -- defines identity, personality, constraints, and profiles |
 | Skill: draw-dino | `/tab/skills/draw-dino` | Skill for drawing a dinosaur |
 | Skill: listen | `/tab/skills/listen` | Skill for listening mode |
+| Skill: teach | `/tab/skills/teach` | Interactive teaching sessions |
+| Skill: think | `/tab/skills/think` | Conversational idea capture |
 
 ### Key Concepts
 
@@ -121,9 +121,9 @@ Tab auto-switches profiles based on context and briefly announces the shift. Use
 | Agent: coordinator | `/tab-for-projects/agents/coordinator.md` | Background subagent -- assesses project health, produces reports or dispatch instructions |
 | Agent: bugfixer | `/tab-for-projects/agents/bugfixer.md` | Foreground subagent -- pair-programs with the user to hunt and fix bugs |
 | Agent: implementer | `/tab-for-projects/agents/implementer.md` | Background subagent -- executes task plans, self-validates against acceptance criteria |
-| Skill: refinement | `/tab-for-projects/skills/refinement` | Backlog refinement ceremony for reviewing and grooming tasks |
-| Skill: bugfix | `/tab-for-projects/skills/bugfix` | Focused bugfix session -- hands off to the bugfixer agent |
-| Skill: autopilot | `/tab-for-projects/skills/autopilot` | Autonomous project coordination -- assess, plan, implement, validate, document |
+| Skill: design | `/tab-for-projects/skills/design` | Feature design and task decomposition |
+| Skill: develop | `/tab-for-projects/skills/develop` | Working session orchestration |
+| Skill: retro | `/tab-for-projects/skills/retro` | Conversation-to-task extraction |
 
 ### Architecture Pattern: Manager Delegates to Subagents
 
@@ -187,11 +187,12 @@ marketplace.json
     |     +-- skills/
     |           +-- draw-dino/
     |           +-- listen/
+    |           +-- teach/
+    |           +-- think/
     |
     +-- tab-for-projects/
           |
           +-- plugin.json          (name, agents, skills)
-          +-- settings.json        (default agent: tab-for-projects:manager)
           +-- agents/
           |     +-- manager.md     (entry point, user-facing)
           |     +-- planner.md     (background subagent)
@@ -201,9 +202,9 @@ marketplace.json
           |     +-- bugfixer.md    (foreground subagent)
           |     +-- implementer.md (background subagent)
           +-- skills/
-                +-- refinement/
-                +-- bugfix/
-                +-- autopilot/
+                +-- design/
+                +-- develop/
+                +-- retro/
 ```
 
 ### tab-for-projects Internal Architecture
