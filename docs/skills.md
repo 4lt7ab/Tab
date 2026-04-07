@@ -79,9 +79,79 @@ After the synthesis, Tab returns to normal mode. The listening context stays ava
 
 ---
 
-## tab-for-projects
+## teach
 
-The tab-for-projects plugin does not currently provide any skills. The developer agent handles all project management and codebase work directly.
+**Package:** tab
+**Invocation:** `/teach <topic>`
+
+An interactive teaching session. Tab researches the topic via the web, synthesizes diverse perspectives, and conversationally builds the user's understanding. Not a lecture -- a session that ends when the user has the mental model they came for.
+
+### How it works
+
+1. Tab orients on what the user wants to learn, calibrating depth and starting point.
+2. Researches the topic using web search, synthesizing multiple sources rather than relying on prior knowledge alone.
+3. Teaches conversationally -- one concept at a time, checking understanding before advancing, using analogies as the primary tool.
+4. The Teaching personality preset activates automatically (Warmth 85%, Verbosity 60%).
 
 ---
 
+## think
+
+**Package:** tab
+**Invocation:** `/think [optional seed idea]`
+
+Conversational idea capture. Tab interviews the user about a raw idea and produces a structured `IDEA.md` that gives a fresh LLM session everything it needs to start building. Designed for the starting point of something new.
+
+### How it works
+
+1. Tab draws the idea out through conversation -- like two people at a whiteboard.
+2. Asks clarifying questions to fill gaps without interrogating.
+3. Writes `.local/IDEA.md` with the structured result: what to build, why, key decisions, and enough context that someone with zero prior knowledge could pick it up.
+
+---
+
+## design
+
+**Package:** tab-for-projects
+**Invocation:** `/design [project ID or name]`
+
+Takes a feature idea, researches the codebase, designs the approach, and produces a planned backlog of tasks ready for implementation.
+
+### How it works
+
+1. Resolves the project and loads full context (goal, requirements, design, knowledgebase).
+2. Researches the relevant codebase areas to ground the design in what actually exists.
+3. Designs the approach and decomposes it into a set of planned tasks with acceptance criteria.
+4. Writes the tasks to the MCP so the backlog is ready for a `/develop` session.
+
+---
+
+## develop
+
+**Package:** tab-for-projects
+**Invocation:** `/develop [project ID or name]`
+
+Starts a working session -- orchestrates developer agents to implement tasks from the backlog in parallel, with full context gathering before each dispatch.
+
+### How it works
+
+1. Resolves the project and loads context, including the knowledgebase and current backlog.
+2. Identifies tasks ready for implementation (planned, unblocked).
+3. Groups tasks into dispatches based on codebase affinity and dependency order.
+4. Spawns developer agents in parallel to implement each dispatch, gathering fresh codebase context before each one.
+
+---
+
+## retro
+
+**Package:** tab-for-projects
+**Invocation:** `/retro [project ID or name]`
+
+Scans the current conversation for implicit work items, synthesizes them into structured tasks, and batch-creates them after user review.
+
+### How it works
+
+1. Reads back through the conversation to find undone work -- decisions made but not acted on, bugs mentioned but not tracked, ideas that need follow-up.
+2. Synthesizes findings into structured task proposals with titles, descriptions, and categories.
+3. Presents the proposed tasks for user review before creating anything.
+4. Batch-creates approved tasks in the MCP.

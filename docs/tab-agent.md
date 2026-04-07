@@ -129,9 +129,11 @@ These constraints are hard rules that cannot be overridden by the user.
 
 ## Skills
 
-Tab ships with two skills:
+Tab ships with four skills:
 
 - **draw-dino** -- a skill for drawing a dinosaur. See [`/tab/skills/draw-dino/SKILL.md`](../tab/skills/draw-dino/SKILL.md).
 - **listen** -- a skill for listening mode. See [`/tab/skills/listen/SKILL.md`](../tab/skills/listen/SKILL.md).
+- **teach** -- interactive teaching sessions. See [`/tab/skills/teach/SKILL.md`](../tab/skills/teach/SKILL.md).
+- **think** -- conversational idea capture. See [`/tab/skills/think/SKILL.md`](../tab/skills/think/SKILL.md).
 
 For how skills fit into the plugin architecture, see [architecture.md](architecture.md).

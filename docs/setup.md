@@ -9,7 +9,7 @@
 
 The `tab` plugin provides:
 - **Tab agent** — a thinking partner defined in markdown. Sharp, warm, opinionated. Helps you pressure-test ideas and make better decisions.
-- **Skills** — `draw-dino`, `listen`.
+- **Skills** — `draw-dino`, `listen`, `teach`, `think`.
 
 ### Steps
 
@@ -32,11 +32,12 @@ After installation, confirm the Tab agent is active:
 ## Installing the tab-for-projects plugin
 
 The `tab-for-projects` plugin provides:
-- **Agent** — `developer` (codebase owner, implementation, analysis, in-code docs).
+- **Agents** — `manager`, `planner`, `qa`, `documenter`. The manager is the primary interface; the others run as background subagents.
+- **Skills** — `design`, `develop`, `retro`.
 
 ### Additional prerequisite
 
-The Tab for Projects MCP server must be connected before the plugin can do anything useful. The developer agent checks MCP connectivity on startup by calling `list_projects` with `limit: 1`. If the MCP is not available, it will tell you and stop -- it does not improvise alternatives.
+The Tab for Projects MCP server must be connected before the plugin can do anything useful. The manager agent checks this on startup by calling `list_projects` with `limit: 1`. If the MCP is not available, it will tell you and stop — it does not improvise alternatives.
 
 ### Steps
 
@@ -44,26 +45,25 @@ The Tab for Projects MCP server must be connected before the plugin can do anyth
 
 2. Add the plugin from the AltTab marketplace, same as above. The marketplace manifest registers `tab-for-projects` alongside `tab`.
 
-3. Once installed, the plugin sets `tab-for-projects:developer` as the default agent (configured in `tab-for-projects/settings.json`).
+3. Once installed, the `tab-for-projects:manager` agent becomes available. (This plugin does not have a `settings.json` -- there is no default agent override.)
 
 ### Verification
 
-1. Start a new Claude Code session with the `tab-for-projects:developer` agent active.
-2. The developer agent will call `list_projects` on startup. If you see a project list (or an empty list with no errors), the MCP connection is working.
+1. Start a new Claude Code session with the `tab-for-projects:manager` agent active.
+2. The manager agent will call `list_projects` on startup. If you see a project list (or an empty list with no errors), the MCP connection is working.
 3. Try asking the agent to list projects or create a test project. If it responds with structured project data from the MCP, everything is connected.
 
 ## Configuration
 
 ### Default agent
 
-Each plugin declares a default agent in its `settings.json`:
+Only the `tab` plugin declares a default agent in its `settings.json`:
 
 | Plugin | File | Default agent |
 |--------|------|---------------|
 | `tab` | `tab/settings.json` | `tab:Tab` |
-| `tab-for-projects` | `tab-for-projects/settings.json` | `tab-for-projects:developer` |
 
-The `agent` field uses the format `plugin-name:agent-name`. To switch which agent loads by default, update the `agent` value in the relevant `settings.json`.
+The `agent` field uses the format `plugin-name:agent-name`. To switch which agent loads by default, update the `agent` value in `tab/settings.json`.
 
 ### Sandbox and permissions
 
@@ -81,7 +81,7 @@ Both plugins are defined entirely in text files — no compiled code, no depende
 
 ### MCP not connected (tab-for-projects)
 
-**Symptom:** The developer agent says "the Tab for Projects MCP isn't connected" on startup, or `list_projects` fails.
+**Symptom:** The manager agent says "the Tab for Projects MCP isn't connected" on startup, or `list_projects` fails.
 
 **What to check:**
 - Verify the MCP server process is running.
@@ -102,8 +102,8 @@ Both plugins are defined entirely in text files — no compiled code, no depende
 
 ### Wrong agent loading
 
-**Symptom:** You expected one agent but got another (e.g., Tab instead of the developer).
+**Symptom:** You expected one agent but got another (e.g., Tab instead of the project manager).
 
 **What to check:**
-- Each plugin has its own `settings.json` with an `agent` field. Verify the correct plugin is active and its `settings.json` points to the agent you want.
+- The `tab` plugin has a `settings.json` with an `agent` field. Verify the correct plugin is active and its `settings.json` points to the agent you want.
 - If both plugins are installed, check which one is set as the active plugin in your session.
