@@ -20,15 +20,20 @@ tab/                              # "tab" plugin package
   skills/think/SKILL.md           #   /think — conversational idea capture
 tab-for-projects/                 # "tab-for-projects" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-  agents/developer.md             #   Developer agent — codebase owner, implementation, analysis, in-code docs
-  skills/dev/SKILL.md             #   /dev — pair-programming and implementation
-  skills/docs/SKILL.md            #   /docs — generic knowledgebase document authoring
+  agents/developer.md             #   Developer agent — pragmatic coding collaborator, reaches for workflow skills
+  skills/plan-project/SKILL.md    #   /plan-project — interview + research + decompose into a groomed backlog
+  skills/fix/SKILL.md             #   /fix — file a single task from conversation
+  skills/manage-backlog/SKILL.md  #   /manage-backlog — groom todos up to the readiness bar
+  skills/develop/SKILL.md         #   /develop — autonomously execute the ready portion of the backlog
+  skills/search/SKILL.md          #   /search — find docs and tasks via an escalating filter ladder
+  skills/get-project/SKILL.md     #   /get-project — pull a project snapshot for orientation
+  skills/save-document/SKILL.md   #   /save-document — capture a decision, convention, or reference doc
 ```
 
 ## Package Architecture
 
 - **tab** is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** extends the ecosystem with one agent (developer) that interacts with the Tab for Projects MCP for project/task/document CRUD.
+- **tab-for-projects** extends the ecosystem with one agent (developer) and a set of verb-shaped workflow skills that automate high-friction operations against the Tab for Projects MCP. Each skill is a one-shot automation, not an ambient mode. Skills resolve the active project via inference (explicit arg → `.tab-project` file → git remote → cwd → recent activity) and respect a shared task-readiness bar defined in the KB.
 - Each package is independently installable. A `settings.json` at a package root can set the default agent via `{"agent": "<plugin>:<agent>"}`.
 
 ## Conventions
@@ -73,5 +78,5 @@ Use semver: patch for fixes and minor prompt tweaks, minor for new skills or mea
 | `tab/.claude-plugin/plugin.json` | Tab plugin manifest |
 | `tab-for-projects/.claude-plugin/plugin.json` | Tab for Projects plugin manifest |
 | `tab/agents/tab.md` | Tab agent — personality, profiles, settings |
-| `tab-for-projects/agents/developer.md` | Developer agent — codebase owner, implementation, analysis, in-code docs |
+| `tab-for-projects/agents/developer.md` | Developer agent — pragmatic coding collaborator that reaches for workflow skills |
 | `tab/settings.json` | Tab default agent config |
