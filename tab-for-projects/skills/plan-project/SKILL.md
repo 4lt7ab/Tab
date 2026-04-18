@@ -16,7 +16,7 @@ Take a fuzzy objective and produce a backlog the user can hand to `/work` withou
 **When NOT to activate:**
 - User wants a single task captured from conversation — use `/fix`.
 - User wants to execute existing tasks — use `/work`.
-- User wants to groom an existing backlog — use `/manage-backlog`.
+- User wants to groom an existing backlog — use `/backlog`.
 - User is still thinking out loud and hasn't committed to scope — use `/think`.
 
 ## Requires
@@ -125,4 +125,4 @@ Created 7 tasks in Tab (group: auth-v2).
 - **No writes until confirmed.** The whole backlog is proposed before any task is created.
 - **No writes below confident project inference.** Ask or stop.
 - **Readiness bar is non-negotiable.** A task that can't meet the bar from this session's context isn't written — it's surfaced to the user as a gap.
-- **Don't archive or modify existing tasks.** This skill creates. Grooming is `/manage-backlog`'s job.
+- **Don't archive or modify existing tasks.** This skill creates. Grooming is `/backlog`'s job.

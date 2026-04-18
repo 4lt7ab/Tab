@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.6.9] — 2026-04-18
+
+### Changed
+- **Breaking:** `/manage-backlog` renamed to `/backlog`. Matches the tight verb-shaped naming of the other skills (`/fix`, `/feature`, `/search`, `/work`). Behavior is identical — only the invocation changes. Cross-references in `/feature`, `/fix`, `/work`, and `/plan-project` were updated.
+
 ## [0.6.8] — 2026-04-18
 
 ### Removed

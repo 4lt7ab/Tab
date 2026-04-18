@@ -1,6 +1,6 @@
 ---
-name: manage-backlog
-description: Groom the project backlog so every task starts above the readiness bar. Fills missing summaries/effort/impact/category/acceptance-signal, splits oversized tasks, wires dependencies, and flags or archives stale work. Use when the backlog has accumulated under-specified tasks, when `/work` reports too many flagged items, or when planning a grooming pass before handing work to agents. Triggers on `/manage-backlog` and phrases like "groom the backlog", "clean up tasks", "get the backlog ready for execution".
+name: backlog
+description: Groom the project backlog so every task starts above the readiness bar. Fills missing summaries/effort/impact/category/acceptance-signal, splits oversized tasks, wires dependencies, and flags or archives stale work. Use when the backlog has accumulated under-specified tasks, when `/work` reports too many flagged items, or when planning a grooming pass before handing work to agents. Triggers on `/backlog` and phrases like "groom the backlog", "clean up tasks", "get the backlog ready for execution".
 argument-hint: "[optional filter: group_key or category]"
 ---
 
@@ -9,7 +9,7 @@ Take the current backlog of `todo` tasks and move each one to one of four states
 ## Trigger
 
 **When to activate:**
-- User invokes `/manage-backlog`, optionally scoped to a `group_key` or `category`.
+- User invokes `/backlog`, optionally scoped to a `group_key` or `category`.
 - User says "groom the backlog", "clean up tasks", "get tasks ready for execution", "score the backlog".
 - `/work` just ran and reported several flagged tasks — the user wants to close the gaps.
 

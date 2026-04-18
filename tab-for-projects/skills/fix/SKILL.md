@@ -16,7 +16,7 @@ The "I just noticed something, write it down" skill. The user is mid-conversatio
 **When NOT to activate:**
 - User wants many tasks across a scope — use `/plan-project`.
 - User wants to start executing — use `/work`.
-- User wants to edit an existing task — use the MCP `update_task` directly or `/manage-backlog`.
+- User wants to edit an existing task — use the MCP `update_task` directly or `/backlog`.
 - The conversation has no concrete thing to file (user is still thinking) — offer `/think` instead.
 
 ## Requires

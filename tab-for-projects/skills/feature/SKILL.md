@@ -103,5 +103,5 @@ One or more tasks in the MCP, all above the readiness bar, optionally linked by 
 - **No writes below confident project inference.** Ask or stop.
 - **No codebase search, no web research.** This is a capture skill, not a research skill.
 - **Readiness bar is non-negotiable.** Every filed task meets the bar or isn't filed.
-- **Don't edit existing tasks.** This skill creates. Grooming is `/manage-backlog`'s job.
+- **Don't edit existing tasks.** This skill creates. Grooming is `/backlog`'s job.
 - **No interview.** One clarifying question is the maximum; beyond that, hand off to `/plan-project`.

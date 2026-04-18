@@ -11,10 +11,10 @@ Hand over execution. The skill reads the ready portion of the backlog, builds an
 **When to activate:**
 - User invokes `/work`, optionally scoped to a `group_key` or limited by `--max=N`.
 - User says "finish the backlog", "execute the ready tasks", "work through the todo list", "run the groomed tasks".
-- User just finished `/manage-backlog` and wants to cash in the groomed work.
+- User just finished `/backlog` and wants to cash in the groomed work.
 
 **When NOT to activate:**
-- Backlog hasn't been groomed — run `/manage-backlog` first.
+- Backlog hasn't been groomed — run `/backlog` first.
 - User wants to file new work — use `/plan-project` or `/fix`.
 - User wants to execute a single specific task with tight oversight — direct conversation is better than autonomous mode.
 
@@ -116,7 +116,7 @@ Flagged (5 tasks won't execute until groomed):
   01K2… "Investigate X" — blocked by 01K3… (also flagged)
   ...
 
-Suggest: /manage-backlog to address flagged items.
+Suggest: /backlog to address flagged items.
 ```
 
 ## Output
