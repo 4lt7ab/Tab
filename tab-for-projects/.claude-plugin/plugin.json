@@ -1,7 +1,7 @@
 {
   "name": "tab-for-projects",
   "description": "Project workflow tracking — skills and agents for the Tab for Projects MCP.",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "author": {
     "name": "4lt7ab"
   },
@@ -10,7 +10,8 @@
     "./agents/implementer.md",
     "./agents/architect.md",
     "./agents/test-writer.md",
-    "./agents/docs-writer.md"
+    "./agents/docs-writer.md",
+    "./agents/reviewer.md"
   ],
   "skills": "./skills/"
 }

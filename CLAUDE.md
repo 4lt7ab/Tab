@@ -26,6 +26,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   agents/architect.md             #   Architect subagent — produces design docs and ADRs from design/feature tasks
   agents/test-writer.md           #   Test-writer subagent — pins current behavior with tests; suspicious behavior becomes a new bugfix task
   agents/docs-writer.md           #   Docs-writer subagent — produces READMEs, CHANGELOG prose, upgrade guides, reference docs; KB-doc authority
+  agents/reviewer.md              #   Reviewer subagent — reads a diff independently, triages critical/suggestion/cosmetic; doesn't fix
   skills/plan-project/SKILL.md    #   /plan-project — interview + research + decompose into a groomed backlog
   skills/feature/SKILL.md         #   /feature — capture a feature idea as 1+ tasks on the backlog
   skills/fix/SKILL.md             #   /fix — file a single task from conversation

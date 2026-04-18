@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.6.5] — 2026-04-17
+
+### Added
+- `reviewer` subagent — independent second opinion on a committed diff. Triages findings into critical (reverts task to rework), suggestion (filed as new tasks), and cosmetic (logged only). Does not fix anything; the triage decides what happens next.
+
 ## [0.6.4] — 2026-04-17
 
 ### Added
