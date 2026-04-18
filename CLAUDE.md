@@ -23,6 +23,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
   CHANGELOG.md                    #   Release notes (keep-a-changelog)
   agents/developer.md             #   Developer agent — pragmatic coding collaborator, reaches for workflow skills
+  agents/architect.md             #   Architect subagent — produces design docs and ADRs from design/feature tasks
   skills/plan-project/SKILL.md    #   /plan-project — interview + research + decompose into a groomed backlog
   skills/feature/SKILL.md         #   /feature — capture a feature idea as 1+ tasks on the backlog
   skills/fix/SKILL.md             #   /fix — file a single task from conversation
