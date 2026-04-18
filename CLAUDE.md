@@ -24,6 +24,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   CHANGELOG.md                    #   Release notes (keep-a-changelog)
   agents/implementer.md           #   Implementer subagent — takes one ready task, writes code, verifies, commits; files tasks for follow-ups (no KB writes)
   agents/architect.md             #   Architect subagent — produces design docs and ADRs from design/feature tasks
+  agents/test-writer.md           #   Test-writer subagent — pins current behavior with tests; suspicious behavior becomes a new bugfix task
   skills/plan-project/SKILL.md    #   /plan-project — interview + research + decompose into a groomed backlog
   skills/feature/SKILL.md         #   /feature — capture a feature idea as 1+ tasks on the backlog
   skills/fix/SKILL.md             #   /fix — file a single task from conversation
