@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.6.4] — 2026-04-17
+
+### Added
+- `docs-writer` subagent — produces written artifacts (READMEs, CHANGELOG prose, upgrade guides, inline docs, KB reference material). Has KB-doc authority alongside `architect`. Technical Docs register — structural, precise, low-humor. Source gaps become filed follow-up tasks, not hedged prose.
+
 ## [0.6.3] — 2026-04-17
 
 ### Added
