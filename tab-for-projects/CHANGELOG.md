@@ -2,6 +2,18 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.8.0] — 2026-04-18
+
+### Changed
+- `/work` upgraded from a max=5 batched executor to a persistent task-graph walker. The default run now continues until the ready portion of the backlog is empty, the user interrupts, or three consecutive task failures abort — `--max=N` stays as an opt-in safety valve for short runs.
+- `/work` now routes each task to the appropriate subagent by category. A new routing table maps all ten categories (feature, bugfix, refactor, test, docs, perf, design, security, infra, chore) to default agents with optional precursor/successor chains (e.g. architect before a medium-effort feature, test-writer after, reviewer after a refactor).
+- `/work`'s dispatch contract is now ID-only: subagents receive `task_id`, optional `parent_task_id`, and `group_key` (for shipper) — nothing else. Subagents fetch their own context via the MCP. This keeps the main thread's context window small across long persistent runs.
+- Status ceremony (`in_progress` → `done` / `todo`) is owned exclusively by the dispatched subagent. `/work` reads task state after a subagent returns; it never writes task state on the subagent's behalf.
+- Halts and newly filed `design`-category tasks are batched into a single end-of-run "needs your call" section — `/work` no longer interrupts mid-run for design questions.
+- At end-of-run, `/work` invokes the `shipper` subagent for any `group_key` with unshipped commits, producing PR descriptions / release notes / CHANGELOG polish as drafts. The user still ships — `/work` does not push or merge.
+- Parallelism is now opt-in via `--parallel` and only fires within a `group_key` where tasks share no ordering edges and touch different top-level directories. Default is serial.
+- End-of-run report expanded: per-task summary with agent name, flagged-below-bar list, needs-your-call section, and shipper output.
+
 ## [0.7.0] — 2026-04-18
 
 ### Added
