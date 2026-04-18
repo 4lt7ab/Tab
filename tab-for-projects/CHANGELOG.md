@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.6.6] — 2026-04-17
+
+### Added
+- `shipper` subagent — packages a completed `group_key` into written deliverables: PR description, release notes, or final CHANGELOG polish. Derives the commit range from task ULID references in commit messages, reads linked architect docs for notable-decisions context, and produces prose that stands alone for a reader who wasn't in the conversation. Does not push, merge, or create PRs — the user ships.
+
 ## [0.6.5] — 2026-04-17
 
 ### Added
