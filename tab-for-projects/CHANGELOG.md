@@ -2,6 +2,14 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.7.0] — 2026-04-18
+
+### Added
+- `/feature` now scales rigor to the input instead of relying on a separate skill. A one-line idea with full context still files as one task; a fuzzy multi-surface objective triggers a bounded interview (3–5 questions), targeted web research (when the objective touches unfamiliar territory), and dependency wiring (when the decomposition has natural ordering). The ceiling is full planning; the floor is unchanged — no interview, no research when the conversation already covered it. Picks the right rigor from signals in the input so you don't have to choose up front.
+
+### Removed
+- **Breaking:** `/plan-project` skill. Its behavior folded into `/feature` — the planning path (interview + research + decomposition + deps) now activates by signal rather than by invocation. If you were using `/plan-project` to set up a backlog from a fuzzy objective, use `/feature` instead; it will interview and research when needed. Cross-references in `/fix`, `/work`, `/search`, `/backlog`, and `/save-document` were updated.
+
 ## [0.6.9] — 2026-04-18
 
 ### Changed

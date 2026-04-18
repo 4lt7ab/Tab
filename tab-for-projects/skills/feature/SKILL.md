@@ -1,27 +1,39 @@
 ---
 name: feature
-description: Capture a new feature idea as one or more tasks on the project backlog. Reads context from the conversation — no codebase search, no web research, no interview — shapes it into tasks that start above the readiness bar, confirms, and writes. Triggers on `/feature` and phrases like "file this as a feature", "add a feature task for", "put this on the backlog as a feature".
-argument-hint: "[idea]"
+description: Capture new feature work onto the backlog — a single task for a small idea, or a decomposed backlog for a bigger one. Scales rigor to what the input needs: zero interview when context is complete, a short interview (3–5 questions) when acceptance is unclear, targeted web research when the objective touches unfamiliar territory, dependency wiring when tasks have natural ordering. Triggers on `/feature` and phrases like "file this as a feature", "plan out the work for X", "build me a backlog for Y", "break this down into tasks".
+argument-hint: "[idea or objective]"
 ---
 
-The "I have an idea, write it down" skill. Sibling of `/fix`: `/fix` captures a small leftover, `/feature` captures a new idea. The user provides as much context as they want in the invocation or the surrounding conversation; this skill shapes it into one or more tasks that an autonomous executor could pick up cold.
+The "new work" skill. The user has an idea — small or large, sharp or fuzzy — and wants it landed on the backlog as ready-to-execute tasks. This skill reads the conversation, figures out what the idea actually needs (one task? several? interview? research?), shapes the work, confirms once, and writes.
+
+## Design note
+
+Earlier versions split this into two skills: `/feature` for the fast path (no research, no interview) and `/plan-project` for the heavier path (interview + research + decomposition + deps). That split forced the user to choose rigor up front, often wrong. This skill picks the right rigor from signals in the input instead:
+
+- **Interview** activates when the proposed tasks can't all meet the readiness bar from the conversation alone. Bounded at 3–5 questions; never a requirements workshop.
+- **Research** activates when the objective touches unfamiliar territory the conversation didn't resolve. One to three focused searches.
+- **Dependency wiring** activates when the decomposition has natural ordering.
+
+All three phases are skipped when the conversation already resolved them. The ceiling is full planning; the floor is a one-line idea → one task.
 
 ## Trigger
 
 **When to activate:**
 - User invokes `/feature` optionally followed by the idea inline.
-- User says "file this as a feature", "add a feature task for", "put this on the backlog as a feature", "capture this idea".
-- User has been describing a feature idea in conversation and wants it landed without a planning session.
+- User says "file this as a feature", "add a feature task for", "plan out the work for X", "build me a backlog for Y", "break this down into tasks", "what would it take to ship Z".
+- User has been describing feature work in conversation and wants it landed without manual filing.
 
 **When NOT to activate:**
-- User wants to file a bug or small drive-by work — use `/fix`.
-- User has a fuzzy multi-task objective that needs interview + research + decomposition — use `/plan-project`.
-- User is still thinking through the idea and hasn't committed to shape — use `/think`.
-- User wants to execute existing tasks — use `/work`.
+- User wants to file a single small bug or drive-by cleanup — use `/fix`.
+- User is still thinking and hasn't committed to any shape — use `/think`.
+- User wants to groom existing tasks — use `/backlog`.
+- User wants to execute — use `/work`.
 
 ## Requires
 
-- **MCP:** `tab-for-projects` — for project resolution and task creation.
+- **MCP:** `tab-for-projects` — for project resolution, task creation, dependency wiring.
+- **MCP (preferred):** `exa` — `web_search_exa` and `web_fetch_exa` for research. Better results than native search for technical topics.
+- **Tool (fallback):** `WebSearch` / `WebFetch` — used only when the `exa` MCP is unavailable.
 
 ## Behavior
 
@@ -35,36 +47,62 @@ Follow the shared Project Inference convention:
 4. Match cwd basename and parent segments against project titles.
 5. Fall back to most recently updated plausible project. Never sole signal.
 
-Below **confident**, ask or stop. No writes below confident.
+Below **confident**, ask or stop. No writes below confident. State the resolved project in the opening line so the user can catch a bad inference before tasks are written.
 
-### 2. Shape the idea into tasks
+### 2. Read the invocation and the surrounding conversation
 
-Read the invocation argument and the surrounding conversation. Do not search the codebase. Do not search the web. The user's words are the source.
+The user's words are the starting point. Pull:
 
-Decide whether the idea is one task or several:
+- The idea or objective itself.
+- Scope hints — what's in, what's out.
+- Acceptance hints — what "done" looks like.
+- Constraints already named — decisions, dependencies, deadlines.
 
-- **One task** when the idea is a single coherent change that a single commit (or a single PR) could deliver.
-- **Several tasks** when the idea naturally decomposes along seams the user already named — separate surfaces, separate milestones, separate concerns. If you have to invent the split, it's one task.
+Do not search the codebase.
 
-For each task, fill every field required by the readiness bar:
+### 3. Decide the shape
 
-- **Title** — verb-led, specific. "Add keyboard shortcut for search focus" beats "search shortcut".
-- **Summary** — 1–3 sentences, why + what. Pulled from what the user said; don't invent motivation.
-- **Acceptance signal** — a concrete test, observable behavior, or artifact. "A new keybinding `Cmd+K` focuses the search input, visible in the keybinding help panel."
-- **Effort** — `trivial` / `low` / `medium` / `high` / `extreme`.
-- **Impact** — same scale.
-- **Category** — `feature` is the default; use `refactor`, `test`, `docs`, etc. only when the task is genuinely that shape.
-- **`group_key`** — set when the idea decomposes into multiple tasks so they travel together. Skip for single-task filings.
+Is this one task or several?
 
-### 3. Ask at most one question
+- **One task** — a single coherent change a commit (or small PR) could deliver.
+- **Several tasks** — the idea decomposes along seams the user already named (separate surfaces, separate milestones, separate concerns). If you have to invent the split, it's probably one task.
 
-If exactly one required field can't be inferred confidently, ask **one specific question**. Common gap: the acceptance signal for an idea described abstractly.
+Sizing: one task = one PR-ish chunk. A `high`-effort task almost always wants splitting; a `trivial` task is fine if the bar is still met.
 
-If two or more fields are ambiguous across the proposed task set, the idea isn't ready to file as-is. Say so and suggest `/plan-project` for a real planning pass. Don't file below-bar tasks to avoid the conversation.
+### 4. Interview, only if needed
 
-### 4. Confirm, then write
+A task is **ready** when it has: verb-led title; 1–3 sentence summary (why + what); `effort`, `impact`, `category` set; a concrete acceptance signal; no unmet blocker dependencies.
 
-Present the proposed task (or tasks) in compact form:
+If every proposed task can meet the bar from the conversation alone, skip this step. If one or more tasks are missing a required field, ask **bounded, specific questions** — 3–5 maximum, ideally fewer:
+
+- Ask one at a time when the answer to one shapes the next.
+- Batch independent questions.
+- Favor "what's the acceptance signal for X?" over "tell me more about Y."
+
+If the gaps can't close in 5 questions, the idea isn't ready to file. Say so and ask the user to sit with it a bit longer. Don't file below-bar tasks to escape the conversation.
+
+### 5. Research, only if it pays for itself
+
+If the objective touches territory the conversation didn't resolve — a library the user hasn't used, a domain pattern, a decision point where best-practice isn't obvious — do **targeted web research**. One to three focused searches. Prefer `exa` (`web_search_exa`, `web_fetch_exa`); fall back to `WebSearch` / `WebFetch` only if it isn't available.
+
+Skip research when:
+
+- The idea is entirely internal (refactoring, cleanup, existing patterns).
+- The conversation covered the unknowns.
+- Research would just confirm what's already known.
+
+Research output goes into task `context`, not into a separate doc. Each task that needed research cites the source inline.
+
+### 6. Wire dependencies, only if natural
+
+- **`blocks`** — hard ordering. B needs A's output to even start.
+- **`relates_to`** — soft context. Readers of B benefit from reading A, but B can execute independently.
+
+Don't over-wire. A flat backlog with a shared `group_key` is often better than a chain of five `blocks` edges. If there are no natural edges, leave the set flat.
+
+### 7. Confirm, then write
+
+Present the proposal in compact form:
 
 ```
 Idea: [one-line restatement]
@@ -75,13 +113,17 @@ Group: [group_key, if multi-task]
    Acceptance: [one line]
 
 2. ...
+
+Dependencies: (shown only when present)
+  2 blocks 1
+  3 relates_to 1
 ```
 
-Ask: "File these?" Accept inline edits — drop a task, adjust effort, tighten a title. Once confirmed, create the tasks in one batch via `create_task`.
+Ask: "File these?" Accept inline edits — drop a task, adjust effort, tighten a title. Once confirmed, create all tasks in one batch via `create_task`, then wire dependencies in a second batch.
 
-### 5. Close
+### 8. Close
 
-One line. The user is still thinking about the idea itself, not the filing.
+One line. The user is thinking about the work itself, not the filing:
 
 ```
 Filed 3 tasks in Tab (group: search-affordances-v1). /work will pick them up.
@@ -89,19 +131,21 @@ Filed 3 tasks in Tab (group: search-affordances-v1). /work will pick them up.
 
 ## Output
 
-One or more tasks in the MCP, all above the readiness bar, optionally linked by `group_key`. No documents, no changes to existing tasks, no branches created.
+One or more tasks in the MCP, all above the readiness bar, optionally linked by `group_key` and dependency edges. No documents, no changes to existing tasks, no branches created.
 
 ## Principles
 
-- **The user's words are the source.** No codebase search, no web search. If the conversation doesn't contain something, ask or defer — don't go find it.
-- **File what's ready, defer what isn't.** A clean filing of one ready task beats a rushed filing of three half-specified ones. Below-bar work belongs in `/plan-project`.
-- **Confirm once, then get out of the way.** The user is still thinking about the idea; don't turn filing into a review.
+- **Scale rigor to what the input needs, not to what the invocation says.** A one-line idea with full context gets a one-task filing. A paragraph about a fuzzy multi-surface goal gets an interview + research + deps. Same skill, same mental model.
+- **Interview is a tool, not a phase.** Ask when a specific field is missing; skip when it isn't. Ceremony is the enemy.
 - **Decompose along seams the user named.** Inventing splits creates phantom structure; trust what's said.
+- **File what's ready, defer what isn't.** A clean filing of one ready task beats a rushed filing of three half-specified ones.
+- **Confirm once, then get out of the way.** The user is still thinking about the work; filing is overhead.
 
 ## Constraints
 
 - **No writes below confident project inference.** Ask or stop.
-- **No codebase search, no web research.** This is a capture skill, not a research skill.
+- **No writes until confirmed.** The full proposal is shown before any task is created.
+- **No codebase search.** Web research and bounded interview only. The user's intent is the source for *what to build*; research informs *how*.
 - **Readiness bar is non-negotiable.** Every filed task meets the bar or isn't filed.
 - **Don't edit existing tasks.** This skill creates. Grooming is `/backlog`'s job.
-- **No interview.** One clarifying question is the maximum; beyond that, hand off to `/plan-project`.
+- **Interview is bounded.** 3–5 questions maximum. Beyond that, the idea isn't ready.

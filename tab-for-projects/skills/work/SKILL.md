@@ -15,7 +15,7 @@ Hand over execution. The skill reads the ready portion of the backlog, builds an
 
 **When NOT to activate:**
 - Backlog hasn't been groomed — run `/backlog` first.
-- User wants to file new work — use `/plan-project` or `/fix`.
+- User wants to file new work — use `/feature` or `/fix`.
 - User wants to execute a single specific task with tight oversight — direct conversation is better than autonomous mode.
 
 ## Requires

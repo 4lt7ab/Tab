@@ -14,7 +14,7 @@ The "I just noticed something, write it down" skill. The user is mid-conversatio
 - User is closing a thread and wants the leftover filed before moving on.
 
 **When NOT to activate:**
-- User wants many tasks across a scope — use `/plan-project`.
+- User wants many tasks across a scope — use `/feature`.
 - User wants to start executing — use `/work`.
 - User wants to edit an existing task — use the MCP `update_task` directly or `/backlog`.
 - The conversation has no concrete thing to file (user is still thinking) — offer `/think` instead.
@@ -56,7 +56,7 @@ If exactly one required field can't be inferred confidently from the conversatio
 - "What's the acceptance signal — a passing test, or just that the error stops appearing?"
 - "Is this `low` or `medium` effort? Ballpark."
 
-If two or more fields are ambiguous, the conversation doesn't actually contain enough to file a ready task — tell the user and suggest `/plan-project` or a bit more discussion first. Don't file a below-bar task.
+If two or more fields are ambiguous, the conversation doesn't actually contain enough to file a ready task — tell the user and suggest `/feature` (which can run a short interview) or a bit more discussion first. Don't file a below-bar task.
 
 ### 4. Confirm, then write
 
@@ -91,5 +91,5 @@ No fanfare. The user was in the middle of something else.
 
 - **No writes below confident project inference.** Ask or stop.
 - **Readiness bar is non-negotiable.** Even for `/fix`. A trivial task still needs a title, summary, and acceptance signal.
-- **No multi-task filing.** If the conversation surfaced several things, hand off to `/plan-project` rather than batching.
+- **No multi-task filing.** If the conversation surfaced several things, hand off to `/feature` rather than batching.
 - **Don't edit existing tasks.** This skill creates. Pointing out a duplicate is fine; merging is not.

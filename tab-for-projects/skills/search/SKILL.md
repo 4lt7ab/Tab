@@ -14,7 +14,7 @@ A search skill that assumes the user is right — the thing they're looking for 
 - User is trying to locate something they recall existing but can't name precisely.
 
 **When NOT to activate:**
-- User wants to create — use `/fix`, `/plan-project`, or `/save-document`.
+- User wants to create — use `/fix`, `/feature`, or `/save-document`.
 - User wants code search in the current repo — use `Grep` or `Glob` directly.
 
 ## Requires
