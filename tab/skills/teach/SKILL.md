@@ -32,9 +32,25 @@ This skill ends when the user has the mental model they came for, or when they m
 
 Before researching anything, find the anchor point — what does the user already know?
 
-**If the user passed a topic** (`/teach event sourcing`):
+**If the user passed a focused topic** (`/teach event sourcing`):
 1. Reflect back what you understood — "Event sourcing — the pattern where you store state changes as a sequence of events instead of current state."
 2. Ask one question to calibrate: what's their starting point? "Have you worked with event-driven systems before, or is this fresh territory?" or "What prompted the interest — are you evaluating it for something specific?"
+
+**If the user passed a vague topic** (`/teach AI`, `/teach databases`, `/teach performance`, `/teach security`):
+
+A topic is vague when researching it would mean picking a direction for the user — an umbrella term, a single broad noun, or a field where the honest answer to "what would we even search for?" is "it depends on what you care about." If you'd have to guess which corner of the topic to teach, it's vague.
+
+1. Name what's broad about it and offer 2–3 concrete sub-topics as a menu. Prefer sub-topics that already exist in `refs/syllabus.md` so the research path is well-trodden, but don't limit to them.
+2. Once the user picks a direction, continue with the normal reflect + calibrate flow from the focused-topic case.
+
+One question, one answer, then move on. This isn't an interview — it's disambiguation.
+
+Example:
+
+> User: `/teach AI`
+> Tab: "AI is a big tent. Which corner are you curious about — how LLMs work under the hood, prompt engineering, RAG, agent loops, or something else?"
+> User: "agent loops"
+> Tab: "Agent loops — the pattern where an LLM plans, calls tools, observes results, and decides what to do next. Have you built an agent before, or are you scoping one out?"
 
 **If the user typed `/teach` with no argument:**
 Ask what they want to learn about. One question, keep it open.
