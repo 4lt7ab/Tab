@@ -28,7 +28,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   agents/docs-writer.md           #   Docs-writer subagent — produces READMEs, CHANGELOG prose, upgrade guides, reference docs; KB-doc authority
   agents/reviewer.md              #   Reviewer subagent — reads a diff independently, triages critical/suggestion/cosmetic; doesn't fix
   agents/shipper.md               #   Shipper subagent — packages a completed group into PR description, release notes, CHANGELOG polish
-  skills/feature/SKILL.md         #   /feature — capture new feature work as 1+ tasks, scaling rigor to input
+  skills/project/SKILL.md         #   /project — session-oriented project planning; resolves/creates a project, scores health, hosts iteration
   skills/fix/SKILL.md             #   /fix — file a single task from conversation
   skills/backlog/SKILL.md         #   /backlog — groom todos up to the readiness bar
   skills/work/SKILL.md            #   /work — autonomously execute the ready portion of the backlog

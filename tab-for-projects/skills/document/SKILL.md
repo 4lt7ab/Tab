@@ -14,7 +14,7 @@ The "this deserves to be a doc" skill. The user just worked through something �
 - A decision or convention just crystallized in conversation and the user wants it preserved.
 
 **When NOT to activate:**
-- User wants to create a task — use `/fix` or `/feature`.
+- User wants to create a task — use `/fix` or `/project`.
 - User wants to search an existing doc — use `/search`.
 - Content isn't ready — offer to keep discussing rather than saving a half-formed doc.
 

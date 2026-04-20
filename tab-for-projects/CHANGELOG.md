@@ -2,6 +2,14 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.9.0] — 2026-04-19
+
+### Added
+- `/project` — session-oriented planning entry point. Opens on a project (existing or brand-new, with explicit creation confirmation), scores backlog health against the readiness bar once at session open, then hosts an open-ended iteration loop for new initiatives, research threads, decision/convention capture, drive-by task filings, grooming handoffs, and status reads until the user closes. Captures tasks and KB docs as conclusions accumulate — no single end-of-session dump. Research is primary posture (prefers the `exa` MCP, falls back to native web search). Introduces a `team:<team-name>:<initiative-name>` convention on `group_key` for team attribution without an MCP schema change, validated against the 32-char ceiling at confirm time. Cross-references in `/fix`, `/work`, `/search`, `/backlog`, and `/document` updated.
+
+### Removed
+- **Breaking:** `/feature` skill. Its capture behavior lives inside `/project`'s iteration loop — a planning session is the natural home for initiative capture, research, and decision documentation, and the "one-shot file" framing pushed the user to dismount between related turns. For single-task drive-by filings from conversation, `/fix` is unchanged. For planning any multi-task work — one initiative or many — invoke `/project` instead.
+
 ## [0.8.1] — 2026-04-18
 
 ### Changed

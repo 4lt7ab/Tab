@@ -20,7 +20,7 @@
       "name": "tab-for-projects",
       "source": "./tab-for-projects",
       "description": "Project workflow tracking — skills and agents for the Tab for Projects MCP. Conversational project management that captures decisions and context.",
-      "version": "0.8.1",
+      "version": "0.9.0",
       "strict": true
     }
   ]

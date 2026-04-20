@@ -14,7 +14,7 @@ Take the current backlog of `todo` tasks and move each one to one of four states
 - `/work` just ran and reported several flagged tasks — the user wants to close the gaps.
 
 **When NOT to activate:**
-- User wants to create new tasks — use `/feature` or `/fix`.
+- User wants to create new tasks — use `/project` or `/fix`.
 - User wants to execute — use `/work`.
 - Backlog is already clean — check first; don't run for ceremony.
 
