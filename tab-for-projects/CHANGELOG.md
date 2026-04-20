@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.9.2] — 2026-04-19
+
+### Changed
+- `/project` close phase now spells out the full session-close flow: a canonical closing-phrase list (`that's it`, `done for now`, `close out`, `wrap up`, `ship it`, `i'm good`, `that's all`, `let's stop here`, `end session`, and `/close` typed inline) that prompts a single `y` / `not yet` confirm before the recap renders, fresh-topic detection that escalates to the same confirm rather than auto-closing, a `ship it` disambiguation rule that resolves to write-affirmation when the previous turn was a write-confirm and to close otherwise (with a one-line statement of which interpretation the skill took), and a scan-shaped recap template that surfaces task IDs, doc IDs, group routing notes, and a single advisory `Suggest:` line picked from a `/work` > `/backlog` > follow-up `/project` > nothing priority ladder. The recap stays conversation-local — no MCP session record, no session-summary doc by default. The locked copy lives in KB doc `01KPMASNH26NVDP038ZZ1ZDA50` and is quoted verbatim in SKILL.md so close behavior renders consistently across invocations.
+
 ## [0.9.1] — 2026-04-19
 
 ### Changed

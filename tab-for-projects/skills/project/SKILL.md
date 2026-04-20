@@ -336,25 +336,168 @@ No team attribution is a valid choice. If the session isn't team-scoped, use jus
 
 ### 9. Close
 
-Triggered by the user saying "that's it", "done for now", "close out", "ship it", or similar. The skill can also recognize a natural end when the user starts a fresh, off-topic turn — confirm closing rather than assuming.
+The full close flow — trigger, confirm, recap, no-persistence — is locked in addendum doc `01KPMASNH26NVDP038ZZ1ZDA50` (`Design: /project session-close UX`). Quote the blocks below verbatim; refer to the addendum for rationale, alternatives considered, and the worked-example variants.
 
-Produce a short recap and a suggestion:
+**Trigger surface (addendum §2).** The close trigger is a **detected closing-phrase list** that prompts a single confirmation before the recap renders. There is **no `/close` slash command**, **no idle/silence heuristic**, and **no auto-close on fresh-topic detection** — fresh-topic detection only escalates to the same confirm prompt.
+
+**(a) Closing-phrase list (addendum §2.5, locked).** Match case-insensitive, with light tolerance for punctuation/leading whitespace. The match must be **the substantive content of the user's turn** — a phrase embedded inside a longer initiative ("that's it for the auth piece, now let's plan billing") doesn't trigger.
+
+| Phrase | Notes |
+| --- | --- |
+| `that's it` / `that is it` | Most common natural close. |
+| `done for now` | Common natural close. |
+| `close out` / `let's close out` | Direct close intent. |
+| `wrap up` / `let's wrap up` / `wrap it up` | Common. |
+| `ship it` | Sometimes ambiguous; see (b) disambiguation. |
+| `i'm good` / `we're good` / `we're done` / `i'm done` | Natural close. |
+| `that's all` / `that's all for now` / `that's all i've got` | Natural close. |
+| `let's stop here` / `stop here` / `we can stop here` | Direct close. |
+| `end session` / `close session` / `end the session` | Explicit close. |
+| `/close` (typed inline as text, not a slash command) | Treated as an explicit close phrase even though `/close` isn't a registered skill. |
+
+**Fresh-topic detection** is a separate signal, not a phrase. It escalates to the same confirm prompt when **all three** of these hold:
+
+1. The user's turn names a project, codebase, or domain that doesn't match the active session's project.
+2. The turn carries an intent verb (`let's plan`, `start a session`, `work on`) — not a passing reference.
+3. The turn doesn't contain any closing phrase (otherwise the phrase wins and there's nothing to escalate).
+
+If the user replies `not yet` to the escalated confirm, the new topic is absorbed into the loop normally.
+
+**(b) `ship it` disambiguation (addendum §2.6).** `ship it` is the only listed phrase with realistic in-session ambiguity — it can mean "close the session" or "file the tasks I just confirmed". Resolve as follows:
+
+- If the **previous skill turn** was a write-confirmation prompt (`File these?`, `Create document?`, `Create the project?`), `ship it` resolves to **affirm the write**, not close. The skill treats it as a `y` for the pending confirm.
+- Otherwise, `ship it` resolves to a **close trigger** and routes through the standard close confirm.
+
+State the interpretation in one line so the user can correct:
 
 ```
-Session recap — Tab project
+Reading 'ship it' as confirming the write above. Filing now.
+```
 
-Filed 4 tasks in 2 initiatives:
-  - mfa-enrollment: 01KX…, 01KY…, 01KZ… (3 tasks, architect + implementer routing)
-  - token-rotation-fix: 01KW… (1 task)
+or
+
+```
+Reading 'ship it' as closing the session. Recap below — confirm to close.
+```
+
+**(c) Close-confirm prompt (addendum §2.7, locked copy).** On any close trigger (phrase match or fresh-topic escalation):
+
+```
+Closing the session?
+
+  (y / not yet)
+```
+
+Two responses, no third option:
+
+- **`y`** — render the recap (below) and end the session.
+- **`not yet`** — return to the loop without rendering the recap. Acknowledge with `Continuing — what's next?` and wait for the next turn.
+
+**Recap block (addendum §3).** One scan-shaped block, ordered by entity type, with task IDs and doc IDs surfaced for downstream reference. The recap fires once after `y`; no follow-up prompts.
+
+**(d) Recap structure (addendum §3.1, locked template).**
+
+```
+Session recap — <Project Title> (<project-id-prefix…>)
+
+Filed <N> task<s> in <M> initiative<s>:
+  - <group_key_1>: <id1>, <id2>, <id3> (<count> tasks, <category-routing-note>)
+  - <group_key_2>: <id4> (<count> task)
+  - (no group): <id5> (<count> drive-by task)
+
+Saved <P> KB doc<s>:
+  - <doc_id_1> "<Doc Title>" — <folder>
+  - <doc_id_2> "<Doc Title>" — <folder>
+
+Created project: <Project Title> (<project-id>)   ← only when the session created the project
+
+No writes this session.   ← shown instead of the above when nothing landed
+
+Suggest: <one-line next step — see (g) below>
+```
+
+**(e) Inclusion rules (addendum §3.2).**
+
+- **Tasks:** every `create_task` that fired during the session, grouped by `group_key`. Drive-bys (no `group_key`) collapse into a single `(no group)` line. Updates to existing tasks are not included — only newly-filed tasks.
+- **Documents:** every `create_document` that fired during the session. Updates to existing docs collapse into a single `Updated <Q> existing doc<s>: <id> "<Title>"` line below the saved-docs block.
+- **Project creation:** if the session created the project, surface it as a separate line below the docs block. If the project was resolved via inference, suppress this line entirely.
+- **Dependencies wired:** suppressed from the recap by default. The IDs are enough for follow-up inspection via `/search` or `get_task`.
+
+**(f) Ordering (addendum §3.3).**
+
+- **Initiatives:** in the order they were filed during the session (chronological).
+- **Tasks within an initiative:** in the order they were created (chronological within the batch).
+- **Docs:** chronological.
+
+**(g) `Suggest:` line priority (addendum §3.4).** One short suggestion, picked from this priority order:
+
+1. **`/work` is ready and natural** — at least one filed initiative has all tasks above the bar with no `blocks` edges to non-`done` tasks outside the group. Suggest: `/work to execute the <group_key> group — all <N> tasks are ready.`
+2. **`/backlog` is needed** — the opening summary flagged below-bar tasks that weren't groomed during the session. Suggest: `/backlog to clear the <Z> below-bar items before kicking off /work.`
+3. **Open question worth a follow-up session** — the session captured an open thread that wasn't filed. Suggest: `Worth a follow-up /project session on <topic> when ready.`
+4. **No clear next step** — suggest nothing. Drop the line entirely rather than padding with a generic "good session".
+
+Suggestions are advisory. The skill never auto-invokes another skill from the recap.
+
+**(h) Routing-note derivation (addendum §3.5).** The parenthetical category note on each initiative line summarizes which subagents `/work` would route the group's tasks to:
+
+| Tasks in the group | Routing note |
+| --- | --- |
+| All `feature` / `bugfix` / `refactor` / `perf` / `infra` / `chore` | `implementer routing` |
+| All `design` | `architect routing` |
+| All `test` | `test-writer routing` |
+| All `docs` | `docs-writer routing` |
+| All `security` | `implementer routing` (no security-specialist agent exists) |
+| Mixed categories | List the agents that would be touched, comma-separated, in the order they'd be hit by a topological walk: `architect + implementer routing`, `implementer + docs-writer routing`, etc. |
+| Single drive-by task | Omit the routing note; the `(no group)` line is short enough without it. |
+
+This is informational — `/work` does the actual routing.
+
+**(i) Worked example (addendum §3.6).** A two-initiative session with a drive-by, two docs, and a project created from scratch:
+
+```
+Session recap — Auth Rewrite (01KQ8X…)
+
+Filed 5 tasks in 3 initiatives:
+  - mfa-enrollment: 01KX1A…, 01KY2B…, 01KZ3C… (3 tasks, architect + implementer routing)
+  - token-rotation-fix: 01KW4D… (1 task, implementer routing)
+  - (no group): 01KV5E… (1 drive-by task)
 
 Saved 2 KB docs:
-  - 01KQ… "Decision: MFA vendor selection"
-  - 01KR… "Conventions: Session token rotation"
+  - 01KQ7F… "Decision: MFA vendor selection" — decisions
+  - 01KR8G… "Conventions: Session token rotation" — conventions
 
-Suggest: /work to execute the mfa-enrollment group — all 3 tasks are ready and sit in a natural chain.
+Created project: Auth Rewrite (01KQ8X…)
+
+Suggest: /work to execute the mfa-enrollment group — all 3 tasks are ready.
 ```
 
-Keep it short. The user wants to move on.
+A session with no writes:
+
+```
+Session recap — Tab (01KN6H…)
+
+No writes this session.
+
+Suggest: /backlog to clear the 3 below-bar items before kicking off /work.
+```
+
+**(j) No MCP persistence (addendum §4).** The recap stays **conversation-local**. The skill does not file a session-summary document, does not append to a project-attached log, and does not write any kind of `session` entity to the MCP. Every persistent artifact from the session is a discrete task or document the user already confirmed during the loop.
+
+If the user explicitly says during close `save this recap as a doc`, route to `/document` with the recap content pre-populated. That's a one-off opt-in, not a default behavior. The locked default is no persistence.
+
+**(k) Re-confirmation cadence summary (addendum §5).** For implementer reference:
+
+| Event | Cadence |
+| --- | --- |
+| Closing-phrase match | Single confirm prompt (c); awaits `y` / `not yet`. |
+| Fresh-topic detection (escalation) | Same single confirm prompt; awaits `y` / `not yet`. If `not yet`, the new topic is absorbed into the loop normally. |
+| `ship it` near a write-confirm | Resolves to write-affirmation, not close. Skill states the interpretation in one line (b). |
+| `ship it` outside a write-confirm | Resolves to close trigger; routes through the standard close confirm. |
+| `y` on close confirm | Render recap (d) and end the session. No further prompts. |
+| `not yet` on close confirm | Acknowledge with `Continuing — what's next?` and return to the loop. |
+| Recap rendered | One-shot output. No follow-up prompt — the suggestion line is advisory only. |
+
+Underneath: **close is one confirm, then a non-interactive recap, then nothing.** No multi-step close ceremony, no post-recap prompts.
 
 ## Output
 
@@ -387,3 +530,4 @@ No branches created, no code executed, no existing tasks silently edited.
 - **No codebase search as a substitute for the user's intent.** The user's words are the source for *what to build*; research informs *how*. Ask before spelunking the repo.
 - **One session at a time per conversation.** No parallel `/project A` + `/project B` in the same conversation; closing one is implicit before opening another.
 - **group_key respects the 32-char ceiling.** Validate at confirm; never truncate silently.
+- **Close is one confirm, then a non-interactive recap, then nothing.** No multi-step close ceremony, no post-recap prompts, no idle/silence auto-close, no auto-close on fresh-topic detection (escalates to the same confirm instead). The recap is conversation-local — no MCP persistence of the session record.
