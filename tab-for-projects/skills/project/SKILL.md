@@ -45,18 +45,129 @@ Three resolution branches:
 
 - **Confident match (existing project)** — state the project in the opening line and proceed to health evaluation.
 - **Ambiguous (2+ plausible projects)** — list the top 2–3 and ask which. No writes, no evaluation, no creation prompts until the user picks.
-- **No match at all** — offer to create a new project. Never silent-create. Use this prompt shape:
+- **No match at all** — offer to create a new project. Never silent-create. The full creation dialog (initial proposal, iterative edit loop with re-confirmation, 5-edit cap with `keep going` override, post-create acknowledgement, and the `pick existing instead` fallback) is locked in addendum doc `01KPMAFVJ6CDQMGMJRMYDKECAR` (`Design: /project creation prompt and edit-loop mechanics`). Quote the blocks below verbatim; refer to the addendum for rationale and alternatives considered.
+
+**(a) Initial proposal block (addendum §3.1).** Present once per session entry into the no-match branch:
 
 ```
 No existing project matches. Create a new one?
 
-  Title: <proposed — from cwd basename, git repo name, or the user's invocation>
-  Summary: <one line if the invocation carried intent, else blank>
+  Title: <proposed>
+  Summary: <one line if the invocation carried intent, else (none)>
 
 Create? (y / edit / pick existing instead)
 ```
 
-On `y`, call `create_project` with the confirmed title (+ summary if supplied). The returned `project_id` becomes the session's project. On `edit`, accept inline edits to title/summary and re-confirm. On `pick existing`, fall back to a short `list_projects` with a search term and let the user choose.
+Proposal sources, in priority order:
+
+1. **Title** — the user's invocation when it carried a clear noun phrase (`spin up a new project for the auth-rewrite` → `auth-rewrite`); else git remote `origin` repo name; else cwd basename. Strip leading `the`, trailing punctuation, and obvious connector words. Title-case.
+2. **Summary** — one line synthesized from the invocation when intent is present. Otherwise the literal token `(none)` is shown to make the empty state explicit; the field is left empty in the eventual `create_project` call.
+
+**(b) Iterative edit prompt + field prompts (addendum §3.2).** On `edit`, ask which field with the current proposal restated:
+
+```
+Which field?
+
+  1. Title:    <current proposed title>
+  2. Summary:  <current proposed summary, or (none)>
+
+(1 / 2 / both / cancel)
+```
+
+- `1` — prompt for a new title only.
+- `2` — prompt for a new summary only.
+- `both` — prompt for title, then summary, in sequence.
+- `cancel` — drop the edit, return to the initial proposal block (a) unchanged.
+
+Field prompts are minimal:
+
+```
+New title:
+```
+
+```
+New summary (or (none) to clear):
+```
+
+The `(none)` sentinel lets the user explicitly clear an existing summary back to empty.
+
+**(c) Re-confirmation block with `(changed)` markers (addendum §3.3).** After every accepted edit, re-present the full proposal with `(changed)` on fields that moved this round:
+
+```
+Updated proposal:
+
+  Title: <updated>     (changed)
+  Summary: <updated>   (changed)
+
+Create? (y / edit / pick existing instead)
+```
+
+The `(changed)` marker only appears on fields that moved this round. If neither field changed (e.g., the user typed a new title identical to the current one), omit the marker and prepend `No changes — same proposal as before.` above the block.
+
+**(d) 5-edit cap with `keep going` override (addendum §3.4).** When the user accepts a 6th edit, surface the cap once before continuing:
+
+```
+This is the 6th revision. Two options if the proposal still isn't landing:
+
+  - `pick existing` — search for an existing project instead of creating a new one.
+  - `cancel` — drop the proposal and re-invoke /project with a clearer hint.
+
+Or keep editing — say `keep going` and we'll continue.
+```
+
+If the user says `keep going`, the cap is suppressed for the rest of this proposal — do **not** re-surface it.
+
+**(e) Post-create acknowledgement (addendum §3.5).** On `y`, fire `create_project` with the confirmed title and summary (omitting the summary field entirely when it's `(none)`). Acknowledge the new ID and segue into the open-ended prompt — no health evaluation runs (there's nothing to evaluate):
+
+```
+Created: <Title> (<project_id>)
+
+New project — no backlog yet, no docs yet.
+
+What are we working on?
+```
+
+**(f) `pick existing instead` selection UI (addendum §4).** On `pick existing instead`, build the search term from the same signals that fed the title proposal (invocation noun phrase → git remote → cwd basename; first non-empty wins). Call `list_projects` with that title-search filter, capped at **8 results**, ordered `updated_at` desc. Present:
+
+```
+Looking for an existing project matching `<search term>`:
+
+  1. <Title> (<id-prefix…>) — last activity <relative-time>
+  2. <Title> (<id-prefix…>) — last activity <relative-time>
+  ...
+
+(Number to pick / `search <term>` to retry / `back` to return to the create proposal / `cancel` to abort the session)
+```
+
+Four responses:
+
+- **Number** — confirm the choice in one line (`Using: <Title> (<id>)`) and proceed to health evaluation as if inference had landed on this project.
+- **`search <term>`** — re-run `list_projects` with a new term. Same cap (8), same ordering, same UI. **No iteration cap on searching** — the user is searching, not editing a write proposal.
+- **`back`** — return to the initial creation proposal (a) unchanged.
+- **`cancel`** — close the session without creating or selecting. Acknowledge with `No project selected. Re-invoke /project when ready.` and stop.
+
+When `list_projects` returns zero matches, **do not auto-fall-back to the create proposal**:
+
+```
+No existing projects match `<search term>`.
+
+(`search <term>` to retry / `back` to the create proposal / `cancel` to abort)
+```
+
+When exactly one result matches, still present the selection UI — **do not auto-select**. The numeric pick is the explicit confirmation.
+
+**(g) Re-confirmation cadence summary (addendum §5).** For implementer reference:
+
+| Event | Cadence |
+| --- | --- |
+| Initial proposal | One block, awaits `y` / `edit` / `pick existing instead`. |
+| Each accepted edit | Re-present the full updated proposal block with `(changed)` markers; awaits explicit `y` again. |
+| 5-edit cap reached | Surface the cap prompt once; user picks among `pick existing` / `cancel` / `keep going`. |
+| `pick existing` selection | One-line `Using: <Title>` confirmation; no separate "is this right?" prompt — the explicit numeric pick is the confirmation. |
+| `pick existing` re-search | Re-present results UI; no additional confirmation between searches. |
+| `y` on a proposal | One-line `Created: <Title> (<id>)` acknowledgement; transition to the new-project prompt (no health evaluation, since there's nothing to evaluate). |
+
+Underneath: **every state change that produces a write fires through an explicit affirmation; every state change that's read-only or navigational does not.**
 
 **Hard rule:** no MCP writes of any kind below confident resolution. Project creation counts as a write — it gets the same confirmation bar as a task write.
 

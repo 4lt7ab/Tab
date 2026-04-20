@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [0.9.1] — 2026-04-19
+
+### Changed
+- `/project` no-match branch now spells out the full creation dialog: initial proposal, iterative one-field-at-a-time edit loop with `(changed)` markers on re-confirmation, a 5-edit cap that offers `pick existing` / `cancel` / `keep going` once when the proposal isn't converging, an explicit post-create acknowledgement with no spurious health evaluation, and a `pick existing instead` fallback with an 8-cap `list_projects` search, `back` / `cancel` / re-`search <term>` responses, and no auto-fall-back on empty results or auto-select on a single result. Every write still passes through an explicit `y`; navigational moves do not. The locked copy lives in KB doc `01KPMAFVJ6CDQMGMJRMYDKECAR` and is quoted verbatim in SKILL.md so renderings stay consistent across invocations.
+
 ## [0.9.0] — 2026-04-19
 
 ### Added
