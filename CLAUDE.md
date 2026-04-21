@@ -34,6 +34,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
   skills/work/SKILL.md            #   /work — autonomously execute the ready portion of the backlog
   skills/search/SKILL.md          #   /search — find docs and tasks via an escalating filter ladder
   skills/document/SKILL.md        #   /document — capture a decision, convention, or reference doc
+  skills/design/SKILL.md          #   /design — conversational KB doc capture for a design-category task; optionally fires archaeologist for a research brief
 ```
 
 ## Package Architecture

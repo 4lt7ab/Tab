@@ -2,7 +2,12 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
-## [2.0.0] — 2026-04-20
+## [2.1.0] — 2026-04-20
+
+### Added
+- `/design` — conversational KB doc capture for a design-category task. Takes a task ID, loads the task and any referenced documents, optionally dispatches the `archaeologist` subagent for a one-page research brief on larger codebases (opt out with `--no-brief`, force on with `--brief`), then hosts the conversation with the user and produces a decision / architecture / convention document via `create_document` — linked to the project, optionally closing the originating task on confirm. Design decisions stay the user's job; the skill loads context, runs the survey, hosts the conversation, and captures the result. Off-limits: picking a winner between real alternatives, writing source code, resolving forks the user punted on (those file as follow-up design tasks).
+
+
 
 ### Changed
 - **Breaking:** `architect` agent renamed to `archaeologist` and reshaped from a design-doc author into a research briefer. Invoking `tab-for-projects:architect` no longer resolves — use `tab-for-projects:archaeologist` instead. The new agent reads a design-category task and the surrounding code and KB, then returns a distilled ~1-page brief (relevant files, prior decisions, options on the table, open forks, assumptions) for a user running `/design`. It does not write source code, does not create KB documents, and does not make the design decision — design decisions are the user's to make in `/design`. The rename also lands downstream: `/work`'s design-category routing, the worked examples in `/project` and `/work`, and the cross-references in `implementer`, `docs-writer`, and `shipper` now name the new agent (and, where the agent no longer produces docs, name the user/`/design` as the source of design material).
