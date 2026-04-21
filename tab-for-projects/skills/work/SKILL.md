@@ -44,7 +44,8 @@ Below **confident**, ask. No writes below confident.
 1. Pull all `todo` tasks for the project. Apply filters (`group_key`).
 2. Pull the dependency graph.
 3. For each task, evaluate readiness — a task is **ready** when all of the following hold: verb-led title; 1–3 sentence summary covering why + what; `effort`, `impact`, and `category` all set; a concrete acceptance signal (a test that must pass, an observable behavior change, an artifact produced, or an artifact removed); no unmet blocker dependencies. Partition into:
-   - **Ready** — above the bar, no unmet blockers. Enters the eligible set.
+   - **Ready** — above the bar, no unmet blockers, category is not `design`. Enters the eligible set.
+   - **Awaiting human** — category is `design`. Not executed; surfaced in the end-of-run report with a pointer to `/design`. Task state untouched.
    - **Flagged** — below the bar, or blocked by unready tasks. Include reason per task. Reported at end-of-run; never executed.
 4. Topologically order the ready set by dependency edges, then by category priority (see routing table).
 5. Respect `--max=N` if given. **No default cap** — `/work` is persistent and runs until the ready set is empty, the user interrupts, or three consecutive task failures abort the run.
@@ -52,14 +53,15 @@ Below **confident**, ask. No writes below confident.
 
 ```
 /work — Tab project
-Ready: 7 tasks (persistent loop; no max cap)
+Ready: 6 tasks (persistent loop; no max cap)
+Awaiting human: 1 design task (surfaced in report; run `/design` to resolve)
 Flagged: 3 tasks (see list at end)
 
 Plan (first 5 shown; loop continues until ready set empty):
   1. 01KX… "Update README badges" (trivial / docs) → docs-writer
   2. 01KY… "Refactor session store" (medium / refactor) → implementer, reviewer after
-  3. 01KZa… "MFA enrollment" (medium / feature, group auth-mfa) → archaeologist, implementer, test-writer
-  4. 01KZb… "MFA verification" (medium / feature, group auth-mfa) → archaeologist, implementer, test-writer
+  3. 01KZa… "MFA enrollment" (medium / feature, group auth-mfa) → implementer, test-writer
+  4. 01KZb… "MFA verification" (medium / feature, group auth-mfa) → implementer, test-writer
   5. 01KZc… "MFA recovery" (low / feature, group auth-mfa) → implementer, test-writer
   ...
 
@@ -70,22 +72,31 @@ Accept `edit` (user reorders or drops tasks), `dry-run` (prints plan only, no ex
 
 ### 3. Route each task to the right subagent
 
-Task category determines the default agent. Optional precursor or successor agents form a chain that runs in sequence for a single task.
+Task category determines the default agent. Optional precursor or successor agents form a chain that runs in sequence for a single task. `design` is the exception — it has no autonomous route (see below).
 
-| Task category | Default agent | Optional precursor / successor                         |
-| ------------- | ------------- | ------------------------------------------------------ |
-| `feature`     | implementer   | archaeologist (precursor, if effort ≥ medium); test-writer (successor) |
-| `bugfix`      | implementer   | —                                                      |
-| `refactor`    | implementer   | reviewer (successor)                                   |
-| `test`        | test-writer   | —                                                      |
-| `docs`        | docs-writer   | —                                                      |
-| `perf`        | implementer   | —                                                      |
-| `design`      | archaeologist | — (produces a research brief, not a decision)          |
-| `security`    | reviewer      | implementer (successor, if fix needed)                 |
-| `infra`       | implementer   | —                                                      |
-| `chore`       | implementer   | —                                                      |
+| Task category | Default agent                | Optional precursor / successor         |
+| ------------- | ---------------------------- | -------------------------------------- |
+| `feature`     | implementer                  | test-writer (successor)                |
+| `bugfix`      | implementer                  | —                                      |
+| `refactor`    | implementer                  | reviewer (successor)                   |
+| `test`        | test-writer                  | —                                      |
+| `docs`        | docs-writer                  | —                                      |
+| `perf`        | implementer                  | —                                      |
+| `design`      | *(none — awaiting human)*    | — (surfaced in report; user runs `/design`) |
+| `security`    | reviewer                     | implementer (successor, if fix needed) |
+| `infra`       | implementer                  | —                                      |
+| `chore`       | implementer                  | —                                      |
 
-A chain is still one task. The precursor (e.g. archaeologist for a medium-effort feature) returns a research brief the user can skim before the default agent picks up the same `task_id`. Successors run after the default agent marks `done`.
+A chain is still one task. Successors run after the default agent marks `done`.
+
+**Design-category tasks are terminal to `/work`.** The routing table has no default agent for `design` because design decisions are the user's job — an autonomous agent can't supply the trade-offs, priorities, and unstated constraints a design doc encodes (see KB doc `01KPQ2AA503SNHRZYQHMD6RCPG`, *Design: Design work is user-driven, not autonomous*). When `/work` encounters a design task during the walk, it:
+
+- Does **not** dispatch any subagent for it.
+- Does **not** set task state — the task stays in `todo`.
+- Records the task ID in an "awaiting human" bucket for the end-of-run report, with a pointer to `/design`.
+- Advances to the next task.
+
+The archaeologist subagent exists, but it is only dispatched by the `/design` skill — never by `/work`. `/work`'s job is executing what's machine-executable; design isn't.
 
 ### 4. Dispatch contract — IDs only
 
@@ -116,15 +127,16 @@ After a subagent returns, `/work` re-reads task state to determine outcome:
 
 **On every subagent return, re-evaluate the dependency graph.** New tasks filed by the subagent, or completions that unblocked existing tasks, may expand the eligible set. Pull the graph again before picking the next task.
 
-### 6. Halts and new design tasks are batched
+### 6. Halts and design tasks are batched
 
 `/work` does not interrupt the user mid-run. Throughout the loop:
 
 - Halt notes accumulate in a queue.
-- New tasks of category `design` filed by subagents (typically by the archaeologist during a chain) accumulate in a separate queue — the user usually wants to weigh in on design forks before they spawn implementation work.
+- Design-category tasks encountered in the walk accumulate in an "awaiting human" queue — not executed, task state untouched.
+- New tasks of category `design` filed by subagents accumulate in the same "awaiting human" queue — the user weighs in on design forks before they spawn implementation work.
 - All other status changes and new tasks flow without pause.
 
-At end-of-run, both queues surface in the single "needs your call" section of the report.
+At end-of-run, both queues surface in the single "needs your call" section of the report, with task IDs and a pointer to `/design` for the design items.
 
 ### 7. Parallelism
 
@@ -167,30 +179,29 @@ When abort fires, skip directly to end-of-run reporting — the shipper step and
 ```
 /work complete — Tab project
 
-Executed: 7 tasks · 5 commits · 3 new tasks filed by subagents
+Executed: 6 tasks · 5 commits · 2 new tasks filed by subagents
 
   ✓ 01KX… Update README badges                   → docs-writer
   ✓ 01KY… Refactor session store                 → implementer, reviewer (clean)
-  ✓ 01KZa… MFA enrollment                        → archaeologist, implementer, test-writer
+  ✓ 01KZa… MFA enrollment                        → implementer, test-writer
   ✓ 01KZb… MFA verification                      → implementer, test-writer
   ✗ 01KZc… MFA recovery                          → implementer (halt — spec unclear)
   ✓ 01KW… Add security audit log                 → implementer
-  ✗ 01KV… Upgrade cookie crypto                  → reviewer (halt — key rotation policy needed)
 
 Flagged (3 tasks below bar — won't execute until groomed):
   01K1… "Improve search performance" — no acceptance signal
   01K2… "Investigate X" — blocked by 01K3… (also flagged)
   01K3… "Rethink Y" — no summary
 
-Needs your call (2 halts · 1 new design task):
+Needs your call (1 halt · 2 design tasks awaiting human):
   01KZc "MFA recovery" halted — note: "recovery flow: SMS or TOTP-only? spec doesn't say"
-  01KV "Upgrade cookie crypto" halted — note: "need key-rotation policy before touching AEAD"
-  01KU "Choose MFA vendor" (new, category=design) — filed by archaeologist during 01KZa
+  01KU "Choose MFA vendor" (design) — awaiting human, run `/design 01KU…`
+  01KT "Session-store boundary" (design, new — filed by implementer during 01KY) — awaiting human, run `/design 01KT…`
 
 Shipper output:
   Group auth-mfa: 3 commits, PR description generated — see task 01KS for the draft.
 
-Suggest: /backlog to address flagged items, then reply to the halts above.
+Suggest: resolve the design tasks with `/design`, then /backlog for the flagged items, then reply to the halt above.
 ```
 
 ## Output
@@ -209,6 +220,7 @@ Suggest: /backlog to address flagged items, then reply to the halts above.
 - **One task = one commit.** Subagents enforce this. If a run aborts halfway, the user gets a clean boundary to resume from.
 - **Flagging is a feature, not a failure.** A run that executes 4 of 7 tasks and flags 3 with specific reasons is better than one that silently ships 7 half-done changes.
 - **Halts are batched, never interruptive.** The user ran `/work` to hand off execution; breaking in for every design question defeats the handoff.
+- **Design is the user's job.** `/work` surfaces design-category tasks and gets out of the way — it never dispatches a subagent to produce a design decision on the user's behalf.
 - **Parallelism has a cost.** Default serial. Opt in explicitly when the group is well-partitioned.
 
 ## Constraints
@@ -220,6 +232,7 @@ Suggest: /backlog to address flagged items, then reply to the halts above.
 - **No mid-run interruption for halts.** Batch to end-of-run.
 - **No force-push, no destructive git, no rewriting shared history.** Ever.
 - **No executing below-bar tasks.** Ever. Flag instead.
+- **No executing design-category tasks.** Ever. Surface with a pointer to `/design` instead.
 - **No auto-merging PRs, no pushing commits.** The shipper produces drafts; the user ships.
 - **Never skip acceptance-signal verification.** A task without verification is not done.
 - **Three-strikes abort is non-negotiable.** Three consecutive failures means something structural is wrong — stop the run and hand it back.

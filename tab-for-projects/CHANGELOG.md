@@ -2,6 +2,11 @@
 
 All notable changes to the **tab-for-projects** plugin. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/).
 
+## [2.3.0] — 2026-04-20
+
+### Changed
+- `/work` no longer routes design-category tasks to any subagent. Design is treated as terminal to the autonomous walk: when the initial plan is built, design tasks partition into an "Awaiting human" bucket (separate from Ready and Flagged); during the run they are never dispatched and their task state stays untouched; at end-of-run they surface in the "needs your call" section with their task IDs and a pointer to `/design`. New design tasks filed by subagents mid-run flow into the same bucket. The routing table row for `design` is replaced by `*(none — awaiting human)*`, and the `feature` row drops the archaeologist precursor entirely — archaeologist is now only dispatched by `/design`, never by `/work`. Aligns `/work` with the decision in KB doc `01KPQ2AA503SNHRZYQHMD6RCPG`: design decisions encode trade-offs only the user can supply, so the autonomous executor surfaces them rather than guessing.
+
 ## [2.2.0] — 2026-04-20
 
 ### Changed
