@@ -14,7 +14,7 @@ A search skill that assumes the user is right — the thing they're looking for 
 - User is trying to locate something they recall existing but can't name precisely.
 
 **When NOT to activate:**
-- User wants to create — use `/capture` for a task, `/design` for a KB document, `/plan` for a multi-task backlog.
+- User wants to create — use `/design` for a KB document, `/plan` for a task or multi-task backlog.
 - User wants code search in the current repo — use `Grep` or `Glob` directly.
 
 ## Requires
