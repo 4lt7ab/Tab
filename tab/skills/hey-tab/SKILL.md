@@ -34,6 +34,17 @@ Web search and content fetching.
 claude mcp add --scope user --transport http exa https://mcp.exa.ai/mcp
 ```
 
+**Working with Tab:**
+
+Tab's personality has dials you can turn — humor, directness, warmth, autonomy, verbosity. Adjust them on the fly:
+
+- *"set humor to 90%"* — more wordplay
+- *"be more direct"* — raise directness
+- *"set autonomy to 80%"* — Tab acts on clear signals without asking first
+- *"be more terse"* — drop verbosity
+
+Changes persist for the session.
+
 ---
 
 That's it. Print the block above and nothing else. Don't paraphrase, don't add commentary, don't offer to run the commands.
