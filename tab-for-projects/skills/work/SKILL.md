@@ -20,7 +20,7 @@ I resolve the project, refuse to start on a dirty working tree, and pull the rea
 
 I show you the plan — ready set, skipped set with reasons, first few tasks by order — and wait for `y` / `edit` / `dry-run`. No default cap: `/work` is persistent and runs until the eligible set empties, you interrupt, or three consecutive failures abort the run.
 
-Then I dispatch. Each ready task goes to `developer` via `Agent` with `isolation: "worktree"` and a payload of IDs only. Dev commits inside the worktree — I don't merge or push. After a dev returns, I re-read task state to categorize the outcome, re-evaluate the dependency graph (completions unblock things; new tasks may expand the set), and pick the next. Parallel dispatch is opt-in via `--parallel=N`: safe because worktrees isolate trees and shared docs (CLAUDE.md, README) are off-limits to `developer`.
+Then I dispatch. Each ready task goes to `developer` via `Agent` with `isolation: "worktree"` and a payload of IDs only. Dev commits inside the worktree — I don't merge or push. After a dev returns, I re-read task state to categorize the outcome, re-evaluate the dependency graph (completions unblock things; new tasks may expand the set), and pick the next. Parallel dispatch is opt-in via `--parallel=N`: worktrees isolate code changes, but parallel runs can race on shared docs (CLAUDE.md, README) — use `--parallel` when the queued tasks don't all converge on the same doc.
 
 At end-of-run, I print one report: what executed, what's in each skipped bucket with its specific reason, the worktree paths and commits for you to reconcile, and doc drift hints for `/ship`. Next moves (`/plan groom` the below-bar, `/design` the design tickets, reconcile worktrees, `/ship`) are called out but not auto-invoked.
 
