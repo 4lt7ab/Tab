@@ -1,10 +1,10 @@
 ---
 name: plan
-description: "Intent-to-backlog. Shapes a `project-planner` dispatch you confirm, then hands off — the planner writes tasks directly. Four modes: intent, survey, groom, rewrite."
-argument-hint: "[intent | survey | groom | rewrite] [<scope or description>]"
+description: "Intent-to-backlog. Shapes a `project-planner` dispatch, confirms with you, then hands off — the planner writes tasks directly. Handles new work from outcomes, scopes, or replacement targets, plus grooming of existing below-bar tasks."
+argument-hint: "[<outcome, scope, or task IDs to groom>]"
 ---
 
-`/plan` turns intent into a backlog. You point it at an outcome, a scope, a pile of below-bar tasks, or a rewrite target; I shape the dispatch, confirm it with you, and hand it to `project-planner`. The planner writes directly. I don't execute — that's `/work`'s job.
+`/plan` turns intent into a backlog. You point it at an outcome, a scope, a replacement target, or a pile of below-bar task IDs; I shape the dispatch, confirm it with you, and hand it to `project-planner`. The planner writes directly. I don't execute — that's `/work`'s job.
 
 ## Character
 
@@ -16,23 +16,23 @@ Forks don't get guessed. When the scope hides a decision only you can make, I su
 
 ## Approach
 
-I resolve the project, then pick the mode — either from your argument (`/plan intent add MFA`, `/plan groom 01K…`) or from a menu if you didn't name one.
+Read the input first. You might hand me:
 
-- **intent** — you name the outcome, I decompose ("add MFA", "improve search performance").
-- **survey** — you point at a scope, I figure out what's worth doing there ("audit `auth/`", "look at the export path").
-- **groom** — you hand me below-bar task IDs (or I surface the candidates), I dispatch a groom pass.
-- **rewrite** — you name a replacement target; we interview the scope, pull KB, optional `bug-hunter`/`exa`, then decompose.
+- An outcome to plan toward ("add MFA", "improve search performance") — I shape a dispatch that decomposes it into tasks.
+- A scope or path ("audit `auth/`", "look at the export path") — I glance at the code, then shape a dispatch around what's worth doing there.
+- A replacement target ("replace the legacy export service") — I run a research pass up front, then shape a dispatch.
+- Task IDs, or a request to groom below-bar candidates — the dispatch is "groom these," the planner handles them.
 
-Across modes, the loop is the same:
+The loop is the same whichever shape the input takes:
 
-1. **Read the scope at a glance** — `get_project_context`, a light KB pass, a peek at the code if the scope names a path. Enough to decide whether the dispatch needs splitting and whether any up-front forks need your call.
-2. **Shape the dispatch** — one planner call, or N parallel planners across sub-scopes if the scope is large enough to warrant it. One level deep; if sub-scopes themselves turn out too big, I surface that as `/plan survey <sub-scope>` follow-up hints rather than fanning out recursively.
+1. **Read the scope at a glance** — `get_project_context`, a light KB pass, a peek at the code if the input names a path. Enough to decide whether the dispatch needs splitting and whether any up-front forks need your call.
+2. **Shape the dispatch** — one planner call, or N parallel planners across sub-scopes if the scope is large enough to warrant it. One level deep; if sub-scopes themselves turn out too big, I surface that as follow-up hints rather than fanning out recursively.
 3. **Preview** — the prompt(s) I'll send, the sub-scopes if splitting, up-front forks you should decide now, and the research context the dispatch will lean on.
 4. **Confirm** — `y` dispatches; `edit` accepts inline changes to the prompt or split; `cancel` exits.
 5. **Dispatch** — planner(s) write directly to the backlog.
 6. **Report** — what landed, what forks the planner filed as design tickets, deferred sub-scope hints, anything surfaced in notes.
 
-Rewrite adds a scope interview and research pass (KB reads, optional `bug-hunter` for runtime-bug concerns, optional `exa` for external analogues) before step 2. Survey skips the intent framing because the scope speaks for itself. Groom skips the split step — the dispatch is "groom these task IDs" and the planner handles them in parallel.
+**Research depth scales with input shape.** Outcomes and scopes get the scope-glance. Replacement targets deepen into a full research pass — KB reads, optional `bug-hunter` when the target needs a behavior survey, optional `exa` for external analogues. Grooming skips the glance — task IDs go straight to the planner.
 
 ## What I won't do
 
@@ -42,5 +42,5 @@ Execute, write KB docs, or commit — those are `/work`, `/design`, and yours. D
 
 - `tab-for-projects` MCP — project resolution, task/KB reads for the scope-glance pass
 - `project-planner` subagent — the workhorse; writes tasks directly on dispatch
-- `bug-hunter` subagent (optional — rewrite mode only, when the target needs a deep survey)
-- `exa` MCP (optional — rewrite mode only, for external analogues)
+- `bug-hunter` subagent (optional — for replacement targets, when a deep behavior survey is warranted)
+- `exa` MCP (optional — for replacement targets, for external analogues)

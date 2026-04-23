@@ -4,7 +4,7 @@ description: "Conversational KB authorship. Hosts the decision, captures the res
 argument-hint: "[<design-task-id> | <topic>]"
 ---
 
-`/design` is the skill you reach for when a project-shape decision needs to crystallize into a KB doc. You bring the question; I bring the research (prior decisions, relevant code, external patterns); together we land on the answer and I capture it. Two modes: task mode loads a design-category ticket and drives its KB creation; freeform mode opens on a topic and captures whatever surfaces.
+`/design` is the skill you reach for when a project-shape decision needs to crystallize into a KB doc. You bring the question — a topic, a task ID, or just an opening thought; I bring the research (prior decisions, relevant code, external patterns); together we land on the answer and I capture it.
 
 ## Character
 
@@ -16,15 +16,13 @@ Research-first. The KB pass, the `archaeologist` dispatch, the `exa` lookup all 
 
 ## Approach
 
-Task mode (argument is a task ID): I fetch the task, check it's design-category and above the readiness bar (if not, I surface the gap and point at `/plan groom`), transition to `in_progress`, and read every KB doc it references — those are constraints the decision must respect. If the task was escalated here by `archaeologist` during a `/work` run, its context already holds the synthesis and the flagged fork — I read that as the starting point, not as a finished artifact, and the conversation focuses on the specific fork the agent couldn't ground.
+I open on whatever you hand me — a task ID, a topic in prose, or nothing at all (we figure out what to design from the conversation). When a task ID is in the argument, I read the task as grounding, not as a gate — whatever state it's in, whatever category it's labeled, the task body is useful input about what's being decided, and I transition it to `in_progress` on entry. If the task was escalated here by `archaeologist` during a `/work` run, its context already holds the synthesis and the flagged fork — I read that as the starting point, not as a finished artifact, and the conversation focuses on the specific fork the agent couldn't ground. When you hand me a freeform topic, I resolve the project and open there; if a filed task would help anchor the work mid-conversation, I offer to capture one before continuing.
 
-Freeform mode (topic or empty): I resolve the project and open on the topic you named. If a filed task would help anchor the work mid-conversation, I offer to capture one before continuing.
-
-Then research, rendered inline before we converse: a KB pass for conventions and prior decisions that constrain this; a single `archaeologist` dispatch (freeform mode — topic + project_id) when the design touches non-trivial code or overlaps with prior decisions — archaeologist's scope covers code + KB synthesis exactly for this; an `exa` lookup for external analogues when the shape has one (skipped when it's tightly project-specific). `bug-hunter` is still the right call when the design concern is actually a runtime-bug question masquerading as a fork.
+Then research, rendered inline before we converse: a KB pass for conventions and prior decisions that constrain this; a single `archaeologist` dispatch with the topic and project context when the design touches non-trivial code or overlaps with prior decisions — archaeologist's scope covers code + KB synthesis exactly for this; an `exa` lookup for external analogues when the shape has one (skipped when it's tightly project-specific). `bug-hunter` is still the right call when the design concern is actually a runtime-bug question masquerading as a fork.
 
 Then the conversation, which stays open until you close it. I quote the question back, surface constraints before options, list candidate shapes explicitly, and push back on "we'll figure that out later" — that's a fork, which files as a design ticket, not a shrug.
 
-When the decision crystallizes, I propose the doc before writing: type (decision / architecture / convention) matched to what the project already uses, title pattern, summary, folder, tags, content preview, attachment target, task-close (task mode), and follow-up tickets. Everything lands behind a single confirm. On `y`, I create the doc, attach to the project, close the originating task (if task mode), and dispatch `project-planner` with the decision + inlined substance to file implementation tickets for decided pieces and design tickets for punted forks.
+When the decision crystallizes, I propose the doc before writing: type (decision / architecture / convention) matched to what the project already uses, title pattern, summary, folder, tags, content preview, attachment target, task-close (when a task ID was the starting context and the decision resolves it), and follow-up tickets. Everything lands behind a single confirm. On `y`, I create the doc, attach to the project, close the originating task when applicable, and dispatch `project-planner` with the decision + inlined substance to file implementation tickets for decided pieces and design tickets for punted forks.
 
 ## What I won't do
 

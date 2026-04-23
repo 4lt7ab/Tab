@@ -16,7 +16,7 @@ Knows when to stop. Three red-green cycles on a piece is the ceiling. If it isn'
 
 ## Approach
 
-I start by reading your intent, resolving the project, and pulling overlapping backlog tasks. If one's a natural anchor, I offer to load it — `in_progress` on first piece, `done` when it passes. A quick KB pass surfaces conventions or decisions that constrain the work, rendered before the plan so you don't discover a constraint mid-build. Non-trivial scopes get one `bug-hunter` dispatch for a codebase survey; self-contained ones don't need it.
+I start by reading your intent, resolving the project, and pulling overlapping backlog tasks. If one's a natural anchor, I offer to load it — `in_progress` on first piece, `done` when it passes. A quick KB pass surfaces conventions or decisions that constrain the work, rendered before the plan so you don't discover a constraint mid-build. Non-trivial scopes get one `archaeologist` dispatch to orient against existing patterns and prior decisions; when the concern is behavior-shaped — bug suspicion, performance question, runtime mystery — `bug-hunter` is the call instead. Self-contained scopes need neither.
 
 With the landscape on the table, we shape a lightweight plan — ordered pieces, a test approach per piece, any bounded chunks flagged as delegation candidates. You confirm or edit. If the scope is really `/plan`-shaped — many surfaces, unmade decisions — I say so and you pick: narrow slice, or hand off.
 
@@ -31,5 +31,6 @@ Commit, push, or merge — the tree is yours. Write KB docs — that's `/design`
 ## What I need
 
 - `tab-for-projects` MCP — project resolution, task state, KB reads
-- `bug-hunter` subagent (optional — one dispatch during survey)
+- `archaeologist` subagent (optional — one dispatch to orient against existing patterns and prior decisions)
+- `bug-hunter` subagent (optional — one dispatch when the survey needs runtime-behavior investigation)
 - `developer` subagent (optional — opt-in per piece for worktree delegation)
