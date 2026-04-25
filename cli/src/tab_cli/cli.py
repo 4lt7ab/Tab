@@ -606,6 +606,34 @@ def teach(
     typer.echo(output)
 
 
+@app.command("setup")
+def setup() -> None:
+    """Print the CLI install / provider-key cheat sheet and exit.
+
+    Loads the verbatim block from
+    ``cli/src/tab_cli/setup.md`` (shipped inside the wheel) and writes
+    it to stdout — no flags, no agent, no network. The same readable-error
+    / non-zero exit contract as ``tab ask`` applies if the bundled
+    markdown ever goes missing.
+    """
+    # Lazy import: keeps ``tab --help`` and unrelated subcommands from
+    # paying for the (admittedly tiny) ``Path.read_text`` plumbing at
+    # import time. Same pattern as the other subcommands in this module.
+    from tab_cli.setup import read_setup_body
+
+    try:
+        body = read_setup_body()
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    # ``rstrip("\n")`` so ``typer.echo`` appends exactly one trailing
+    # newline regardless of whether ``setup.md`` ends in one. Keeps the
+    # smoke-test contract (``tab setup | head -1`` prints ``tab setup``)
+    # robust against editor-induced trailing-newline drift.
+    typer.echo(body.rstrip("\n"))
+
+
 @app.command("chat")
 def chat(
     model: str | None = typer.Option(

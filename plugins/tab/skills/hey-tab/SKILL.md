@@ -22,6 +22,11 @@ When the user runs `/hey-tab`, print the following block exactly:
 
 ---
 
+> Tab also runs as a standalone CLI with multi-provider support
+> (Anthropic / OpenAI / Google / Groq / Ollama). For CLI install
+> and provider keys, run `tab setup` after installing via
+> `uv tool install tab`.
+
 **MCPs that Tab likes to use:**
 
 These are optional — Tab works fine without them. But they unlock web search, research, and fetching capabilities that make several skills (like `/teach`) significantly better.
