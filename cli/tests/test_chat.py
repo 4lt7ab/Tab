@@ -437,3 +437,150 @@ def test_bare_tab_surfaces_runtime_errors(runner: CliRunner) -> None:
     assert result.exit_code != 0
     assert "tab:" in result.stderr
     assert "registry unreachable" in result.stderr
+
+
+# ---- Personality dial flags (Typer-level) ---------------------------------
+#
+# `tab chat` and the bare-`tab` shortcut both expose the five
+# `--<dial> INT` flags. The values they parse must round-trip into
+# `run_chat(settings=...)`. Range errors emit the same one-line stderr
+# message as `tab ask`.
+
+
+@pytest.fixture
+def isolated_xdg(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> Any:
+    """Empty ``XDG_CONFIG_HOME`` so the resolver doesn't read real config."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    tab_dir = tmp_path / "tab"
+    tab_dir.mkdir()
+    return tab_dir
+
+
+def test_tab_chat_humor_flag_routes_to_run_chat(
+    runner: CliRunner, isolated_xdg: Any
+) -> None:
+    """``tab chat --humor 90`` must reach ``run_chat`` with humor=90."""
+    captured: list[dict[str, Any]] = []
+
+    def _stub(**kwargs: Any) -> None:
+        captured.append(kwargs)
+
+    with patch("tab_cli.chat.run_chat", _stub):
+        result = runner.invoke(app, ["chat", "--humor", "90"])
+
+    assert result.exit_code == 0, result.output
+    assert len(captured) == 1
+    settings = captured[0].get("settings")
+    assert settings is not None, "run_chat must receive a TabSettings"
+    assert settings.humor == 90
+    # Other dials default.
+    assert settings.directness == 80
+
+
+def test_tab_chat_all_five_dial_flags_round_trip(
+    runner: CliRunner, isolated_xdg: Any
+) -> None:
+    captured: list[dict[str, Any]] = []
+
+    def _stub(**kwargs: Any) -> None:
+        captured.append(kwargs)
+
+    with patch("tab_cli.chat.run_chat", _stub):
+        result = runner.invoke(
+            app,
+            [
+                "chat",
+                "--humor", "5",
+                "--directness", "15",
+                "--warmth", "25",
+                "--autonomy", "35",
+                "--verbosity", "45",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    settings = captured[0]["settings"]
+    assert settings.humor == 5
+    assert settings.directness == 15
+    assert settings.warmth == 25
+    assert settings.autonomy == 35
+    assert settings.verbosity == 45
+
+
+def test_tab_chat_out_of_range_dial_exits_non_zero(
+    runner: CliRunner, isolated_xdg: Any
+) -> None:
+    """``tab chat --humor 150`` must surface the readable range error."""
+
+    def _stub(**_: Any) -> None:
+        # Should never be called — validation happens before run_chat.
+        raise AssertionError("run_chat should not run on out-of-range input")
+
+    with patch("tab_cli.chat.run_chat", _stub):
+        result = runner.invoke(app, ["chat", "--humor", "150"])
+
+    assert result.exit_code != 0
+    assert "humor must be 0-100, got 150" in result.stderr
+
+
+def test_bare_tab_humor_flag_routes_to_run_chat(
+    runner: CliRunner, isolated_xdg: Any
+) -> None:
+    """The bare-``tab``-defaults-to-chat path must accept dial flags too."""
+    captured: list[dict[str, Any]] = []
+
+    def _stub(**kwargs: Any) -> None:
+        captured.append(kwargs)
+
+    with patch("tab_cli.chat.run_chat", _stub):
+        result = runner.invoke(app, ["--humor", "12", "--verbosity", "88"])
+
+    assert result.exit_code == 0, result.output
+    settings = captured[0]["settings"]
+    assert settings.humor == 12
+    assert settings.verbosity == 88
+
+
+def test_bare_tab_out_of_range_dial_exits_non_zero(
+    runner: CliRunner, isolated_xdg: Any
+) -> None:
+    """Same range error on the bare-``tab`` path."""
+
+    def _stub(**_: Any) -> None:
+        raise AssertionError("run_chat should not run on out-of-range input")
+
+    with patch("tab_cli.chat.run_chat", _stub):
+        result = runner.invoke(app, ["--directness", "200"])
+
+    assert result.exit_code != 0
+    assert "directness must be 0-100, got 200" in result.stderr
+
+
+def test_tab_chat_unset_flags_fall_through_to_config_then_defaults(
+    runner: CliRunner, isolated_xdg: Any
+) -> None:
+    """flag > config file > tab.md defaults — same precedence on chat."""
+    (isolated_xdg / "config.toml").write_text("[settings]\nautonomy = 99\n")
+
+    captured: list[dict[str, Any]] = []
+
+    def _stub(**kwargs: Any) -> None:
+        captured.append(kwargs)
+
+    with patch("tab_cli.chat.run_chat", _stub):
+        result = runner.invoke(app, ["chat", "--humor", "10"])
+
+    assert result.exit_code == 0, result.output
+    settings = captured[0]["settings"]
+    assert settings.humor == 10        # flag wins
+    assert settings.autonomy == 99     # config-file fallthrough
+    assert settings.directness == 80   # tab.md default fallthrough
+
+
+def test_tab_chat_help_lists_dial_flags(runner: CliRunner) -> None:
+    sub = runner.invoke(app, ["chat", "--help"])
+    assert sub.exit_code == 0
+    for dial in ("--humor", "--directness", "--warmth", "--autonomy", "--verbosity"):
+        assert dial in sub.stdout, f"{dial} missing from `tab chat --help`"

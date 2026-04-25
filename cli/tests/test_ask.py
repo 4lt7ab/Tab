@@ -215,3 +215,207 @@ def test_ask_help_lists_command_and_model_flag(runner: CliRunner) -> None:
     assert sub.exit_code == 0
     assert "--model" in sub.stdout
     assert "PROMPT" in sub.stdout.upper()
+
+
+# ---- Personality dial flags -----------------------------------------------
+#
+# Per the settings-system synthesis (task 01KQ2YXEDHVD2YG1DPD9HEVR2S), each
+# of the five dials gets a `--<dial> INT` flag that wins over config + tab.md
+# defaults for the invocation. Out-of-range values exit non-zero with a
+# `<dial> must be 0-100, got <value>` line on stderr — the contract the
+# original task acceptance pinned.
+
+
+@pytest.fixture
+def isolated_xdg(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> Any:
+    """Point ``XDG_CONFIG_HOME`` at an empty tmp dir.
+
+    Keeps every flag test from accidentally picking up the developer's
+    real ``~/.config/tab/config.toml`` and reading values that aren't in
+    the test's setup. Returns the tab/ subdir so individual tests can
+    write a config file when they want to exercise the layering.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    tab_dir = tmp_path / "tab"
+    tab_dir.mkdir()
+    return tab_dir
+
+
+def test_ask_humor_flag_reaches_compile_tab_agent(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """``tab ask --humor 90 "..."`` must compile the agent with humor=90."""
+    agent = _StubAgent()
+    recorder = _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(app, ["ask", "--humor", "90", "hello"])
+
+    assert result.exit_code == 0, result.stderr
+    settings = recorder.calls[0].get("settings")
+    assert settings is not None, "compile_tab_agent must receive a settings kwarg"
+    assert settings.humor == 90
+    # Other dials fall through to tab.md defaults.
+    assert settings.directness == 80
+    assert settings.warmth == 70
+    assert settings.autonomy == 50
+    assert settings.verbosity == 35
+
+
+def test_ask_all_five_dial_flags_work(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """All five flags route into the resolved TabSettings."""
+    agent = _StubAgent()
+    recorder = _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(
+        app,
+        [
+            "ask",
+            "--humor", "10",
+            "--directness", "20",
+            "--warmth", "30",
+            "--autonomy", "40",
+            "--verbosity", "50",
+            "hello",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    settings = recorder.calls[0]["settings"]
+    assert settings.humor == 10
+    assert settings.directness == 20
+    assert settings.warmth == 30
+    assert settings.autonomy == 40
+    assert settings.verbosity == 50
+
+
+def test_ask_dial_boundaries_are_accepted(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """0 and 100 are valid; the validator's range is inclusive."""
+    agent = _StubAgent()
+    recorder = _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(
+        app, ["ask", "--humor", "0", "--directness", "100", "hi"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    settings = recorder.calls[0]["settings"]
+    assert settings.humor == 0
+    assert settings.directness == 100
+
+
+def test_ask_out_of_range_exits_non_zero_with_readable_error(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """``--humor 150`` exits non-zero with the contract'd one-line error."""
+    agent = _StubAgent()
+    _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(app, ["ask", "--humor", "150", "hello"])
+
+    assert result.exit_code != 0
+    assert "humor must be 0-100, got 150" in result.stderr
+    # No traceback, no agent call, no half-printed response.
+    assert agent.runs == []
+    assert result.stdout.strip() == ""
+
+
+def test_ask_negative_dial_value_also_errors(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """Negative values must hit the same readable-error path."""
+    agent = _StubAgent()
+    _patch_compile(monkeypatch, agent)
+
+    # Click treats a leading `-1` as another option name unless we use
+    # `--directness=-1`. The `=` form is what users will reach for too.
+    result = runner.invoke(app, ["ask", "--directness=-1", "hello"])
+
+    assert result.exit_code != 0
+    assert "directness must be 0-100, got -1" in result.stderr
+
+
+def test_ask_unset_flags_fall_through_to_tab_md_defaults(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """No flags + no config file → :class:`TabSettings` defaults."""
+    agent = _StubAgent()
+    recorder = _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(app, ["ask", "hi"])
+
+    assert result.exit_code == 0, result.stderr
+    settings = recorder.calls[0]["settings"]
+    # tab.md / TabSettings field defaults.
+    assert settings.humor == 65
+    assert settings.directness == 80
+    assert settings.warmth == 70
+    assert settings.autonomy == 50
+    assert settings.verbosity == 35
+
+
+def test_ask_unset_flags_fall_through_to_config_file(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """Per the synthesis: flag > config file > tab.md defaults."""
+    (isolated_xdg / "config.toml").write_text(
+        "[settings]\nhumor = 42\nverbosity = 88\n"
+    )
+
+    agent = _StubAgent()
+    recorder = _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(app, ["ask", "hi"])
+
+    assert result.exit_code == 0, result.stderr
+    settings = recorder.calls[0]["settings"]
+    # Config-file values appear...
+    assert settings.humor == 42
+    assert settings.verbosity == 88
+    # ...everything else falls through to tab.md defaults.
+    assert settings.directness == 80
+
+
+def test_ask_flag_overrides_config_file(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_xdg: Any,
+) -> None:
+    """Flag wins over the config file for the dial it names."""
+    (isolated_xdg / "config.toml").write_text("[settings]\nhumor = 42\n")
+
+    agent = _StubAgent()
+    recorder = _patch_compile(monkeypatch, agent)
+
+    result = runner.invoke(app, ["ask", "--humor", "99", "hi"])
+
+    assert result.exit_code == 0, result.stderr
+    settings = recorder.calls[0]["settings"]
+    assert settings.humor == 99  # flag wins
+
+
+def test_ask_help_lists_dial_flags(runner: CliRunner) -> None:
+    """The five dials must show up in ``tab ask --help``."""
+    sub = runner.invoke(app, ["ask", "--help"])
+    assert sub.exit_code == 0
+    for dial in ("--humor", "--directness", "--warmth", "--autonomy", "--verbosity"):
+        assert dial in sub.stdout, f"{dial} missing from `tab ask --help`"
