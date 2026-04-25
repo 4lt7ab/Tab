@@ -11,6 +11,7 @@ dependencies = [
     "pydantic-ai>=0.0.20",
     "grimoire",
     "pyyaml>=6.0",
+    "fastmcp>=2.0",
 ]
 
 [project.scripts]

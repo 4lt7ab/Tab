@@ -241,6 +241,55 @@ def ask(
     typer.echo(result.output)
 
 
+@app.command("mcp")
+def mcp(
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help=(
+            "Default pydantic-ai model name in <provider:model> form "
+            "(e.g. anthropic:claude-sonnet-4). Per-call ``model`` "
+            "arguments on ``ask_tab`` override this."
+        ),
+        show_default=False,
+    ),
+    humor: int | None = _DIAL_OPTS["humor"],
+    directness: int | None = _DIAL_OPTS["directness"],
+    warmth: int | None = _DIAL_OPTS["warmth"],
+    autonomy: int | None = _DIAL_OPTS["autonomy"],
+    verbosity: int | None = _DIAL_OPTS["verbosity"],
+) -> None:
+    """Run the Tab CLI as an MCP server on stdio.
+
+    Exposes two tools — ``ask_tab(prompt, model?)`` and
+    ``search_memory(query)`` — for MCP-aware hosts (Claude Code et al.)
+    to call. The personality settings established at startup apply to
+    every ``ask_tab`` turn for the lifetime of the server; restart with
+    new flags to change them. Errors collapse to the same readable
+    one-line stderr / non-zero exit contract as ``tab ask``.
+    """
+    for name, value in (
+        ("humor", humor),
+        ("directness", directness),
+        ("warmth", warmth),
+        ("autonomy", autonomy),
+        ("verbosity", verbosity),
+    ):
+        _validate_dial(name, value)
+
+    settings = _resolve_settings(humor, directness, warmth, autonomy, verbosity)
+
+    # Lazy-imported so ``tab --help`` and unrelated subcommands don't
+    # pay for FastMCP's import cost.
+    from tab_cli.mcp_server import run_server
+
+    try:
+        run_server(settings=settings, model=model)
+    except Exception as exc:  # noqa: BLE001
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+
 @app.command("chat")
 def chat(
     model: str | None = typer.Option(
