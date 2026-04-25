@@ -7,9 +7,16 @@ A turn is: read a line of user input, classify it, react.
   active :class:`TabSettings`, recompiles the agent, prints a one-line
   acknowledgement, and continues.
 - Anything else goes through the grimoire registry: an above-threshold
-  hit prints a one-line acknowledgement that names the matched skill
-  (individual skill dispatch lives in per-skill port tickets); a miss
-  is routed to the agent and the response is streamed back.
+  hit dispatches the matched skill (Tab persona + SKILL.md body); a
+  miss is routed to the agent and the response is streamed back.
+
+The ``listen`` skill is sticky: matching it flips the session into
+listen mode, where every subsequent line bypasses grimoire and
+settings detection and routes straight to the listen skill agent. The
+SKILL.md body keeps Tab silent during the dump and emits the synthesis
+when the user signals done. ``/done`` is the explicit exit signal —
+the line is forwarded so the skill agent produces the synthesis, then
+the session returns to normal chat.
 
 History persists across turns within the session by passing
 :meth:`AgentRunResult.all_messages` (or its streamed equivalent) into
@@ -72,6 +79,12 @@ class _Session:
     Held as a dataclass rather than passed around as scalars so the
     settings-adjustment path has a single object to mutate — recompiling
     the agent in three different places would drift.
+
+    ``active_skill`` carries the name of a sticky skill the session is
+    currently running under (today only ``"listen"`` uses this). While
+    set, the loop bypasses grimoire and settings detection and routes
+    every line through that skill's agent. ``None`` means normal chat
+    routing — grimoire-then-agent.
     """
 
     agent: Agent
@@ -79,6 +92,25 @@ class _Session:
     model: str | None
     registry: SkillRegistry | None
     history: list[ModelMessage] = field(default_factory=list)
+    active_skill: str | None = None
+
+
+# Skills that take over the session for multiple turns once they fire,
+# rather than running one-shot like ``draw-dino``. Membership in this set
+# is what makes a skill match flip the session's ``active_skill`` flag.
+# Today only ``listen`` qualifies (and the SKILL.md's "Tab says nothing
+# until you signal done" semantics literally require this — a one-shot
+# dispatch would drop back to the regular agent on the user's next line
+# and the silence promise breaks).
+_STICKY_SKILLS = frozenset({"listen"})
+
+# The line that ends a sticky-skill mode. We forward the literal token
+# to the skill agent (so the SKILL.md body's "synthesise on done"
+# branch fires) and only after that turn flip ``active_skill`` back to
+# ``None``. Single-shape exit beats per-skill exit phrases — easy to
+# document, easy to grep, and the SKILL.md body already recognises
+# "done" as a synthesis trigger.
+_STICKY_EXIT_COMMAND = "/done"
 
 
 def _detect_setting_change(text: str, current: TabSettings) -> TabSettings | None:
@@ -258,8 +290,24 @@ def run_chat(
         if not stripped:
             continue
 
+        # ``/exit`` / ``/quit`` always end the session, even mid-listen-
+        # mode. The user's escape hatch must be unconditional or
+        # accidental sticky-mode lock-in becomes a real failure mode.
         if stripped in ("/exit", "/quit"):
             return
+
+        # Sticky-skill mode (today: listen). Bypass grimoire and
+        # settings detection and route every line through the active
+        # skill agent. The SKILL.md body decides what to emit (silence
+        # while listening, synthesis on done). ``/done`` is the
+        # explicit exit signal — we forward it so the skill agent
+        # produces the synthesis, then drop back to normal routing.
+        if session.active_skill is not None:
+            is_exit = stripped == _STICKY_EXIT_COMMAND
+            _dispatch_skill(session, session.active_skill, stripped, stdout)
+            if is_exit:
+                session.active_skill = None
+            continue
 
         # Settings nudge — handled before routing because phrases like
         # "be more direct" should never accidentally trip a skill match.
@@ -284,6 +332,13 @@ def run_chat(
         hit = session.registry.match(stripped) if session.registry else None
         if hit is not None and hit.passed:
             _dispatch_skill(session, hit.name, stripped, stdout)
+            # Sticky skills (e.g. ``listen``) take over the session
+            # until ``/done``. Set the flag *after* the dispatch so the
+            # entry turn — the SKILL.md's "Listening..." acknowledgement
+            # — runs through the same code path as a normal one-shot
+            # dispatch.
+            if hit.name in _STICKY_SKILLS:
+                session.active_skill = hit.name
             continue
 
         # Default: route to the agent and stream the response back.

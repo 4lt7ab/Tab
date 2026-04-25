@@ -365,6 +365,84 @@ def draw_dino(
     typer.echo(output)
 
 
+@app.command("listen")
+def listen(
+    topic: list[str] = typer.Argument(
+        None,
+        metavar="[TOPIC]...",
+        help=(
+            "Optional topic the user is about to think out loud about "
+            "(e.g. 'auth redesign'). Words are joined with single spaces "
+            "and forwarded to the skill as the user prompt. The skill "
+            "treats it as internal context for the synthesis and does "
+            "not comment on it."
+        ),
+        show_default=False,
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help=(
+            "pydantic-ai model name in <provider:model> form "
+            "(e.g. anthropic:claude-sonnet-4)."
+        ),
+        show_default=False,
+    ),
+    humor: int | None = _DIAL_OPTS["humor"],
+    directness: int | None = _DIAL_OPTS["directness"],
+    warmth: int | None = _DIAL_OPTS["warmth"],
+    autonomy: int | None = _DIAL_OPTS["autonomy"],
+    verbosity: int | None = _DIAL_OPTS["verbosity"],
+) -> None:
+    """Enter deliberate listening mode — direct port of the ``listen`` skill.
+
+    Runs ``plugins/tab/skills/listen/SKILL.md`` as the system-prompt
+    delta on top of the Tab persona, prints the result to stdout, and
+    exits. As a one-shot invocation outside of ``tab chat``, behaviour
+    is "acknowledge and exit" — the SKILL body's entry-line
+    acknowledgement reaches stdout. To actually use listen mode (a
+    sticky session where Tab stays silent until you say ``/done``), run
+    ``tab chat`` and ask Tab to listen — the chat REPL routes the
+    request through grimoire and enters listen mode.
+
+    The optional ``TOPIC`` words are concatenated with spaces and
+    forwarded to the skill as the user prompt. The same readable-error
+    / non-zero exit contract as ``tab ask`` applies.
+    """
+    for name, value in (
+        ("humor", humor),
+        ("directness", directness),
+        ("warmth", warmth),
+        ("autonomy", autonomy),
+        ("verbosity", verbosity),
+    ):
+        _validate_dial(name, value)
+
+    settings = _resolve_settings(humor, directness, warmth, autonomy, verbosity)
+
+    # Empty list (no positional args) -> empty string. The SKILL.md's
+    # entry path covers the "no specific topic" case explicitly.
+    user_input = " ".join(topic) if topic else ""
+
+    # Lazy import: keeps ``tab --help`` and unrelated subcommands from
+    # paying for pydantic-ai's import cost. Same pattern as
+    # ``tab draw-dino``.
+    from tab_cli.skills import run_skill
+
+    try:
+        output = run_skill(
+            "listen",
+            user_input,
+            settings=settings,
+            model=model,
+        )
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(output)
+
+
 @app.command("chat")
 def chat(
     model: str | None = typer.Option(

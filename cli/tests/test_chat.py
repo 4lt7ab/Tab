@@ -656,3 +656,209 @@ def test_tab_chat_help_lists_dial_flags(runner: CliRunner) -> None:
     assert sub.exit_code == 0
     for dial in ("--humor", "--directness", "--warmth", "--autonomy", "--verbosity"):
         assert dial in sub.stdout, f"{dial} missing from `tab chat --help`"
+
+
+# ----------------------------------------------------- Sticky listen mode
+#
+# Once the grimoire registry fires ``listen``, the session enters a
+# sticky mode where every subsequent line bypasses grimoire and
+# settings detection and routes through the listen skill agent. The
+# SKILL.md body keeps Tab silent during the dump and emits a synthesis
+# when the user signals done. ``/done`` is the explicit exit signal:
+# the line is forwarded so the skill agent produces the synthesis,
+# then the session returns to normal chat.
+#
+# Acceptance criteria 2 + 3 from the porting task (the chat-mode
+# behavior and the exit signal) live in this section.
+
+
+def test_listen_match_sticks_subsequent_turns_to_skill_agent() -> None:
+    """Acceptance criterion #2: ``listen`` is sticky inside ``tab chat``.
+
+    After grimoire fires ``listen``, follow-up lines must continue to
+    reach the listen skill agent — not the regular Tab agent. The SKILL
+    body's "stay silent" promise breaks if the next line falls through
+    to the default chat path.
+    """
+    persona_agent = _StubAgent()
+    skill_agent = _StubAgent(
+        response_stream=[
+            (["Listening. Say 'done' when ready."], [object()]),
+            ([""], [object()]),  # silent listen turn
+            ([""], [object()]),  # another silent listen turn
+        ]
+    )
+    registry = _StubRegistry(
+        responder=lambda q: _StubHit(name="listen", passed=True)
+        if "listen" in q
+        else None
+    )
+
+    out, _, skill_calls = _run_chat_with_input(
+        "listen to me think\nfirst thought\nsecond thought\n/exit\n",
+        agent=persona_agent,
+        skill_agent=skill_agent,
+        registry=registry,
+    )
+
+    # Persona agent never ran — every turn went through the skill agent.
+    assert persona_agent.runs == []
+    # Three skill turns: the entry match plus two follow-on lines.
+    assert len(skill_agent.runs) == 3
+    assert skill_agent.runs[0]["user_prompt"] == "listen to me think"
+    assert skill_agent.runs[1]["user_prompt"] == "first thought"
+    assert skill_agent.runs[2]["user_prompt"] == "second thought"
+
+    # The acknowledgement reached stdout from the entry turn.
+    assert "Listening" in out
+    # All three skill dispatches resolved the listen skill name.
+    assert all(call["skill_name"] == "listen" for call in skill_calls)
+
+
+def test_listen_mode_routes_done_through_skill_then_exits() -> None:
+    """Acceptance criterion #3: ``/done`` exits listen mode.
+
+    The user-typed ``/done`` line is forwarded so the SKILL body's
+    synthesis branch fires, then the session drops back to normal
+    routing — the next line goes to the regular Tab agent.
+    """
+    persona_agent = _StubAgent(
+        response_stream=[(["back to normal"], [object()])]
+    )
+    skill_agent = _StubAgent(
+        response_stream=[
+            (["Listening."], [object()]),         # entry
+            ([""], [object()]),                   # silent turn
+            (["Synthesis: ..."], [object()]),     # /done -> synthesis
+        ]
+    )
+    registry = _StubRegistry(
+        responder=lambda q: _StubHit(name="listen", passed=True)
+        if "listen" in q
+        else None
+    )
+
+    out, _, _ = _run_chat_with_input(
+        "listen to me think\nthought one\n/done\nhello again\n/exit\n",
+        agent=persona_agent,
+        skill_agent=skill_agent,
+        registry=registry,
+    )
+
+    # Three skill turns: entry, silent turn, /done with synthesis.
+    assert len(skill_agent.runs) == 3
+    # ``/done`` reached the skill agent so it could produce the synthesis.
+    assert skill_agent.runs[2]["user_prompt"] == "/done"
+
+    # After /done, the next line went to the persona agent.
+    assert len(persona_agent.runs) == 1
+    assert persona_agent.runs[0]["user_prompt"] == "hello again"
+
+    # Synthesis text reached stdout.
+    assert "Synthesis" in out
+    # Post-exit chat output reached stdout too.
+    assert "back to normal" in out
+
+
+def test_exit_breaks_out_of_listen_mode() -> None:
+    """``/exit`` ends the session even mid-listen-mode.
+
+    Sticky-mode lock-in would be a real failure mode if ``/exit`` got
+    swallowed by the listen branch. The escape hatch must be
+    unconditional.
+    """
+    persona_agent = _StubAgent()
+    skill_agent = _StubAgent(
+        response_stream=[(["Listening."], [object()])]
+    )
+    registry = _StubRegistry(
+        responder=lambda q: _StubHit(name="listen", passed=True)
+        if "listen" in q
+        else None
+    )
+
+    out, _, _ = _run_chat_with_input(
+        "listen to me think\n/exit\n",
+        agent=persona_agent,
+        skill_agent=skill_agent,
+        registry=registry,
+    )
+
+    # Only the entry turn fired through the skill; ``/exit`` ended the loop.
+    assert len(skill_agent.runs) == 1
+    assert "Listening" in out
+
+
+def test_listen_mode_bypasses_grimoire_for_other_skills() -> None:
+    """While listening, an apparent ``draw-dino`` match must not interrupt.
+
+    The user is mid-dump; routing to a different skill mid-stream
+    breaks the SKILL body's "track everything" promise. They have to
+    ``/done`` (or ``/exit``) before another skill can fire.
+    """
+    persona_agent = _StubAgent()
+    skill_agent = _StubAgent(
+        response_stream=[
+            (["Listening."], [object()]),
+            ([""], [object()]),
+        ]
+    )
+
+    # The registry would happily match ``draw-dino`` on the second
+    # query — but the listen-mode branch must short-circuit before the
+    # registry is even consulted.
+    def _responder(query: str) -> _StubHit | None:
+        if "listen" in query:
+            return _StubHit(name="listen", passed=True)
+        if "dinosaur" in query:
+            return _StubHit(name="draw-dino", passed=True)
+        return None
+
+    registry = _StubRegistry(responder=_responder)
+
+    _, _, skill_calls = _run_chat_with_input(
+        "listen to me think\ndraw me a dinosaur out loud\n/exit\n",
+        agent=persona_agent,
+        skill_agent=skill_agent,
+        registry=registry,
+    )
+
+    # Both skill dispatches resolved the listen skill — neither
+    # routed to draw-dino.
+    assert all(call["skill_name"] == "listen" for call in skill_calls)
+    assert len(skill_calls) == 2
+
+
+def test_listen_mode_bypasses_settings_nudge() -> None:
+    """``set humor to 90%`` mid-listen reaches the skill agent, not settings.
+
+    A settings ack ("[settings: humor 90%, ...]") would be Tab making
+    noise during a deliberate-silence mode. The SKILL body decides what
+    to do with the line; the chat layer doesn't intercept.
+    """
+    persona_agent = _StubAgent()
+    skill_agent = _StubAgent(
+        response_stream=[
+            (["Listening."], [object()]),
+            ([""], [object()]),
+        ]
+    )
+    registry = _StubRegistry(
+        responder=lambda q: _StubHit(name="listen", passed=True)
+        if "listen" in q
+        else None
+    )
+
+    out, calls, _ = _run_chat_with_input(
+        "listen to me think\nset humor to 90%\n/exit\n",
+        agent=persona_agent,
+        skill_agent=skill_agent,
+        registry=registry,
+    )
+
+    # No settings recompile happened — only the session-start compile.
+    assert len(calls) == 1
+    # The settings ack line did not appear.
+    assert "humor 90%" not in out.lower()
+    # The setting line went to the skill agent instead.
+    assert skill_agent.runs[1]["user_prompt"] == "set humor to 90%"
