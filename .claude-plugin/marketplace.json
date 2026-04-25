@@ -11,14 +11,14 @@
   "plugins": [
     {
       "name": "tab",
-      "source": "./tab",
+      "source": "./plugins/tab",
       "description": "Tab, a thinking partner defined entirely in markdown. No compiled code, no dependencies — just text files that shape how Claude talks, thinks, and works with you.",
       "version": "0.3.1",
       "strict": true
     },
     {
       "name": "tab-for-projects",
-      "source": "./tab-for-projects",
+      "source": "./plugins/tab-for-projects",
       "description": "Project workflow tracking — skills and agents for the Tab for Projects MCP. Conversational project management that captures decisions and context.",
       "version": "4.13.0",
       "strict": true

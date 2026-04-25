@@ -5,31 +5,33 @@ Claude Code plugin marketplace containing two plugins: **tab** (a standalone per
 ## Repository Structure
 
 ```
-.claude-plugin/marketplace.json   # Marketplace manifest — lists both plugins
-README.md                         # Project README
-LICENSE                           # Apache-2.0 license
-scripts/validate-plugins.sh       # Plugin validation script
-tab/                              # "tab" plugin package
-  .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-  settings.json                   #   Default agent: tab:Tab
-  agents/tab.md                   #   Tab personality agent
-  skills/draw-dino/SKILL.md       #   /draw-dino skill
-  skills/hey-tab/SKILL.md         #   /hey-tab — setup instructions for MCPs
-  skills/listen/SKILL.md          #   /listen — deliberate listening mode
-  skills/teach/SKILL.md           #   /teach — teaching and explanation mode
-  skills/think/SKILL.md           #   /think — conversational idea capture
-tab-for-projects/                 # "tab-for-projects" plugin package
-  .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-  agents/archaeologist.md         #   Archaeologist subagent — autonomous design synthesis; reads code + project KB, produces structured design summary; closes design tasks on clean synthesis, picks sane defaults and flags them on real forks; no KB writes, no code edits
-  agents/bug-hunter.md            #   Bug-hunter subagent — targeted codebase investigation; structured report with file+line anchors; no edits, no backlog writes
-  agents/developer.md             #   Developer subagent — worktree-only; atomic on code + tests; commits in the worktree; never merges
-  agents/project-planner.md       #   Project-planner subagent — expert codebase reader; takes a well-formed prompt and acts on the project backlog: creates tasks for uncaptured work, grooms below-bar tasks to the quality bar for their effort, searches the KB, reads the codebase; falls back to design tickets for forks it can't resolve; no KB writes, no code edits
-  skills/design/SKILL.md          #   /design — conversational KB authorship for project-shape work and design-category tasks; sole entry point for KB writes
-  skills/develop/SKILL.md         #   /develop — conversational pair-programming mode; surveys code + KB + backlog, shapes a lightweight plan, iterates test-first on the working tree; opt-in developer dispatches to worktrees for bounded sub-scopes
-  skills/plan/SKILL.md            #   /plan — intent-to-backlog; shapes a planner dispatch, confirms before handoff, planner writes directly; handles new work from outcomes, scopes, or replacement targets plus grooming of existing below-bar tasks; parallel planners on large scopes, one level deep
-  skills/search/SKILL.md          #   /search — find docs and tasks via an escalating filter ladder
-  skills/ship/SKILL.md            #   /ship — pre-push sweep: version bump, README/CLAUDE.md drift review
-  skills/work/SKILL.md            #   /work — autopilot backlog execution: developer-in-worktree for implementation tasks, archaeologist for design tasks; below-bar surfaces for /plan groom, archaeologist-escalated forks surface for /design
+.claude-plugin/marketplace.json     # Marketplace manifest — lists both plugins
+README.md                           # Project README
+LICENSE                             # Apache-2.0 license
+scripts/validate-plugins.sh         # Plugin validation script
+cli/                                # Tab CLI Python package (scaffold; bootstrap fills it)
+plugins/
+  tab/                              # "tab" plugin package
+    .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
+    settings.json                   #   Default agent: tab:Tab
+    agents/tab.md                   #   Tab personality agent
+    skills/draw-dino/SKILL.md       #   /draw-dino skill
+    skills/hey-tab/SKILL.md         #   /hey-tab — setup instructions for MCPs
+    skills/listen/SKILL.md          #   /listen — deliberate listening mode
+    skills/teach/SKILL.md           #   /teach — teaching and explanation mode
+    skills/think/SKILL.md           #   /think — conversational idea capture
+  tab-for-projects/                 # "tab-for-projects" plugin package
+    .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
+    agents/archaeologist.md         #   Archaeologist subagent — autonomous design synthesis; reads code + project KB, produces structured design summary; closes design tasks on clean synthesis, picks sane defaults and flags them on real forks; no KB writes, no code edits
+    agents/bug-hunter.md            #   Bug-hunter subagent — targeted codebase investigation; structured report with file+line anchors; no edits, no backlog writes
+    agents/developer.md             #   Developer subagent — worktree-only; atomic on code + tests; commits in the worktree; never merges
+    agents/project-planner.md       #   Project-planner subagent — expert codebase reader; takes a well-formed prompt and acts on the project backlog: creates tasks for uncaptured work, grooms below-bar tasks to the quality bar for their effort, searches the KB, reads the codebase; falls back to design tickets for forks it can't resolve; no KB writes, no code edits
+    skills/design/SKILL.md          #   /design — conversational KB authorship for project-shape work and design-category tasks; sole entry point for KB writes
+    skills/develop/SKILL.md         #   /develop — conversational pair-programming mode; surveys code + KB + backlog, shapes a lightweight plan, iterates test-first on the working tree; opt-in developer dispatches to worktrees for bounded sub-scopes
+    skills/plan/SKILL.md            #   /plan — intent-to-backlog; shapes a planner dispatch, confirms before handoff, planner writes directly; handles new work from outcomes, scopes, or replacement targets plus grooming of existing below-bar tasks; parallel planners on large scopes, one level deep
+    skills/search/SKILL.md          #   /search — find docs and tasks via an escalating filter ladder
+    skills/ship/SKILL.md            #   /ship — pre-push sweep: version bump, README/CLAUDE.md drift review
+    skills/work/SKILL.md            #   /work — autopilot backlog execution: developer-in-worktree for implementation tasks, archaeologist for design tasks; below-bar surfaces for /plan groom, archaeologist-escalated forks surface for /design
 ```
 
 ## Package Architecture
@@ -50,7 +52,7 @@ tab-for-projects/                 # "tab-for-projects" plugin package
 
 No other frontmatter fields should be added. Information about which agents run a skill, what mode it operates in, or what MCP servers it requires belongs in the skill body, not the frontmatter — duplicating it in YAML creates a maintenance trap and looks load-bearing when it isn't.
 
-**Plugin metadata** lives in `<package>/.claude-plugin/plugin.json` with fields: `name`, `description`, `version`, `author`, `license`, `agents` (array of paths), `skills` (directory path).
+**Plugin metadata** lives in `plugins/<package>/.claude-plugin/plugin.json` with fields: `name`, `description`, `version`, `author`, `license`, `agents` (array of paths), `skills` (directory path).
 
 **Marketplace manifest** at `.claude-plugin/marketplace.json` lists all plugins with `name`, `source`, `description`, `version`, `strict`.
 
@@ -92,11 +94,11 @@ If the joke doesn't land in a line, it's too much. A body is fine when context g
 |------|---------|
 | `.claude-plugin/marketplace.json` | Marketplace plugin registry |
 | `scripts/validate-plugins.sh` | Plugin validation script |
-| `tab/.claude-plugin/plugin.json` | Tab plugin manifest |
-| `tab-for-projects/.claude-plugin/plugin.json` | Tab for Projects plugin manifest |
-| `tab/agents/tab.md` | Tab agent — personality, profiles, settings |
-| `tab-for-projects/agents/archaeologist.md` | Archaeologist subagent — autonomous design synthesis; reads code + project KB, returns a structured summary with resolved and flagged decisions; closes design tasks on clean synthesis; no KB writes, no code edits |
-| `tab-for-projects/agents/developer.md` | Developer subagent — worktree-only; writes code + tests atomically; commits in the worktree; never merges |
-| `tab-for-projects/agents/project-planner.md` | Project-planner subagent — expert codebase reader; takes a well-formed prompt and acts on the project backlog: creates tasks for uncaptured work, grooms below-bar tasks to the quality bar for their effort, searches the KB, reads the codebase; falls back to design tickets for forks it can't resolve; never writes KB docs, never edits code |
-| `tab-for-projects/agents/bug-hunter.md` | Bug-hunter subagent — targeted investigation returning a structured report with file + line anchors and explicit confidence levels; does not edit code or touch the backlog |
-| `tab/settings.json` | Tab default agent config |
+| `plugins/tab/.claude-plugin/plugin.json` | Tab plugin manifest |
+| `plugins/tab-for-projects/.claude-plugin/plugin.json` | Tab for Projects plugin manifest |
+| `plugins/tab/agents/tab.md` | Tab agent — personality, profiles, settings |
+| `plugins/tab-for-projects/agents/archaeologist.md` | Archaeologist subagent — autonomous design synthesis; reads code + project KB, returns a structured summary with resolved and flagged decisions; closes design tasks on clean synthesis; no KB writes, no code edits |
+| `plugins/tab-for-projects/agents/developer.md` | Developer subagent — worktree-only; writes code + tests atomically; commits in the worktree; never merges |
+| `plugins/tab-for-projects/agents/project-planner.md` | Project-planner subagent — expert codebase reader; takes a well-formed prompt and acts on the project backlog: creates tasks for uncaptured work, grooms below-bar tasks to the quality bar for their effort, searches the KB, reads the codebase; falls back to design tickets for forks it can't resolve; never writes KB docs, never edits code |
+| `plugins/tab-for-projects/agents/bug-hunter.md` | Bug-hunter subagent — targeted investigation returning a structured report with file + line anchors and explicit confidence levels; does not edit code or touch the backlog |
+| `plugins/tab/settings.json` | Tab default agent config |

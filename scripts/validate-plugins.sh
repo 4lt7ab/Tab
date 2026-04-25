@@ -319,7 +319,7 @@ if [[ -f "$CLAUDE_MD" ]]; then
   TREE_OK=true
 
   # Check every skill directory on disk is mentioned in CLAUDE.md
-  for plugin_dir in "$REPO_ROOT"/tab "$REPO_ROOT"/tab-for-projects; do
+  for plugin_dir in "$REPO_ROOT"/plugins/tab "$REPO_ROOT"/plugins/tab-for-projects; do
     plugin_name="$(basename "$plugin_dir")"
     skills_dir="$plugin_dir/skills"
     [[ ! -d "$skills_dir" ]] && continue
@@ -327,7 +327,7 @@ if [[ -f "$CLAUDE_MD" ]]; then
     for skill_path in "$skills_dir"/*/SKILL.md; do
       [[ ! -f "$skill_path" ]] && continue
       skill_name="$(basename "$(dirname "$skill_path")")"
-      expected="$plugin_name/skills/$skill_name/SKILL.md"
+      expected="plugins/$plugin_name/skills/$skill_name/SKILL.md"
       # Use plain substring match — doesn't need to be the full line, just present
       # The tree uses path-like entries with spaces as indentation
       if ! grep -qF "skills/$skill_name/SKILL.md" "$CLAUDE_MD"; then
@@ -342,7 +342,7 @@ if [[ -f "$CLAUDE_MD" ]]; then
         [[ ! -f "$agent_file" ]] && continue
         agent_name="$(basename "$agent_file")"
         if ! grep -qF "agents/$agent_name" "$CLAUDE_MD"; then
-          fail "CLAUDE.md missing agent: $plugin_name/agents/$agent_name"
+          fail "CLAUDE.md missing agent: plugins/$plugin_name/agents/$agent_name"
           TREE_OK=false
         fi
       done
