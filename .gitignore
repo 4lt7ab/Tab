@@ -17,6 +17,18 @@ Thumbs.db
 node_modules/
 npm-debug.log*
 
+# Python / uv (cli/)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# asdf — tool version pins are per-machine
+.tool-versions
+
 # Environment
 .env
 .env.*

@@ -1,0 +1,38 @@
+[project]
+name = "tab-cli"
+version = "0.0.1"
+description = "Tab — a verb-shaped CLI agent for the Tab plugin ecosystem"
+readme = "README.md"
+license = { file = "../LICENSE" }
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "4lt7ab" }]
+dependencies = [
+    "typer>=0.15.1",
+    "pydantic-ai>=0.0.20",
+    "grimoire",
+]
+
+[project.scripts]
+tab = "tab_cli.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tab_cli"]
+
+[tool.uv.sources]
+grimoire = { git = "https://github.com/4lt7ab/grimoire.git", tag = "v0.1.1" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
