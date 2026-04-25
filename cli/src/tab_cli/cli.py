@@ -443,6 +443,83 @@ def listen(
     typer.echo(output)
 
 
+@app.command("think")
+def think(
+    idea: list[str] = typer.Argument(
+        None,
+        metavar="[IDEA]...",
+        help=(
+            "Optional seed idea to think through (e.g. 'a CLI tool that "
+            "turns markdown into slide decks'). Words are joined with "
+            "single spaces and forwarded to the skill as the user prompt. "
+            "Omit to let the SKILL body open with 'what's on your mind?'."
+        ),
+        show_default=False,
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help=(
+            "pydantic-ai model name in <provider:model> form "
+            "(e.g. anthropic:claude-sonnet-4)."
+        ),
+        show_default=False,
+    ),
+    humor: int | None = _DIAL_OPTS["humor"],
+    directness: int | None = _DIAL_OPTS["directness"],
+    warmth: int | None = _DIAL_OPTS["warmth"],
+    autonomy: int | None = _DIAL_OPTS["autonomy"],
+    verbosity: int | None = _DIAL_OPTS["verbosity"],
+) -> None:
+    """Think an idea through with Tab — direct port of the ``think`` skill.
+
+    Runs ``plugins/tab/skills/think/SKILL.md`` as the system-prompt
+    delta on top of the Tab persona, prints the result to stdout, and
+    exits. As a one-shot invocation, it produces a single shaping turn
+    — Tab reflects what it understood and asks the first useful
+    question. To keep the conversation going, run ``tab chat`` and let
+    grimoire route think-style prompts to the skill so follow-on turns
+    keep history in context.
+
+    The optional ``IDEA`` words are concatenated with spaces and
+    forwarded to the skill as the user prompt; the SKILL.md body
+    handles the empty-input case explicitly. The same readable-error /
+    non-zero exit contract as ``tab ask`` applies.
+    """
+    for name, value in (
+        ("humor", humor),
+        ("directness", directness),
+        ("warmth", warmth),
+        ("autonomy", autonomy),
+        ("verbosity", verbosity),
+    ):
+        _validate_dial(name, value)
+
+    settings = _resolve_settings(humor, directness, warmth, autonomy, verbosity)
+
+    # Empty list (no positional args) -> empty string. The SKILL.md's
+    # "no argument" branch covers the open-ended prompt path.
+    user_input = " ".join(idea) if idea else ""
+
+    # Lazy import: keeps ``tab --help`` and unrelated subcommands from
+    # paying for pydantic-ai's import cost. Same pattern as
+    # ``tab draw-dino`` and ``tab listen``.
+    from tab_cli.skills import run_skill
+
+    try:
+        output = run_skill(
+            "think",
+            user_input,
+            settings=settings,
+            model=model,
+        )
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(output)
+
+
 @app.command("chat")
 def chat(
     model: str | None = typer.Option(

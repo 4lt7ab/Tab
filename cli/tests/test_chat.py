@@ -829,6 +829,51 @@ def test_listen_mode_bypasses_grimoire_for_other_skills() -> None:
     assert len(skill_calls) == 2
 
 
+def test_think_match_routes_through_grimoire_to_skill_agent() -> None:
+    """Acceptance criterion (think port #2): a think-style prompt in chat
+    routes through grimoire to the think skill agent.
+
+    Unlike ``listen``, ``think`` is not sticky — a single grimoire match
+    is enough to pin the routing edge. Follow-on turns may either hit
+    the registry again or fall through to the regular Tab agent with the
+    think exchange already in history; either is fine for the SKILL
+    body's "follow the energy" style.
+    """
+    persona_agent = _StubAgent()
+    skill_agent = _StubAgent(
+        response_stream=[
+            (
+                ["So you're picturing markdown-to-slides. ",
+                 "What's the smallest version that would feel useful?"],
+                [object(), object()],
+            )
+        ]
+    )
+    registry = _StubRegistry(
+        responder=lambda q: _StubHit(name="think", passed=True)
+        if "think" in q
+        else None
+    )
+
+    out, tab_calls, skill_calls = _run_chat_with_input(
+        "/think a markdown-to-slides tool\n/exit\n",
+        agent=persona_agent,
+        skill_agent=skill_agent,
+        registry=registry,
+    )
+
+    # Persona agent was bypassed for the think turn.
+    assert persona_agent.runs == []
+    assert len(skill_agent.runs) == 1
+    assert skill_calls[0]["skill_name"] == "think"
+
+    # The skill's streamed shaping question reached stdout.
+    assert "smallest version" in out
+
+    # Session-start compile only — no settings change happened.
+    assert len(tab_calls) == 1
+
+
 def test_listen_mode_bypasses_settings_nudge() -> None:
     """``set humor to 90%`` mid-listen reaches the skill agent, not settings.
 
