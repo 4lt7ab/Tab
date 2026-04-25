@@ -27,8 +27,9 @@ Design choices that aren't obvious from the call sites:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from tab_cli.personality import TabSettings, build_system_prompt
 
@@ -134,6 +135,7 @@ def compile_skill_agent(
     settings: TabSettings | None = None,
     model: str | None = None,
     plugins_dir: Path | None = None,
+    tools: Sequence[Any] | None = None,
 ) -> Agent:
     """Build a pydantic-ai :class:`Agent` for the named personality skill.
 
@@ -141,6 +143,13 @@ def compile_skill_agent(
     Tab's persona (with the active settings preamble) plus the skill
     body. ``defer_model_check=True`` mirrors :func:`compile_tab_agent`
     so the same env-driven model resolution applies.
+
+    ``tools`` is a per-skill registration hook. Most personality skills
+    don't take any (the runner stays generic on purpose); the teach
+    skill is the first that needs one — ``web_search`` is wired in by
+    its caller. Anything pydantic-ai accepts in ``Agent(tools=...)``
+    works: a plain function, a :class:`pydantic_ai.Tool`, or a list
+    mixing both. ``None`` and ``()`` are equivalent — no tools.
 
     Raises:
         SkillNotFoundError: when the skill has no SKILL.md on disk.
@@ -158,6 +167,7 @@ def compile_skill_agent(
         model=model,
         system_prompt=prompt,
         defer_model_check=True,
+        tools=tuple(tools) if tools else (),
     )
 
 
@@ -168,6 +178,7 @@ def run_skill(
     settings: TabSettings | None = None,
     model: str | None = None,
     plugins_dir: Path | None = None,
+    tools: Sequence[Any] | None = None,
 ) -> str:
     """Run one synchronous turn against the named skill and return text.
 
@@ -181,12 +192,17 @@ def run_skill(
     handles a "no specific request" turn (draw-dino picks a dino,
     listen waits for the next line, etc.). The caller doesn't have to
     fabricate a default prompt.
+
+    ``tools`` is forwarded to :func:`compile_skill_agent` for skills
+    that need a tool registered (today: only ``teach`` with
+    ``web_search``).
     """
     agent = compile_skill_agent(
         skill_name,
         settings=settings,
         model=model,
         plugins_dir=plugins_dir,
+        tools=tools,
     )
     result = agent.run_sync(user_input)
     return result.output

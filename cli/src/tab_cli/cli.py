@@ -520,6 +520,92 @@ def think(
     typer.echo(output)
 
 
+@app.command("teach")
+def teach(
+    topic: list[str] = typer.Argument(
+        None,
+        metavar="[TOPIC]...",
+        help=(
+            "Optional topic to learn about (e.g. 'event sourcing'). "
+            "Words are joined with single spaces and forwarded to the "
+            "skill as the user prompt. Omit to let the SKILL body open "
+            "with 'what do you want to learn about?'."
+        ),
+        show_default=False,
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help=(
+            "pydantic-ai model name in <provider:model> form "
+            "(e.g. anthropic:claude-sonnet-4)."
+        ),
+        show_default=False,
+    ),
+    humor: int | None = _DIAL_OPTS["humor"],
+    directness: int | None = _DIAL_OPTS["directness"],
+    warmth: int | None = _DIAL_OPTS["warmth"],
+    autonomy: int | None = _DIAL_OPTS["autonomy"],
+    verbosity: int | None = _DIAL_OPTS["verbosity"],
+) -> None:
+    """Teach a topic — direct port of the ``teach`` skill, with web search.
+
+    Runs ``plugins/tab/skills/teach/SKILL.md`` as the system-prompt
+    delta on top of the Tab persona, with a ``web_search`` tool wired
+    into the pydantic-ai agent so the SKILL body's research phase can
+    query the web during the session. Prints the result to stdout and
+    exits.
+
+    Web search uses Exa when ``EXA_API_KEY`` is set. Without the key
+    the tool runs in a graceful no-op mode and the SKILL body falls
+    back to existing knowledge — per the SKILL's own "Requires"
+    note that web search is optional.
+
+    The optional ``TOPIC`` words are concatenated with spaces and
+    forwarded to the skill as the user prompt. As a one-shot
+    invocation this produces the SKILL body's Phase 1 calibration
+    turn; to keep the conversation going (and let the agent loop
+    through actual research), run ``tab chat`` and ask Tab to teach
+    you about the topic — grimoire routes the request to the same
+    skill, including the tool. The same readable-error / non-zero
+    exit contract as ``tab ask`` applies.
+    """
+    for name, value in (
+        ("humor", humor),
+        ("directness", directness),
+        ("warmth", warmth),
+        ("autonomy", autonomy),
+        ("verbosity", verbosity),
+    ):
+        _validate_dial(name, value)
+
+    settings = _resolve_settings(humor, directness, warmth, autonomy, verbosity)
+
+    # Empty list (no positional args) -> empty string. The SKILL.md's
+    # "no argument" branch covers the open-ended prompt path.
+    user_input = " ".join(topic) if topic else ""
+
+    # Lazy imports: keep ``tab --help`` and unrelated subcommands from
+    # paying for pydantic-ai or httpx import cost. Same pattern as the
+    # other personality-skill ports.
+    from tab_cli.skills import run_skill
+    from tab_cli.web_search import default_web_search
+
+    try:
+        output = run_skill(
+            "teach",
+            user_input,
+            settings=settings,
+            model=model,
+            tools=[default_web_search()],
+        )
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(output)
+
+
 @app.command("chat")
 def chat(
     model: str | None = typer.Option(

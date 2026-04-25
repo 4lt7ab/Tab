@@ -35,7 +35,7 @@ from __future__ import annotations
 import re
 import sys
 from dataclasses import dataclass, field
-from typing import IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, Any
 
 from tab_cli.personality import TabSettings, compile_tab_agent
 
@@ -111,6 +111,27 @@ _STICKY_SKILLS = frozenset({"listen"})
 # document, easy to grep, and the SKILL.md body already recognises
 # "done" as a synthesis trigger.
 _STICKY_EXIT_COMMAND = "/done"
+
+
+def _tools_for_skill(skill_name: str) -> list[Any]:
+    """Return the per-skill tool list for ``skill_name`` dispatches.
+
+    Most personality skills don't need tools — the runner stays
+    generic on purpose. ``teach`` is the first that does: the SKILL.md
+    body's research phase wants a ``web_search`` tool and grimoire
+    routing inside ``tab chat`` is one of the two paths that need to
+    wire it (the other being the one-shot ``tab teach`` Typer
+    subcommand).
+
+    Lazy import for the same reason ``compile_skill_agent`` is lazy:
+    the chat module is loaded for every REPL turn and ``httpx`` /
+    pydantic-ai cost only matters when a tool is actually attached.
+    """
+    if skill_name == "teach":
+        from tab_cli.web_search import default_web_search
+
+        return [default_web_search()]
+    return []
 
 
 def _detect_setting_change(text: str, current: TabSettings) -> TabSettings | None:
@@ -206,6 +227,7 @@ def _dispatch_skill(
         skill_name,
         settings=session.settings,
         model=session.model,
+        tools=_tools_for_skill(skill_name),
     )
 
     with skill_agent.run_stream_sync(
