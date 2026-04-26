@@ -39,6 +39,7 @@ plugins/
     skills/design/SKILL.md          #   /design — conversational KB authorship for project-shape work and design-category tasks; sole entry point for KB writes
     skills/develop/SKILL.md         #   /develop — conversational pair-programming mode; surveys code + KB + backlog, shapes a lightweight plan, iterates test-first on the working tree; opt-in developer dispatches to worktrees for bounded sub-scopes
     skills/plan/SKILL.md            #   /plan — intent-to-backlog; shapes a planner dispatch, confirms before handoff, planner writes directly; handles new work from outcomes, scopes, or replacement targets plus grooming of existing below-bar tasks; parallel planners on large scopes, one level deep
+    skills/qa/SKILL.md              #   /qa — version audit orchestrator: requires a group_key, dispatches bug-hunter (runtime) and archaeologist (alignment) in parallel, files concrete gap tasks into the same group, surfaces complexity/risk for the user; refuses group_key="new"
     skills/search/SKILL.md          #   /search — find docs and tasks via an escalating filter ladder
     skills/ship/SKILL.md            #   /ship — pre-push sweep: version bump, README/CLAUDE.md drift review
     skills/work/SKILL.md            #   /work — autopilot backlog execution: developer-in-worktree for implementation tasks, archaeologist for design tasks; below-bar surfaces for /plan groom, archaeologist-escalated forks surface for /design
