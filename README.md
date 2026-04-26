@@ -39,7 +39,7 @@ The marketplace configuration at `.claude-plugin/marketplace.json` defines both 
 | --- | --- | --- |
 | [tab](./plugins/tab) | 0.3.2 | A sharp, warm thinking partner who helps you make better decisions |
 | [tab-for-projects](./plugins/tab-for-projects) | 4.15.2 | Project workflow tracking -- skills and agents for the Tab for Projects MCP |
-| [tab-cli](./cli) | 0.1.0 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, MCP server mode, Anthropic + Ollama backends |
+| [tab-cli](./cli) | 0.2.0 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, MCP server mode, Anthropic + Ollama backends |
 
 ## Trademark
 
