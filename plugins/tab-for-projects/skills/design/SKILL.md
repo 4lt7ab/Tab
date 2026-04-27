@@ -1,7 +1,7 @@
 ---
 name: design
-description: "Conversational KB authorship, version-anchored. On entry I commit to a version — open a new one (with a proposed slug) or extend the in-progress one — by reading codebase state. I propose a single goal as the filter, decide small forks myself with reasoning the user can override, file off-goal suggestions via `/jot`, and on genuinely contested decisions dispatch `archaeologist` once for the evidence base then `advocate` agents in parallel for the strongest case per position. Pre-dispatch confirm shows the brief, version slug, and task fan-out. Sole entry point for KB writes; the only skill that opens new versions."
-argument-hint: "[<design-task-id> | <topic>]"
+description: "Conversational KB authorship, version-anchored. On entry I commit to a version — open a new one (with a proposed slug) or extend the in-progress one — by reading codebase state. I propose a single goal as the filter, decide small forks myself with reasoning the user can override, file off-goal suggestions via `/jot`, and on genuinely contested decisions dispatch `archaeologist` once for the evidence base then `advocate` agents in parallel for the strongest case per position. Pre-dispatch preview shows the brief, version slug, and task fan-out, then applies (interrupt to redirect); `--dry-run` stops after the preview. Sole entry point for KB writes; the only skill that opens new versions."
+argument-hint: "[<design-task-id> | <topic>] [--dry-run]"
 ---
 
 `/design` is the skill you reach for when a project-shape decision needs to crystallize into a KB doc and a version's worth of work needs to start moving. You bring the question — a topic, a task ID, or just an opening thought; I bring the version frame, the research, and the advocates; together we land on the answer and I capture it. I am the only path that opens new versions, and the only path that writes to the KB.
@@ -55,7 +55,7 @@ I don't run advocates on every fork — only on contested ones. Settled question
 
 **Version brief.** The brief is a KB doc, one per version, the source of truth for what this version is doing. It carries: the goal, the version slug, the resolved decisions with their bases, the deferred forks (now design tickets in the version group), the conventions touched, and the task fan-out. The brief is 1:1 with the version — `/ship` deletes it when the version ships, because git history is the historical record. The KB stays maintainable; the brief is a working document, not an archive.
 
-**Pre-dispatch confirm gate.** Before any writes — KB doc, planner dispatch, follow-up tickets — I show one approval block:
+**Pre-dispatch preview, then apply.** Before any writes — KB doc, planner dispatch, follow-up tickets — I print one preview block for visibility:
 
 ```
 /design — <project>
@@ -64,20 +64,15 @@ Goal:           <one sentence>
 Brief preview:  <title, summary, key decisions, deferred forks>
 Task fan-out:   <N tasks the planner will file, grouped by category>
 Off-goal jots:  <items filed to inbox during the conversation, if any>
-
-Apply? (y / edit / cancel)
 ```
 
-Responses:
-- `y` — write the brief, dispatch `project-planner` with the decision + inlined substance to file version-grouped tickets, transition the originating task to `done` when one anchored the conversation.
-- `edit` — inline edits to the brief or the fan-out before writing.
-- `cancel` — write nothing, exit. Off-goal `/jot` items already written stay written (capture is real-time and friction-free by design).
+Then I announce `applying — interrupt to redirect` and proceed: I create the brief via `create_document`, link it to the project via `update_project` with the `documents` merge-patch (`{ id: <project_id>, documents: { [new_doc_id]: true } }`) so the brief is reachable via `list_documents project_id=…`, file the planner dispatch with `group_key=<slug>` so every ticket lands in the version, and close the originating task when applicable. Forks I deferred file as `category: design` tasks in the same group — they come back to me later for their own version-extending pass. Mid-conversation redirect is the user's affordance: interrupt and I'll edit the brief or the fan-out before re-applying. Off-goal `/jot` writes already happen real-time and friction-free.
 
-On `y`: I create the brief via `create_document`, link it to the project via `update_project` with the `documents` merge-patch (`{ id: <project_id>, documents: { [new_doc_id]: true } }`) so the brief is reachable via `list_documents project_id=…`, file the planner dispatch with `group_key=<slug>` so every ticket lands in the version, close the originating task when applicable. Forks I deferred file as `category: design` tasks in the same group — they come back to me later for their own version-extending pass.
+**`--dry-run`.** When invoked with `--dry-run`, I stop after the preview block and perform no writes — no `create_document`, no `update_project`, no planner dispatch, no originating-task transition. Off-goal `/jot` items captured earlier in the conversation stay written (capture is real-time by design and pre-dates the apply step).
 
 ## What I won't do
 
-Write KB docs outside this skill — I'm the single entry point, which keeps authorship coherent. Open versions outside this skill either — `/curate` slots into in-progress versions, `/design` is the only path that opens new ones; that boundary is what makes the brief lifecycle work. Pick winners between real alternatives — that's your call, which is exactly why advocates exist. Run advocates on uncontested questions — settled answers go straight into the brief; reaching for advocates on every fork inflates context for no gain. Write anything before the confirm block — the doc, the attachment, the task-close, and the planner dispatch all clear one gate together. Close the task before you close it — no rushing to `done` on the first plausible stop. Silently absorb off-goal suggestions into the version — they file via `/jot` into the inbox, not into this version's task fan-out. Touch code, configs, or docs on disk — KB authorship and backlog writes are this skill's territory; on-disk changes are `/develop`'s and `/ship`'s.
+Write KB docs outside this skill — I'm the single entry point, which keeps authorship coherent. Open versions outside this skill either — `/curate` slots into in-progress versions, `/design` is the only path that opens new ones; that boundary is what makes the brief lifecycle work. Pick winners between real alternatives — that's your call, which is exactly why advocates exist. Run advocates on uncontested questions — settled answers go straight into the brief; reaching for advocates on every fork inflates context for no gain. Write anything before the preview block prints — the doc, the attachment, the task-close, and the planner dispatch all happen together after preview, never piecemeal. Close the task before you close it — no rushing to `done` on the first plausible stop. Silently absorb off-goal suggestions into the version — they file via `/jot` into the inbox, not into this version's task fan-out. Touch code, configs, or docs on disk — KB authorship and backlog writes are this skill's territory; on-disk changes are `/develop`'s and `/ship`'s.
 
 ## What I need
 
@@ -110,5 +105,5 @@ Failure modes:
 - Topic doesn't fit any in-progress version and user declines to open a new one — exit cleanly; no brief, no planner dispatch.
 - `archaeologist` returns `failed` or `underspecified` on the evidence-base dispatch — surface the gap, offer to proceed without advocates (settled questions only) or cancel.
 - An advocate returns `failed` (typically a missing/unparseable archaeologist report) — surface the gap; do not declare the case for that position.
-- Confirm gate `cancel` — no KB write, no planner dispatch, no task-close. Off-goal `/jot` items written during the conversation stay written.
+- `--dry-run` invocation — preview block prints, no KB write, no planner dispatch, no task-close. Off-goal `/jot` items written during the conversation stay written.
 - MCP unreachable — halt with the specific reason; partial off-goal jots that already wrote stay written, the brief and the planner dispatch don't fire.
