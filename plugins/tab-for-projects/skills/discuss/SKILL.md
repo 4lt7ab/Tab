@@ -1,12 +1,12 @@
 ---
 name: discuss
-description: "Get the whole advisor team in a room. Takes a goal, runs the archaeologist, project-planner, and code-reviewer in parallel against it, then cross-questions them to resolve forks until what remains is a coherent project plan with very few decisions left for the human. Read-only — no MCP writes, no code edits. Use when the user says /discuss, 'discuss <goal>', or 'get the team together on <goal>'."
+description: "Get the whole advisor team in a room. Takes a goal, runs the core advisors (archaeologist, project-planner, code-reviewer) in parallel against it — adding product-researcher when the goal calls for outside evidence — then cross-questions them to resolve forks until what remains is a coherent project plan with very few decisions left for the human. Read-only — no MCP writes, no code edits. Use when the user says /discuss, 'discuss <goal>', or 'get the team together on <goal>'."
 argument-hint: "<goal>"
 ---
 
 # /discuss
 
-Hand me a goal. I run all three advisors against it, cross-question them until their forks collapse against each other, and return a synthesized plan. The bar is "very few decisions left for the human" — not zero, because some calls genuinely need a human, but the plan should arrive pre-converged.
+Hand me a goal. I run the advisors against it — three core advisors always, plus product-researcher when the goal calls for outside evidence — cross-question them until their forks collapse against each other, and return a synthesized plan. The bar is "very few decisions left for the human" — not zero, because some calls genuinely need a human, but the plan should arrive pre-converged.
 
 I am read-only. I do not write tasks. I do not edit code. I do not write KB docs. The output is a plan — the user takes it from there: two-pass commit to the backlog (via the `tab-for-projects` MCP directly — see "Committing the plan to the backlog" below), then `/grind <suggested_group>` to execute. I'm the thinking step that comes before the doing.
 
@@ -14,7 +14,7 @@ I refuse on an empty goal. There's nothing to discuss.
 
 ## Approach
 
-I'm an orchestrator. The shape is three rounds — diverge, converge, synthesize — and the timing of cross-questions is mine. The contract is that what comes out is *one plan*, not three reports stapled together.
+I'm an orchestrator. The shape is three rounds — diverge, converge, synthesize — and the timing of cross-questions is mine. The contract is that what comes out is *one plan*, not a stack of advisor reports stapled together.
 
 ### Setup
 
@@ -23,25 +23,33 @@ I'm an orchestrator. The shape is three rounds — diverge, converge, synthesize
 
 ### Round 1 — Diverge
 
-Run the three advisors in parallel, each on the goal, each with their native lens:
+Run the advisors in parallel, each on the goal, each with their native lens:
 
 - **`archaeologist`** — *"Given this goal, what do the code and KB say about the right approach? Which docs apply and how? Where's the precedent?"* Returns a prescription with applicable docs and code anchors.
 - **`project-planner`** — *"Given this goal, what tasks need to exist or change to accomplish it? What edges connect them? Where are the design forks?"* Returns a prescription of tasks-to-create, tasks-to-update, edges, and forks.
 - **`code-reviewer`** — *"Given this goal, review the code the goal would touch (or the latest release window if the touch surface isn't yet known) — what existing issues bear on this work? Any ship-blockers or ship-with-followups that need to land first or alongside?"* Returns an issues report calibrated to the goal's angle.
+- **`product-researcher`** — *"Given this goal, what is the outside world doing? Libraries, patterns, prior art that comparable projects have adopted. Cross-check what you find against any KB decision that bears on the question. Returns prescription + outside_sources + kb_conflicts."*
 
-I run all three in a single message with parallel subagent calls. They don't know about each other yet — divergence is the point.
+I run the active advisors in a single message with parallel subagent calls. They don't know about each other yet — divergence is the point.
+
+#### When product-researcher joins Round 1
+
+Product-researcher joins Round 1 only when the goal text contains an outside-evidence signal: words like *best, leading, prevailing, recommended, library, framework, pattern, precedent, prior art*; OR an explicit `--research` flag is passed. For all other goals, Round 1 runs the three core advisors only and product-researcher is a Round 2 reactive consult — called when an existing fork explicitly turns on external evidence (planner prescribes a `category: design` task on which library to use; archaeologist returns KB-and-code-silent on a contested call). The rule errs on the side of the smaller team — if usage shows we miss too many cases, the flip to always-parallel is a one-line edit.
 
 ### Round 2 — Converge
 
-This is the round that earns the skill. I read the three reports and find the friction:
+This is the round that earns the skill. I read the Round 1 reports and find the friction:
 
 1. **Identify forks.** Every fork the planner named, every contested call the archaeologist flagged, every issue the reviewer marked `ship-blocker` or `ship-with-followup`.
 2. **Identify cross-fits.** Where does one advisor's output answer another's open question? (Archaeologist names a KB doc → does the planner's task body honor it? Reviewer flags a surface → does the planner's plan touch it? Planner prescribes a `category: design` task → does the archaeologist already have grounded evidence that resolves the design question?)
 3. **Identify contradictions.** Where do two advisors disagree about the same surface? Those are the cross-questions worth asking.
-4. **Cross-question.** Re-call advisors with specific, focused prompts that hand them another advisor's relevant output. Examples:
+4. **Cross-question.** Re-call advisors with specific, focused prompts that hand them another advisor's relevant output. If product-researcher wasn't in Round 1 and a fork now turns on external evidence (a `category: design` task on which library to use, a contested call where KB and code are silent), this is where I call them in as a reactive consult. Examples:
    - To archaeologist: *"The planner prescribed a `category: design` task on auth strategy. Here's the task body. Is there KB precedent or code that resolves this without a design step?"*
    - To planner: *"The reviewer flagged a `ship-with-followup` on the rate-limiter the new endpoint would touch. Here's the issue. Should the plan fold a fix in, sequence around it, or treat it as parallel?"*
    - To reviewer: *"The plan adds three new endpoints with the shape below. Anything in the existing code that would make this regress on perf or security?"*
+   - To product-researcher: *"The planner prescribed library X for task Y. Is there a prevailing pattern outside this project that suggests a different default? Cite sources."*
+   - To archaeologist: *"The product-researcher surfaced finding Z that contradicts doc D. Is the doc still right, or is the outside evidence load-bearing enough to revisit?"*
+   - To product-researcher: *"The reviewer flagged a perf regression in surface S. What are comparable projects doing for the same surface — is there a known pattern we're missing?"*
 5. **Repeat as warranted.** I judge when to stop. Two rounds of cross-questioning is usually enough. Three is the cap — past that I'm chasing diminishing returns and the remaining forks are genuinely human calls.
 
 I do not invent answers when advisors disagree. If a fork survives cross-questioning, it survives into the output as a `remaining_fork`. The goal is to *minimize* remaining forks, not to manufacture false consensus.
@@ -88,7 +96,7 @@ Run advisors sequentially when they could run in parallel. Round 1 is parallel. 
 ## What I need
 
 - **`tab-for-projects` MCP (read):** `get_project`, `get_project_context` — the advisors handle the rest of the MCP read surface themselves.
-- **Subagents:** `archaeologist`, `project-planner`, `code-reviewer`. All three, every time. If one is unreachable, I proceed with the rest and note the gap.
+- **Subagents:** `archaeologist`, `project-planner`, `code-reviewer`. All three, every time. The `product-researcher` advisor joins Round 1 when the inclusion rule fires, and is available as a Round 2 consult otherwise. If any advisor is unreachable, I proceed with the rest and note the gap.
 - **Read-only code tools:** `Read`, `Grep`, `Glob` — only for sanity checks against advisor output, not for primary grounding. The advisors do the grounding.
 
 ## Arguments
@@ -96,6 +104,7 @@ Run advisors sequentially when they could run in parallel. Round 1 is parallel. 
 - **`<goal>`** (required) — what we're planning toward, in plain language. Refuses if missing or empty.
 - **`--angle <lens>`** (optional) — biases the code-reviewer's review (security, perf, general, etc.). Defaults to a general quality pass framed by the goal.
 - **`--group-key <key>`** (optional) — suggests the `group_key` to attach to prescribed tasks. If omitted, I generate one from the goal and surface it in the output for whoever writes the plan to the backlog.
+- **`--research`** (optional) — forces `product-researcher` into Round 1 regardless of whether the goal text trips the outside-evidence signal. Useful when the goal's framing is internal but you suspect the answer turns on prior art.
 
 ## Output
 
@@ -105,7 +114,7 @@ The `tasks` block is shaped to paste field-for-field into `mcp__tab-for-projects
 goal:             one-line read of the goal
 project_id:       resolved project
 suggested_group:  group_key the synthesized plan would land under
-participants:     { archaeologist: ok|gap, project-planner: ok|gap, code-reviewer: ok|gap }
+participants:     { archaeologist: ok|gap, project-planner: ok|gap, code-reviewer: ok|gap, product-researcher: ok|gap }
 rounds:           short narrative — what diverged in round 1, what cross-questioning resolved in round 2
 plan:
   approach:       2–5 sentences, KB-grounded
