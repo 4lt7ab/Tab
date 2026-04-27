@@ -1,10 +1,10 @@
 ---
 name: curate
 description: "Manual-only inbox drain. Pulls tasks from `group_key=\"new\"` and other loose work, grooms them, and slots them into an existing in-progress version. Cannot open new versions (that's `/design`'s job) and cannot write KB. Triggers only on explicit `/curate` invocation — no other skill suggests it."
-argument-hint: "[<target group_key>]"
+argument-hint: "[<target group_key>] [--dry-run]"
 ---
 
-`/curate` is the skill you reach for when the inbox has gotten heavy and you want to land it inside a version that's already on the rails. I read `group_key="new"` plus any other loose tasks you point me at, you pick a target version from the in-progress set, and I dispatch `project-planner` to groom each candidate to the quality bar as it slots into the target group. The planner writes; I confirm before any `group_key` changes apply.
+`/curate` is the skill you reach for when the inbox has gotten heavy and you want to land it inside a version that's already on the rails. I read `group_key="new"` plus any other loose tasks you point me at, you pick a target version from the in-progress set, and I dispatch `project-planner` to groom each candidate to the quality bar as it slots into the target group. The planner writes; I print the slate, announce, and proceed — interrupt if you want to redirect.
 
 ## Character
 
@@ -28,13 +28,11 @@ If the user names a target that doesn't exist yet, I refuse and point at `/desig
 
 If grooming surfaces a forked decision the planner can't resolve from the prompt, the planner files a `category: design` task in the target group (its standard fallback) and returns `forks` in its report. I never write a KB doc to resolve a fork — the design task carries it forward to `/design` later.
 
-**User-confirm gate before writes apply.** I don't dispatch the planner per-candidate until the user says `y` to the slate. The confirm shows the target version, the candidate list (with current and proposed `group_key`), any candidates the user marked "leave in inbox", and the dispatch fan-out. Responses:
+**Print the slate, announce, proceed.** I print the slate — target version, the candidate list (with current and proposed `group_key`), any candidates marked "leave in inbox", and the dispatch fan-out — then announce "applying — interrupt to redirect" and proceed to the per-candidate planner dispatches. The slate is for visibility; the redirect affordance is the user's interrupt mid-flow if something looks off, not an up-front y/edit/cancel block.
 
-- `y` — dispatch the planner per slotted candidate; loose-leaves stay in their current group.
-- `edit` — inline edits to the candidate set or the target version pick.
-- `cancel` — write nothing, exit.
+If `--dry-run` was passed, I stop after the slate print: no planner dispatches, no `group_key` writes, just the proposed move on screen so the user can eyeball it.
 
-The gate is at the "am I about to rewrite your backlog under a real version" level, not "approve each grooming pass" — trust the planner with the per-task work, iterate after if something looks off.
+Trust the planner with the per-task work, iterate after if something looks off — the loop is print → announce → proceed, with the user steering by interrupt.
 
 **Dispatch and report.** Planner dispatches run serially per candidate (they share the project's task surface and don't parallelize cleanly through the planner's grounding). After each returns, I record the before/after `group_key` and a one-line note on what the planner changed. At end of run, I print the slotted set, the candidates I left in the inbox, any forks the planner filed as design tickets in the target group, and a pointer to `/develop <target>` as the natural next move.
 
@@ -78,5 +76,6 @@ Failure modes:
 - Target `group_key` argument names a finished group (no `todo` / `in_progress` tasks) → refuse with a pointer at `/design`; finished versions don't reopen here.
 - No in-progress versions exist on the project → exit early with a pointer at `/design`; nothing to slot into.
 - Inbox is empty and no other loose groups named → exit early with that note; nothing to drain.
+- `--dry-run` passed → print the slate and exit; no planner dispatches, no `group_key` writes.
 - `project-planner` returns `failed` for a candidate → record the failure in the report, leave the candidate in its source group, continue the run.
 - MCP unreachable mid-run → halt with the specific reason; partial slots that already wrote stay written (the planner owns those writes), unprocessed candidates stay untouched.
