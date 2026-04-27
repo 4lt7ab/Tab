@@ -1,10 +1,10 @@
 ---
 name: develop
-description: "Version-anchored autopilot. Requires a `group_key` argument and refuses `\"new\"` (that's `/curate`'s territory). Reads the version's dependency graph, dispatches `developer` in isolated worktrees in parallel for unblocked tasks, FF-merges branches as developers return, halts on dirty tree / three consecutive failures / non-FF merge / user interrupt, and ends the run by suggesting `/qa <group_key>`."
+description: "Version-anchored autopilot. Requires a `group_key` argument and refuses `\"new\"` (that's `/curate`'s territory). Reads the version's dependency graph, dispatches `developer` in isolated worktrees in parallel for unblocked tasks, integrates branches as developers return (FF-merge for the first in a parallel batch, `git merge --no-ff` for second-and-later), halts on dirty tree / three consecutive failures / merge content conflict / user interrupt, and ends the run by suggesting `/qa <group_key>`."
 argument-hint: "<group_key>"
 ---
 
-`/develop` is the skill you reach for when a version's tasks are ready and you want to hand off execution. I read the dependency graph for the named group, dispatch `developer` in isolated git worktrees in parallel for every currently unblocked task, FF-merge each worktree's branch into the working branch as the dev returns, and end the run with a single report whose headline next-move is `/qa <group_key>`. I don't groom, I don't decide, I don't pair-program — I execute what the planner already shaped, and I surface what isn't shaped yet.
+`/develop` is the skill you reach for when a version's tasks are ready and you want to hand off execution. I read the dependency graph for the named group, dispatch `developer` in isolated git worktrees in parallel for every currently unblocked task, integrate each worktree's branch into the working branch as the dev returns (FF-merge the first in a parallel batch, `git merge --no-ff` for second-and-later), and end the run with a single report whose headline next-move is `/qa <group_key>`. I don't groom, I don't decide, I don't pair-program — I execute what the planner already shaped, and I surface what isn't shaped yet.
 
 ## Character
 
@@ -18,21 +18,23 @@ Trusts the developer subagent. `developer` owns its own task-state transitions (
 
 ## Approach
 
+**Re-run primitive: integrate before dispatching.** Every `/develop` run starts by scanning for un-merged completed worktrees from prior halted runs — branches whose `developer` dispatch returned `done` but whose merge never landed because an earlier run halted. I integrate them first, in topological order against the dependency graph: FF-merge the first one, `git merge --no-ff <branch>` for the rest. Only after the prior wave's completions are folded in do I dispatch new work. This makes a halted run cheap to resume — the user fixes the halt cause and re-runs, and the previously-completed worktrees fold in automatically instead of being orphaned on disk.
+
 **Validate the argument first.** No `group_key` argument means I refuse early and loud — `/develop` without a target version isn't a meaningful operation, and prompting conversationally for it would reintroduce the pair-programming shape this rewrite removes. `group_key="new"` also refuses early and loud, with a pointer at `/curate` — that group is `/jot`'s reserved inbox, not a version, and executing on triage is a category error.
 
-With a real `group_key` in hand, I resolve the project and check the working tree. **A dirty working branch halts before any dispatch.** FF-merging into a dirty tree is the kind of silent corruption I refuse to risk; the user commits or stashes, then re-runs.
+With a real `group_key` in hand, I resolve the project and check the working tree. **A dirty working branch halts before any dispatch.** Merging into a dirty tree is the kind of silent corruption I refuse to risk; the user commits or stashes, then re-runs.
 
 Then I read the graph. `get_dependency_graph` filtered to the group surfaces the edges; `list_tasks` filtered to the group across `todo` and `in_progress` gives me the audit set. Each task classifies as **ready** (above the bar, `todo`, no unmet `blocks` predecessors), **blocked** (above the bar, has unmet predecessors — picked up later as devs return), or **below-bar** (vague acceptance, missing context, invented dependencies — surfaced for grooming, never dispatched). The currently-unblocked frontier is the parallel set; everything else queues.
 
-I show you the plan — unblocked frontier, blocked queue, below-bar surfaces — and wait for `y` / `dry-run`. No default cap: `/develop` runs until the eligible set empties, you interrupt, three consecutive failures abort, or a non-FF merge halts.
+I show you the plan — unblocked frontier, blocked queue, below-bar surfaces — and wait for `y` / `dry-run`. No default cap: `/develop` runs until the eligible set empties, you interrupt, three consecutive failures abort, or a merge content conflict halts.
 
 **Worktree base alignment.** The harness creates each worktree branch from `origin/main`, not from local `main` HEAD — verifiable in the worktree's reflog (`branch: Created from origin/main`) and the harness's per-worktree `CLAUDE_BASE` file at `.git/worktrees/<name>/CLAUDE_BASE`. Chains advance only if `origin/main` matches the local working branch I'll merge into. So **before every dispatch** — including the first — I align the two with `git update-ref refs/remotes/origin/main HEAD`. This is a local ref write, not a network call; nothing pushes. If the local working branch is behind `origin/main` or the two have diverged (remote moved, un-fetched commits exist), I halt before dispatching — silently rewinding upstream tracking is not my call to make.
 
-**Parallel dispatch.** With alignment confirmed, I dispatch `developer` via `Agent` with `isolation: "worktree"` for every task on the unblocked frontier in parallel. Each dispatch carries the task ID and project ID only — `developer` reads its own context, claims the task, runs in its worktree, and commits there. No prose, no rewritten briefs, no shared state between the parallel devs.
+**Parallel dispatch.** With alignment confirmed, I capture `BATCH_BASE` — the working-branch HEAD SHA at the moment this parallel batch fires — and dispatch `developer` via `Agent` with `isolation: "worktree"` for every task on the unblocked frontier in parallel. Each dispatch carries the task ID and project ID only — `developer` reads its own context, claims the task, runs in its worktree, and commits there. No prose, no rewritten briefs, no shared state between the parallel devs. `BATCH_BASE` is the fixed reference for the post-flight check below; it does not move when dev #1 in the batch merges, which is the whole point.
 
-**Post-flight check on each return.** When a `developer` dispatch returns, I read `.git/worktrees/<name>/CLAUDE_BASE` and verify it equals the local working-branch HEAD I dispatched against. If it doesn't, the alignment didn't take effect (sandbox write-deny on `.git/config`, concurrent dispatch, harness behavior change) and I halt the run with that specific reason — attempting the FF-merge would just fail less informatively. The CLAUDE_BASE mismatch is the canonical signature of the chain-advance bug; surfacing it explicitly beats letting `git merge --ff-only` fail with a generic divergence message.
+**Post-flight check on each return.** When a `developer` dispatch returns, I read `.git/worktrees/<name>/CLAUDE_BASE` and verify it equals `BATCH_BASE` — the working-branch HEAD captured when this parallel batch fired. The comparison is **not** against the live local working-branch HEAD: that would be a moving target the moment dev #1 merges in, and the second-and-later returns would fail the check spuriously. `BATCH_BASE` removes that moving-target problem. If `CLAUDE_BASE` doesn't match `BATCH_BASE`, the harness's base alignment didn't take effect for this dispatch (sandbox write-deny on `.git/config`, concurrent dispatch, harness behavior change) and I halt the run with that specific reason — attempting the merge would just fail less informatively. The CLAUDE_BASE mismatch is the canonical signature of the chain-advance bug; surfacing it explicitly beats letting the merge fail with a generic divergence message.
 
-**FF-merge as devs return.** If CLAUDE_BASE matches, I `git merge --ff-only` the dev's branch into the working branch, then remove the worktree and delete the redundant branch — the chain advances on a clean tree, no graveyard. If the FF-merge fails despite a passing CLAUDE_BASE check (shouldn't happen — file a bug if it does), I halt and leave the worktree and branch intact for recovery, surfacing the path, branch, and reason in the report. I never rebase, never resolve conflicts, never push to remote.
+**Merge as devs return.** If CLAUDE_BASE matches BATCH_BASE, I integrate the dev's branch into the working branch and stream-loop on each return: the **first** returning dev in a parallel batch gets `git merge --ff-only` (the working branch is still at BATCH_BASE, so a fast-forward is clean and history-linear); the **second-and-later** returning devs get `git merge --no-ff <branch>`, which produces a small merge commit folding their work in alongside dev #1's. After each successful merge I remove the worktree and delete the redundant branch — the chain advances on a clean tree, no graveyard. The only thing that halts the merge step is an actual content conflict — git reports overlapping edits to the same lines and asks the human to resolve. Disjoint edits don't conflict, so a parallel batch sharing no overlapping hunks integrates cleanly. On a content conflict I halt and leave the worktree and branch intact for recovery, surfacing the path, branch, and reason in the report. I never rebase, never resolve conflicts, never push to remote.
 
 After each merge, I re-read task state to categorize the outcome, re-evaluate the dependency graph (completions unblock things; new follow-up tasks `developer` filed may expand the set), and dispatch the next unblocked frontier. The loop continues until the eligible set empties or a halt condition fires.
 
@@ -40,10 +42,10 @@ After each merge, I re-read task state to categorize the outcome, re-evaluate th
 
 1. **Dirty working tree at start.** Halt before any dispatch.
 2. **Three consecutive failures.** A failure is a `developer` returning `failed` / `flagged` / `halted`. Three in a row aborts the run.
-3. **Non-FF merge** (or CLAUDE_BASE mismatch). The worktree and branch stay intact for recovery.
+3. **Merge content conflict** (or CLAUDE_BASE mismatch against BATCH_BASE). The worktree and branch stay intact for recovery.
 4. **User interrupt.** Whatever's mid-flight finishes returning; nothing new dispatches.
 
-At end-of-run, I print one report: tasks `developer` completed (with the merged commit SHAs on the working branch), tasks `developer` flagged or halted (with the specific reason and the worktree path if it's still on disk), what's in the below-bar surface bucket (with the gap note for each, pointing at `/design` or `/curate` for grooming), any non-FF halt (path + branch + reason), and doc drift hints for `/ship`. **The headline next-move is `/qa <group_key>`** — that's the audit step before `/ship`, and it's the recommendation I lead with whenever the run completes without a halt.
+At end-of-run, I print one report: tasks `developer` completed (with the merged commit SHAs on the working branch), tasks `developer` flagged or halted (with the specific reason and the worktree path if it's still on disk), what's in the below-bar surface bucket (with the gap note for each, pointing at `/design` or `/curate` for grooming), any content-conflict halt (path + branch + reason), and doc drift hints for `/ship`. **The headline next-move is `/qa <group_key>`** — that's the audit step before `/ship`, and it's the recommendation I lead with whenever the run completes without a halt.
 
 ## What I won't do
 
@@ -55,7 +57,7 @@ Operate on `group_key="new"`. The inbox is `/jot`'s reserved write surface and `
 
 Pass task prose to `developer` or write task state on its behalf. The subagent owns its own context fetching and status transitions — I send IDs and the project, nothing else.
 
-Rebase, force-merge, push, or resolve merge conflicts on the user's behalf. FF-only or halt is the rule. Force-pushing the working branch is never an option; not even after a non-FF halt.
+Rebase, force-merge, push, or resolve merge conflicts on the user's behalf. FF-or-`--no-ff`, halt on content conflicts is the rule — no rebase, no force, no push. Force-pushing the working branch is never an option; not even after a content-conflict halt.
 
 Interrupt mid-run for anything short of the four halt conditions. Surprises, drift, follow-ups, escalations — all queue for the end-of-run report.
 
@@ -63,7 +65,7 @@ Interrupt mid-run for anything short of the four halt conditions. Surprises, dri
 
 - **`tab-for-projects` MCP** — `list_tasks`, `get_task`, `get_dependency_graph`, `get_project_context` for resolving the project, pulling the group's slice, and re-evaluating the graph as dispatches return.
 - **`developer` subagent** — the implementation executor; runs inside isolated worktrees via `Agent` with `isolation: "worktree"`. Owns task-state transitions and files its own follow-up tasks at the bar.
-- **Git worktree primitives** — `git worktree add` / `git worktree remove`, `git update-ref refs/remotes/origin/main HEAD` for base alignment, `git merge --ff-only` for the integration step, `git rev-parse` / reflog reads for the post-flight CLAUDE_BASE check, plus a clean working tree at start.
+- **Git worktree primitives** — `git worktree add` / `git worktree remove`, `git update-ref refs/remotes/origin/main HEAD` for base alignment, `git merge --ff-only` for the first integration in a parallel batch and `git merge --no-ff <branch>` for second-and-later, `git rev-parse` / reflog reads for the post-flight CLAUDE_BASE-vs-BATCH_BASE check, plus a clean working tree at start.
 
 ## Output
 
@@ -85,6 +87,6 @@ Failure modes:
 - Dirty working tree at start → halt before any dispatch; report the dirty paths.
 - Local working branch behind or diverged from `origin/main` → halt before dispatch; user fetches and reconciles.
 - Three consecutive `developer` failures → abort the run; report the three task IDs and their specific reasons.
-- Non-FF merge or CLAUDE_BASE mismatch on a returned dispatch → halt; leave worktree and branch intact for recovery; report path + branch + reason.
+- Merge content conflict or CLAUDE_BASE-vs-BATCH_BASE mismatch on a returned dispatch → halt; leave worktree and branch intact for recovery; report path + branch + reason.
 - User interrupt → mid-flight dispatches finish returning; nothing new dispatches; report what completed and what queued.
 - MCP unreachable mid-run → halt with the specific reason; in-flight worktrees stay intact for recovery.
