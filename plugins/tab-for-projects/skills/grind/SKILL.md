@@ -50,7 +50,7 @@ Until the group is done or a halt condition fires:
 - **User interrupt.**
 - **Group done** — every task `done` or no unblocked frontier remains.
 
-On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reasons), what the user should look at next.
+On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reasons), what would have been useful that wasn't there (friction signals), what the user should look at next.
 
 ## What I write to
 
@@ -90,12 +90,24 @@ Burn cycles silently. Every round prints what's running, what just finished, wha
 A live log per round, then a final summary on halt:
 
 ```
-group:           the group_key being ground
-project_id:      resolved project
-landed:          list — { task_id, title, commit_sha }
-in_flight:       list — { task_id, title, worktree_branch } — only if halted with work outstanding
-failed:          list — { task_id, title, reason, attempts }
-advisor_writes:  list — { what_changed, source: archaeologist|project-planner }
-halt_reason:     done | dirty_tree | repeated_failure | merge_conflict | interrupt | deadlock
-next:            one-line suggestion for the user
+group:             the group_key being ground
+project_id:        resolved project
+landed:            list — { task_id, title, commit_sha }
+in_flight:         list — { task_id, title, worktree_branch } — only if halted with work outstanding
+failed:            list — { task_id, title, reason, attempts }
+advisor_writes:    list — { what_changed, source: archaeologist|project-planner }
+halt_reason:       done | dirty_tree | repeated_failure | merge_conflict | interrupt | deadlock
+friction_signals:  list — short bullets on what would have been useful that wasn't there; "none — clean run" when nothing surfaced
+next:              one-line suggestion for the user
 ```
+
+### friction_signals
+
+`friction_signals` captures, in plain bullets, what I wished was easier in this run. The slim suite explicitly bets that "real gaps emerge naturally" (CLAUDE.md) — `friction_signals` is the mechanism that surfaces them. Every `/grind` run produces this field, populated or explicitly empty. The user feeds the captured signals into the next `/discuss` on suite ergonomics.
+
+Shape: short, specific, in my voice. Examples:
+
+- "had to call archaeologist three times to ground a single fuzzy task — task body was thinner than it should have been"
+- "merging with --no-ff produced a messy log; would prefer rebase"
+- "wanted to file an inbox jot mid-run for an out-of-scope idea — no surface for it"
+- "none — clean run"
