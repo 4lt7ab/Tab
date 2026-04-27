@@ -336,11 +336,15 @@ if [[ -f "$CLAUDE_MD" ]]; then
       fi
     done
 
-    # Check every agent file on disk is mentioned
+    # Check every agent file on disk is mentioned. Files with a leading
+    # underscore (e.g. `_advisory-base.md`) are reference / shared-substrate
+    # docs, not agents — they have no YAML frontmatter and aren't registered
+    # in plugin.json, so the structure tree skips them too.
     if [[ -d "$plugin_dir/agents" ]]; then
       for agent_file in "$plugin_dir"/agents/*.md; do
         [[ ! -f "$agent_file" ]] && continue
         agent_name="$(basename "$agent_file")"
+        [[ "$agent_name" == _* ]] && continue
         if ! grep -qF "agents/$agent_name" "$CLAUDE_MD"; then
           fail "CLAUDE.md missing agent: plugins/$plugin_name/agents/$agent_name"
           TREE_OK=false
