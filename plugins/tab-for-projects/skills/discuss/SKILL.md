@@ -8,7 +8,7 @@ argument-hint: "<goal>"
 
 Hand me a goal. I run all three advisors against it, cross-question them until their forks collapse against each other, and return a synthesized plan. The bar is "very few decisions left for the human" — not zero, because some calls genuinely need a human, but the plan should arrive pre-converged.
 
-I am read-only. I do not write tasks. I do not edit code. I do not write KB docs. The output is a plan — the user takes it from there: write the prescribed tasks to the backlog (via the `tab-for-projects` MCP directly), then `/grind <suggested_group>` to execute. I'm the thinking step that comes before the doing.
+I am read-only. I do not write tasks. I do not edit code. I do not write KB docs. The output is a plan — the user takes it from there: two-pass commit to the backlog (via the `tab-for-projects` MCP directly — see "Committing the plan to the backlog" below), then `/grind <suggested_group>` to execute. I'm the thinking step that comes before the doing.
 
 I refuse on an empty goal. There's nothing to discuss.
 
@@ -52,8 +52,8 @@ One plan. Voice is mine, but every claim is anchored in an advisor's grounding.
 
 - **Approach** — 2–5 sentences naming the path forward, KB-grounded, with the archaeologist's applicable docs woven in.
 - **Prerequisites** — any reviewer-flagged issues the plan depends on (ship-blockers must land first; ship-with-followups should be sequenced or folded in).
-- **Tasks** — the planner's prescribed tasks, refined by what cross-questioning resolved. Every task carries title, category, effort, impact, summary, acceptance signal, and a suggested `group_key`. KB substance inlined per the planner's quality bar.
-- **Edges** — every dependency the planner named, plus any new edges that emerged from cross-questioning (e.g. "task X now blocks task Y because reviewer surfaced a shared surface").
+- **Tasks** — the planner's prescribed tasks, refined by what cross-questioning resolved. Every task carries `title`, `category`, `effort`, `impact`, `summary`, `acceptance_criteria`, `context` (KB substance inlined per the planner's quality bar), `group_key`, and `status: todo` — shaped to paste straight into `create_task` items[].
+- **Edges** — every dependency the planner named, plus any new edges that emerged from cross-questioning (e.g. "task X now blocks task Y because reviewer surfaced a shared surface"). Each edge names `from`, `to`, `type` (`blocks` | `relates_to`), and `reason` — `type` matches the MCP `add_dependencies` enum.
 - **Remaining forks** — the calls the team genuinely couldn't resolve. Target: 0–2. Each fork names the question, the options, and which way each advisor leaned.
 - **Confidence** — how converged the team got. `high` when all three advisors aligned and forks collapsed cleanly. `medium` when most forks resolved but the plan has known soft spots. `low` when too many forks survived — usually a signal the goal needs sharpening.
 
@@ -67,7 +67,7 @@ One plan. Voice is mine, but every claim is anchored in an advisor's grounding.
 
 ## What I write to
 
-Nothing. I am read-only on every surface — MCP, code, KB, tasks, git. The output is the plan; the user writes whatever the plan justifies (tasks and edges go to the `tab-for-projects` MCP directly, then `/grind <suggested_group>` executes).
+Nothing. I am read-only on every surface — MCP, code, KB, tasks, git. The output is the plan; the user writes whatever the plan justifies (the two-pass recipe at the bottom of this skill turns the output into MCP calls — `create_task` then `update_task` for edges — then `/grind <suggested_group>` executes).
 
 ## What I won't do
 
@@ -99,6 +99,8 @@ Run advisors sequentially when they could run in parallel. Round 1 is parallel. 
 
 ## Output
 
+The `tasks` block is shaped to paste field-for-field into `mcp__tab-for-projects__create_task`'s `items[]` array. The `edges` block is shaped to drive `mcp__tab-for-projects__update_task`'s `add_dependencies` after Pass 1 returns ULIDs. See "Committing the plan to the backlog" below for the two-pass recipe.
+
 ```
 goal:             one-line read of the goal
 project_id:       resolved project
@@ -108,13 +110,29 @@ rounds:           short narrative — what diverged in round 1, what cross-quest
 plan:
   approach:       2–5 sentences, KB-grounded
   prerequisites:  list — { issue, source: code-reviewer, call: ship-blocker|ship-with-followup, why_it_blocks }
-  tasks:          list — { title, category, effort, impact, summary, acceptance_signal, body_with_inlined_kb }
-  edges:          list — { from, to, kind: blocks|relates_to, reason }
-  applicable_docs: list — { doc_id, title, how_it_applies }
+  tasks:          list — each item is paste-compatible with create_task items[]:
+                    { project_id, title, summary, context, acceptance_criteria,
+                      category, effort, impact, group_key, status: todo }
+                    — `context` carries the body with KB substance inlined per the planner's quality bar.
+                    — `status` defaults to `todo` for new tasks.
+                    — no `applicable_docs` here; that's a top-level plan field for human KB grounding, not a per-task field.
+  edges:          list — { from: <source task title>, to: <target task title>, type: blocks|relates_to, reason }
+                    — titles are the join key at synthesis time (ULIDs don't exist yet).
+                    — `type` matches the MCP enum on `add_dependencies`.
+  applicable_docs: list — { doc_id, title, how_it_applies } — KB grounding for the human, not written to tasks.
 remaining_forks:  list — { question, options, leanings: { advisor: which_option }, why_unresolved } — target 0–2
 confidence:       high | medium | low
-next:             one-line — usually "write these tasks to the backlog under <suggested_group>, then /grind <suggested_group>" or "resolve forks first"
+next:             one-line — usually "two-pass commit under <suggested_group>, then /grind <suggested_group>" or "resolve forks first"
 ```
+
+## Committing the plan to the backlog
+
+Once you've reviewed the plan, two-pass commit:
+
+1. **Pass 1 — create tasks.** Send all `tasks` items in a single `mcp__tab-for-projects__create_task` call (the tool accepts an `items[]` array, and the per-task block is already shaped for it). Capture the returned ULIDs by title — you'll need them in Pass 2.
+2. **Pass 2 — write edges.** For each edge, look up the target task's ULID by its title, then call `mcp__tab-for-projects__update_task` with `add_dependencies: [{task_id: <source_ulid>, type: <type>}]`. The current task being updated is the TARGET — so "A blocks B" means update B, adding A as a `blocks`-source. Multiple edges into the same target can be batched into a single `update_task` items entry.
+
+If a task in `prerequisites` references an existing issue (not a new task to create), translate it into an edge against the existing task's ULID or fold it into a `context` note — don't pass it through `create_task`.
 
 Failure modes:
 
