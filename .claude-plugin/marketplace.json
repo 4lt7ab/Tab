@@ -19,8 +19,8 @@
     {
       "name": "tab-for-projects",
       "source": "./plugins/tab-for-projects",
-      "description": "Project workflow tracking — three read-only advisor agents (archaeologist, project-planner, code-reviewer) and two skills: /discuss runs the full advisor team against a goal and synthesizes one converged plan; /grind drives autonomous implementation against a grouped backlog.",
-      "version": "6.4.0",
+      "description": "Project workflow tracking — skills and agents for the Tab for Projects MCP. The product-researcher advisor additionally requires the Exa MCP.",
+      "version": "6.5.0",
       "strict": true
     }
   ]
