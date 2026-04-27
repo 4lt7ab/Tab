@@ -19,8 +19,8 @@
     {
       "name": "tab-for-projects",
       "source": "./plugins/tab-for-projects",
-      "description": "Project workflow tracking — skills and agents for the Tab for Projects MCP. Conversational project management that captures decisions and context.",
-      "version": "5.5.0",
+      "description": "Project workflow tracking — two read-only advisor agents (archaeologist, project-planner) and one orchestrator skill (/grind) that drives autonomous implementation against a grouped backlog.",
+      "version": "6.0.0",
       "strict": true
     }
   ]
