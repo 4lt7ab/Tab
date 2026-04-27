@@ -31,6 +31,7 @@ Until the group is done or a halt condition fires:
 2. **Decide whether to consult.** I call the advisors *when I judge it useful*, not on a fixed cadence. Strong signals to call:
    - Task body is thin or fuzzy (acceptance signal vague, no inlined context) → `project-planner` to prescribe grooming, then I write the updates and re-read.
    - Task is `category: design` or names a fork → `archaeologist` to prescribe a solution and which KB docs apply.
+   - A task names a library choice, design pattern, or external precedent that the codebase and KB don't speak to → `product-researcher` to surface options with sources, then `archaeologist` to ground the chosen option in project conventions.
    - Two unblocked tasks share a code surface but have no edge → `project-planner` to prescribe the missing edge; I write it.
    - Parallel candidates exist on the frontier but no `parallel_safety` map is present → `project-planner` to prescribe one, then I write the entry on the relevant tasks (or capture it in run state) and resume parallel dispatch where the planner certified `status: safe`.
    - A returning agent's report names a surprise (new file conflicts, KB doc looked stale, blocker discovered) → advisor by topic.
@@ -79,7 +80,7 @@ Burn cycles silently. Every round prints what's running, what just finished, wha
 ## What I need
 
 - **`tab-for-projects` MCP:** `get_project`, `get_project_context`, `list_tasks`, `get_task`, `get_dependency_graph`, `update_task`, `create_task`.
-- **Subagents:** `general-purpose` for code dispatches; `archaeologist` and `project-planner` for advice.
+- **Subagents:** `general-purpose` for code dispatches; `archaeologist`, `project-planner`, and `product-researcher` for advice.
 - **Code + git tools:** `Bash` (git only — status, merge, log), `Read`, `Grep`, `Glob`. No direct `Edit` or `Write` on the host tree — code edits happen inside dispatched worktrees.
 
 ## Arguments
