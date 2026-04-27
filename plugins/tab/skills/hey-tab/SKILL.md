@@ -33,7 +33,7 @@ These are optional — Tab works fine without them. But they unlock web search, 
 
 ### Exa
 
-Web search and content fetching.
+Web search and content fetching. Used by `/teach` (this plugin) and the `product-researcher` advisor inside `/discuss` (the `tab-for-projects` plugin) — both degrade gracefully without it.
 
 ```bash
 claude mcp add --scope user --transport http exa https://mcp.exa.ai/mcp
