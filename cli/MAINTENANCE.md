@@ -8,24 +8,15 @@ isn't self-evident.
 ## 1. Lazy imports per subcommand
 
 Every Typer subcommand body lazy-imports the module it dispatches into
-— `tab_cli.chat`, `tab_cli.skills`, `tab_cli.personality`,
-`tab_cli.mcp_server`, etc. — instead of importing them at module top.
-Seventeen such in-function imports live in `cli.py` today (one per
-dispatch site, sometimes two when a subcommand needs both a runner and
-a helper).
+— `tab_cli.chat`, `tab_cli.skills`, `tab_cli.personality`, etc. —
+instead of importing them at module top. The in-function imports live
+in `cli.py` (one per dispatch site, sometimes two when a subcommand
+needs both a runner and a helper).
 
-The canonical comment names the cost being deferred. FastMCP and
-pydantic-ai are the heavy ones:
-
-```python
-# cli/src/tab_cli/cli.py:323-325
-# Lazy-imported so ``tab --help`` and unrelated subcommands don't
-# pay for FastMCP's import cost.
-from tab_cli.mcp_server import run_server
-```
+The canonical comment names the cost being deferred. pydantic-ai is
+the heavy one:
 
 ```python
-# cli/src/tab_cli/cli.py:262-265
 # Imported lazily so `tab --help` and unrelated subcommands don't pay
 # for pydantic-ai's import cost (and don't fail in environments where
 # the personality file isn't reachable from cwd).
@@ -35,32 +26,12 @@ from tab_cli.personality import compile_tab_agent
 `tab --help`, `tab grimoire show`, and other non-agent paths must stay
 cheap and provider-free. `personality.py` imports `pydantic_ai.Agent`
 at module top, so deferring `tab_cli.personality` is what defers
-pydantic-ai. `mcp_server.py` lazy-imports `fastmcp` itself
-(`mcp_server.py:89-92`) for the same reason — keep it out of the
-non-MCP paths.
+pydantic-ai.
 
 ## 2. Pluggable test seams
 
 Surfaces that talk to providers or to disk accept a `None`-defaulted
 override so tests can inject a stand-in without monkeypatching imports.
-Two anchors:
-
-**`compile_agent` injection in `mcp_server.build_server`** —
-`cli/src/tab_cli/mcp_server.py:60-66`:
-
-```python
-def build_server(
-    *,
-    settings: TabSettings | None = None,
-    model: str | None = None,
-    compile_agent: Callable[..., Any] | None = None,
-    name: str = "tab",
-) -> FastMCP:
-```
-
-The docstring (`mcp_server.py:78-80`) names it explicitly: "Test seam.
-Inject a stand-in for `compile_tab_agent` to avoid touching real
-providers. Production callers leave this `None`."
 
 **`path` override in `grimoire_overrides`** —
 `cli/src/tab_cli/grimoire_overrides.py:117` (and on `save_overrides`,
@@ -76,7 +47,7 @@ optional `path` argument is a test seam; production callers use
 
 A `None`-defaulted parameter wired through to the real default keeps
 production call-sites untouched while letting tests pass a tmp path or
-a fake compiler in.
+a fake helper in.
 
 ## 3. The `tab: <reason>` stderr error pattern
 

@@ -1,16 +1,15 @@
 """Typer entry point for the Tab CLI.
 
 This module wires the verb-shaped command surface — ``tab ask``,
-``tab chat``, ``tab <skill>``, ``tab mcp``, ``tab setup``, ``tab
-grimoire ...`` — to the implementations that live one import away in
-their own modules. The personality-aware verbs (everything that builds
-a Tab persona agent) share a single helper in
-:mod:`tab_cli.commands`: a ``@personality_command`` decorator that
-exposes the five ``--<dial> INT`` flags + ``--model``, validates dial
-ranges, resolves :class:`TabSettings` and the model identifier, and
-wraps the body in the readable-error contract before dispatching to a
-small body that takes a :class:`TabContext` and the verb's positional
-arguments.
+``tab chat``, ``tab <skill>``, ``tab setup``, ``tab grimoire ...`` —
+to the implementations that live one import away in their own modules.
+The personality-aware verbs (everything that builds a Tab persona
+agent) share a single helper in :mod:`tab_cli.commands`: a
+``@personality_command`` decorator that exposes the five
+``--<dial> INT`` flags + ``--model``, validates dial ranges, resolves
+:class:`TabSettings` and the model identifier, and wraps the body in
+the readable-error contract before dispatching to a small body that
+takes a :class:`TabContext` and the verb's positional arguments.
 
 The five personality dials (humor, directness, warmth, autonomy,
 verbosity) are exposed as ``--<dial> INT`` flags on every command.
@@ -198,32 +197,6 @@ def ask(
     # type — which is the default when no ``output_type`` is configured
     # on the agent (the personality compiler doesn't set one).
     typer.echo(result.output)
-
-
-@personality_command(
-    app,
-    "mcp",
-    model_help=(
-        "Default pydantic-ai model name in <provider:model> form "
-        "(e.g. anthropic:claude-sonnet-4). Per-call ``model`` "
-        "arguments on ``ask_tab`` override this."
-    ),
-)
-def mcp(ctx: TabContext) -> None:
-    """Run the Tab CLI as an MCP server on stdio.
-
-    Exposes two tools — ``ask_tab(prompt, model?)`` and
-    ``search_memory(query)`` — for MCP-aware hosts (Claude Code et al.)
-    to call. The personality settings established at startup apply to
-    every ``ask_tab`` turn for the lifetime of the server; restart with
-    new flags to change them. Errors collapse to the same readable
-    one-line stderr / non-zero exit contract as ``tab ask``.
-    """
-    # Lazy-imported so ``tab --help`` and unrelated subcommands don't
-    # pay for FastMCP's import cost.
-    from tab_cli.mcp_server import run_server
-
-    run_server(settings=ctx.settings, model=ctx.model)
 
 
 @personality_command(app, "draw-dino")

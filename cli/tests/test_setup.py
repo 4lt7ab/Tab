@@ -68,7 +68,6 @@ def test_setup_command_prints_block_to_stdout() -> None:
     assert "GEMINI_API_KEY" in result.stdout
     assert "GROQ_API_KEY" in result.stdout
     assert "OLLAMA_HOST" in result.stdout
-    assert "claude mcp add --scope user --transport stdio tab tab mcp" in result.stdout
     assert "/hey-tab" in result.stdout
     assert "https://github.com/4lt7ab/Tab" in result.stdout
 

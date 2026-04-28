@@ -11,10 +11,6 @@ tab setup
      export GROQ_API_KEY=...
      # Ollama needs no key — point at OLLAMA_HOST if running remote.
 
-3. (Optional) Wire `tab mcp` into Claude Code
-     claude mcp add --scope user --transport stdio tab tab mcp
-     # Then any Claude Code session can call ask_tab() and search_memory().
-
-4. Want the Claude Code plugin instead of (or in addition to) the CLI?
+3. Want the Claude Code plugin instead of (or in addition to) the CLI?
      Run /hey-tab inside Claude Code, or:
      https://github.com/4lt7ab/Tab

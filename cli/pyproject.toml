@@ -1,6 +1,6 @@
 [project]
 name = "tab-cli"
-version = "0.3.0"
+version = "0.4.0"
 description = "Tab — a verb-shaped CLI agent for the Tab plugin ecosystem"
 readme = "README.md"
 license = { file = "../LICENSE" }
@@ -11,7 +11,6 @@ dependencies = [
     "pydantic-ai>=0.0.20",
     "grimoire",
     "pyyaml>=6.0",
-    "fastmcp>=2.0",
     # Used by `tab ask --model ollama:<name>` to bypass pydantic-ai's
     # OpenAI-compat routing for local Ollama. Currently transitive via
     # grimoire; pinned here explicitly so the dependency stays visible

@@ -24,9 +24,6 @@ uv run tab teach "byzantine fault tolerance"
 uv run tab listen
 uv run tab think
 
-# MCP server mode (expose ask_tab + search_memory to MCP-aware hosts)
-uv run tab mcp
-
 # Setup hints
 uv run tab setup
 ```
@@ -59,7 +56,6 @@ cli/
     skills.py              # Shared skill runner (read SKILL.md body + compile skill agent)
     registry.py            # SKILL.md loader: seeds grimoire's Gate for semantic routing
     grimoire_overrides.py  # `tab grimoire` per-skill threshold persistence
-    mcp_server.py          # `tab mcp` runtime: FastMCP server exposing ask_tab + search_memory
     web_search.py          # Exa-backed web_search tool for /teach
     setup.py + setup.md    # `tab setup` body and command
     models/
@@ -72,11 +68,10 @@ cli/
 
 ## Stack
 
-- **Typer** — CLI surface (verb-shaped subcommands, REPL, MCP server mode).
+- **Typer** — CLI surface (verb-shaped subcommands, REPL).
 - **pydantic-ai** — agent loop, tool dispatch, structured output.
 - **anthropic** — first backend (`anthropic:<model>`) via pydantic-ai's stock `AnthropicModel`.
 - **ollama-python** — second backend (`ollama:<model>`) via Tab's in-house `OllamaNativeModel`, which talks to `/api/chat` directly. pydantic-ai's stock `OllamaModel` extends `OpenAIChatModel` and routes through `/v1` OpenAI-compat, which has model-registration drift on some installs.
 - **grimoire** (tag-pinned) — semantic-gate routing of user input against skill descriptions.
-- **fastmcp** — `tab mcp` server runtime.
 
 See KB doc `01KQ2YKTWGXQKYZZS56Y29KT0C` for the architectural decision context.

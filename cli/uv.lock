@@ -2005,10 +2005,9 @@ wheels = [
 
 [[package]]
 name = "tab-cli"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
-    { name = "fastmcp" },
     { name = "grimoire" },
     { name = "ollama" },
     { name = "pydantic-ai" },
@@ -2023,7 +2022,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=2.0" },
     { name = "grimoire", git = "https://github.com/4lt7ab/grimoire.git?tag=v0.1.1" },
     { name = "ollama", specifier = ">=0.4" },
     { name = "pydantic-ai", specifier = ">=0.0.20" },

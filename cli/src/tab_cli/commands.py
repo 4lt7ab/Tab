@@ -1,9 +1,9 @@
 """Shared scaffolding for ``tab`` subcommands.
 
-This module exists to kill an 8-site duplication in
+This module exists to kill a multi-site duplication in
 :mod:`tab_cli.cli`. Every personality-aware subcommand (``tab``'s root
-callback, ``ask``, ``mcp``, ``draw-dino``, ``listen``, ``think``,
-``teach``, ``chat``) used to repeat the same shape:
+callback, ``ask``, ``draw-dino``, ``listen``, ``think``, ``teach``,
+``chat``) used to repeat the same shape:
 
 1. Five ``--<dial> INT`` Options (humor, directness, warmth, autonomy,
    verbosity).
@@ -14,7 +14,7 @@ callback, ``ask``, ``mcp``, ``draw-dino``, ``listen``, ``think``,
    collapses any exception to ``typer.echo("tab: <reason>", err=True)``
    plus ``raise typer.Exit(1)``.
 
-Eight verbs, ~50 lines of repetition each. The helper here pulls the
+Seven verbs, ~50 lines of repetition each. The helper here pulls the
 repeated half — dials + resolution + error contract — into one place,
 leaving each subcommand body free to focus on its actual job
 (positional args + lazy import + dispatch + stdout).
@@ -115,12 +115,10 @@ def model_option(
 ) -> typer.models.OptionInfo:
     """Return a ``--model`` Option with the given help text.
 
-    Most commands use the default phrasing. ``tab mcp`` overrides it to
-    note that per-call ``model`` arguments on ``ask_tab`` win over the
-    server-startup default; the bare-``tab``/``chat`` callbacks override
-    it to mention the chat REPL specifically. The help text is the only
-    thing that varies — the parsing semantics (``str | None``,
-    ``show_default=False``) are fixed.
+    Most commands use the default phrasing. The bare-``tab``/``chat``
+    callbacks override it to mention the chat REPL specifically. The
+    help text is the only thing that varies — the parsing semantics
+    (``str | None``, ``show_default=False``) are fixed.
     """
     return typer.Option(
         None,
@@ -279,8 +277,8 @@ def personality_command(
        typer.Exit(1)``.
 
     The model help text defaults to the generic per-command phrasing.
-    Override via ``model_help`` for subcommands like ``mcp`` whose
-    flag has a different meaning ("default model for the MCP server").
+    Override via ``model_help`` for subcommands whose flag has a
+    different meaning than the default per-command phrasing.
 
     The model resolver is looked up on :mod:`tab_cli.cli` at *call*
     time, not at import time, so the suite-wide test fixture that

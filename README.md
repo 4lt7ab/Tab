@@ -7,7 +7,7 @@ A thinking partner defined entirely in markdown -- no compiled code, no dependen
 Tab is a markdown substrate for an AI thinking partner. The personality, skills, and workflows live in plain text files; runtimes load them. Two runtimes ship today:
 
 - **Claude Code plugins** under `plugins/`: distributed through AltTab's marketplace.
-- **Tab CLI** under `cli/`: a Python package that runs the same markdown outside Claude Code, exposable as an MCP server.
+- **Tab CLI** under `cli/`: a Python package that runs the same markdown outside Claude Code.
 
 The repo contains:
 
@@ -15,7 +15,7 @@ The repo contains:
 
 - **tab-for-projects** -- project workflow tools that integrate with the Tab for Projects MCP server for pair-programming, capturing decisions, and managing project context.
 
-- **tab-cli** -- the Python runtime. Verb-shaped subcommands (`tab ask`, `tab chat`, `tab <skill>`, `tab mcp`, `tab setup`); pydantic-ai for the agent loop with Anthropic + Ollama backends; grimoire for semantic skill routing.
+- **tab-cli** -- the Python runtime. Verb-shaped subcommands (`tab ask`, `tab chat`, `tab <skill>`, `tab setup`); pydantic-ai for the agent loop with Anthropic + Ollama backends; grimoire for semantic skill routing.
 
 Both Claude Code plugins are distributed through AltTab's marketplace.
 
@@ -39,7 +39,7 @@ The marketplace configuration at `.claude-plugin/marketplace.json` defines both 
 | --- | --- | --- |
 | [tab](./plugins/tab) | 0.3.2 | A sharp, warm thinking partner who helps you make better decisions |
 | [tab-for-projects](./plugins/tab-for-projects) | 5.3.0 | Project workflow tracking -- skills and agents for the Tab for Projects MCP |
-| [tab-cli](./cli) | 0.2.0 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, MCP server mode, Anthropic + Ollama backends |
+| [tab-cli](./cli) | 0.4.0 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, Anthropic + Ollama backends |
 
 ## Trademark
 
