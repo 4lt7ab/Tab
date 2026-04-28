@@ -1,6 +1,6 @@
 ---
 name: grind
-description: "Autonomous implementation against the project backlog. Takes a group_key as the focus, reads the dependency graph, dispatches generic Claude Code agents in isolated worktrees to do the actual code work on unblocked tasks (in parallel when safe), and writes task status back to the tab-for-projects MCP as work lands. Calls the archaeologist and project-planner advisors when judgment is required — when a task is fuzzy, when a surprise surfaces, when the backlog clearly needs reshaping mid-run — and writes the prescribed task/KB updates itself. Halts on dirty tree, three consecutive failures, merge conflict, user interrupt, or group done. Use when the user says /grind, 'grind the <group> group', or 'grind through <group>'."
+description: "Autonomous implementation against the project backlog. Takes a group_key as the focus, reads the dependency graph, dispatches generic Claude Code agents in isolated worktrees to do the actual code work on unblocked tasks (in parallel when safe), and writes task status back to the tab-for-projects MCP as work lands. Calls the archaeologist and project-planner advisors when judgment is required — when a task is fuzzy, when a surprise surfaces, when the backlog clearly needs reshaping mid-run — and writes the prescribed task updates itself. Refuses docs-deliverable tasks (KB doc creation/update is not /grind-shaped — those route to /discuss). Halts on dirty tree, three consecutive failures, merge conflict, user interrupt, or group done. Use when the user says /grind, 'grind the <group> group', or 'grind through <group>'."
 argument-hint: "<group_key>"
 ---
 
@@ -41,6 +41,7 @@ Until the group is done or a halt condition fires:
 4. **Dispatch.** For each unblocked task I'm running this round:
    - `update_task` → `in_progress`.
    - Spawn a `general-purpose` Agent in an isolated git worktree (`isolation: "worktree"`) with a self-contained prompt: the task body verbatim, the acceptance signal, file anchors, inlined KB substance, and a clear ask — write the code, write/update tests, run them, commit in the worktree, report back. Every dispatched-agent prompt opens with the SHA pre-flight per `_skill-base.md`'s "Worktree pre-flight for dispatched agents"; on a stale-worktree report I send the continuation message named there, then resume.
+   - Every dispatched-agent prompt also includes an explicit no-KB-write clause: *"Do not call `create_document` or `update_document`. KB doc writes are out of scope for this dispatch. If the task as written seems to require either, halt and report — do not produce a KB doc."* If the agent halts on this clause, I treat it as a category-misrouted task: I refuse it on the spot, mark it failed with reason `docs-deliverable`, and surface it for the user (or `/discuss`) to re-shape.
    - Run multiple dispatches in parallel only when the planner's output explicitly names the candidate set as `parallel_safety: status: safe`. Absence of a `parallel_safety` entry is **not** an assertion of safety — I treat unanalyzed pairs as conflict-possible and dispatch them serially. If the unblocked frontier is N tasks but only K are explicitly named safe-together, I parallelize K and queue the rest for the next round.
    - **Fallback when no `parallel_safety` map exists** (e.g. a fresh `/grind` run on a backlog filled by `/discuss` before this contract change): I dispatch **one task at a time**, no parallelism, until I consult `project-planner` mid-run to get a `parallel_safety` map for the remaining frontier. Once the map is in hand, I either write the entries onto the relevant tasks (if the prescription names task updates) or capture them in run state, then resume parallel dispatch where it's been certified safe.
 5. **Integrate as agents return.** First returner of a parallel batch: fast-forward merge into the working branch. Second-and-later: `git merge --no-ff` so the parallel structure stays legible in history. On merge content conflict: halt the loop, surface the conflict, leave the worktree branch intact.
@@ -55,15 +56,24 @@ On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reas
 
 ## What I write to
 
-- **MCP:** `update_task` for status transitions and result notes; `create_task` and edge writes when an advisor prescribes them; never `create_document` or `update_document` directly — KB application is via the archaeologist's prescription, which I apply as edits inside the dispatched code work or as task updates, not as doc rewrites.
-- **Code:** only via dispatched agents, only inside worktrees. I don't edit code directly.
-- **Git:** merges into the working branch on the host repo; worktrees and their branches are managed by the dispatch isolation.
+Per `_skill-base.md`'s "What this skill writes" — my write surface, declared explicitly:
+
+- **Code** — only via dispatched `general-purpose` agents in isolated worktrees. I don't edit code on the host tree directly.
+- **Git** — merges into the working branch on the host repo; worktrees and their branches are managed by the dispatch isolation.
+- **MCP task fields** — `update_task` for status transitions and result notes; `create_task` and dependency-edge writes only when an advisor prescribes them. I never create or update tasks beyond what advisors name, and I never reach for task fields the advisors didn't speak to.
+
+Refused surfaces, named explicitly:
+
+- **KB docs** — never. Not `create_document`, not `update_document`, not directly, not via a dispatched agent. KB application happens via the archaeologist's prescription, which I apply as code edits or task updates, never as doc rewrites. See "What I won't do" below for the full refusal — it's load-bearing.
+- **Tasks beyond the advisor's prescription** — I don't groom the backlog freelance. If `project-planner` doesn't name a create/update/edge, I don't write one.
 
 ## What I won't do
 
 Refusal posture is at the top of the file and in `_skill-base.md`. Grind-specific:
 
-Rewrite KB docs. The archaeologist prescribes which docs apply and how; I write task updates and dispatch code work, never `update_document`.
+Write KB docs — at all. Not directly, not via a dispatched agent. The archaeologist prescribes which docs apply and how; I act on that prescription as code edits or task updates, never as doc rewrites. The dispatched `general-purpose` agent's prompt explicitly forbids `create_document` and `update_document` — if it finds the task seems to require either, it halts and reports.
+
+Run on a docs-deliverable task. If a task's acceptance criteria names `create_document`, `update_document`, or KB-doc creation/update as a deliverable, I refuse — code-writer skills and doc-writer skills have different shapes, and conflating them invites cargo-culting. Worked example: *"audit `cli/` surface and land KB doc"* is `/discuss`-shaped, not `/grind`-shaped — `/discuss` synthesizes the audit, the user (or a future doc-writer skill) commits the KB doc, and any code work the audit prescribes lands as a separate `/grind`-shaped follow-up task with no KB-doc deliverable on it. I surface the refused task with reason `docs-deliverable` so the user can route it.
 
 Push. I commit and merge locally. Pushing is the user's call.
 

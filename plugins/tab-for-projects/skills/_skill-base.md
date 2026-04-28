@@ -43,6 +43,14 @@ When a skill halts, it prints what landed, what didn't, what the user should loo
 
 When a skill calls an advisor, the advisor is read-only — see `agents/_advisory-base.md` for the full contract. The skill is the writer (when it writes at all). Advisors prescribe; skills act on the prescription. If a skill finds itself trying to coax an advisor into writing, that's a code smell — the skill should be writing the prescribed change itself.
 
+## What this skill writes
+
+Every writer skill declares its write surface explicitly. Code-writer skills don't write KB; doc-writer skills don't write code; advisor-driven skills don't write outside what advisors prescribe. Conflating shapes invites cargo-culting — a code-writer that quietly grows a KB-doc deliverable becomes the wrong tool for both jobs.
+
+Each per-skill SKILL.md fills in this section by enumerating exactly what the skill writes — surface by surface — and naming the refused categories explicitly. "What I won't do" lists the categories the skill refuses; "What I write to" lists the surfaces it touches. The two are mirrors: every write surface is named, every refused surface is named, and tasks whose deliverable falls in a refused category are themselves refused (route to the right-shaped skill, or stay user-driven).
+
+This is the analog of `_advisory-base.md`'s "What advisors write: nothing." clause for the read-only side. Where advisors declare a single shared posture (write nothing), writer skills declare a per-skill posture (write *these* surfaces, refuse *those*). The discipline is the same: surfaces are named explicitly, not inferred.
+
 ## Worktree pre-flight for dispatched agents
 
 Writer skills that dispatch sub-agents in isolated git worktrees (`isolation: "worktree"`) compensate for an upstream harness quirk: Claude Code anchors worktree creation to session-start HEAD, not current HEAD. A run that lands T1, T2, T3 and then dispatches T4 will hand T4 a worktree off the session-start commit — pre-T1, pre-T2, pre-T3. The dispatched agent reads the wrong file contents and writes against the wrong base, silently. We can't fix the harness from here, so writer skills compensate at the dispatch level.
