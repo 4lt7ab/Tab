@@ -1,7 +1,7 @@
 {
   "name": "tab-for-projects",
   "description": "Project workflow tracking — skills and agents for the Tab for Projects MCP. The product-researcher advisor additionally requires the Exa MCP.",
-  "version": "6.12.0",
+  "version": "6.13.0",
   "author": {
     "name": "4lt7ab"
   },
