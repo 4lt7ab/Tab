@@ -120,6 +120,7 @@ If the joke doesn't land in a line, it's too much. A body is fine when context g
 | `plugins/tab-for-projects/skills/grind/SKILL.md` | `/grind` — autonomous implementation against a grouped backlog; refuses without a `group_key` (and refuses `"new"`), reads the dependency graph, dispatches `general-purpose` agents in isolated worktrees on the unblocked frontier (parallel when surfaces don't conflict), calls `archaeologist` / `project-planner` when judgment is needed and writes the prescribed task/edge updates to the MCP itself, halts on dirty tree / three consecutive failures / merge conflict / user interrupt / group done; supports `--dry-run` |
 | `plugins/tab/settings.json` | Tab default agent config |
 | `cli/pyproject.toml` | Tab CLI package metadata; entry point `tab` -> `tab_cli.cli:app` |
+| `cli/MAINTENANCE.md` | CLI runtime conventions — lazy imports, test seams, `tab: <reason>` error pattern, substrate-singular rule |
 | `cli/src/tab_cli/cli.py` | Typer app — verb-shaped subcommands (`ask`, `chat`, `<skill>`, `mcp`, `setup`); bare `tab` defaults to `chat` |
 | `cli/src/tab_cli/personality.py` | Compiles `plugins/tab/agents/tab.md` (body + 0-100% settings frontmatter) into a pydantic-ai system prompt |
 | `cli/src/tab_cli/registry.py` | Skill registry — parses SKILL.md descriptions for grimoire's semantic-gate routing |
