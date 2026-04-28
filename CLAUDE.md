@@ -122,6 +122,8 @@ If the joke doesn't land in a line, it's too much. A body is fine when context g
 | `cli/pyproject.toml` | Tab CLI package metadata; entry point `tab` -> `tab_cli.cli:app` |
 | `cli/MAINTENANCE.md` | CLI runtime conventions — lazy imports, test seams, `tab: <reason>` error pattern, substrate-singular rule |
 | `cli/src/tab_cli/cli.py` | Typer app — verb-shaped subcommands (`ask`, `chat`, `<skill>`, `mcp`, `setup`); bare `tab` defaults to `chat` |
+| `cli/src/tab_cli/commands.py` | Shared subcommand scaffolding — `@personality_command` decorator, `TabContext` resolved bundle, dial/model Options, `tab: <reason>` error wrapper |
+| `cli/src/tab_cli/grimoire_cli.py` | `tab grimoire` subcommand group — `set` / `reset` / `show` for per-skill threshold overrides |
 | `cli/src/tab_cli/personality.py` | Compiles `plugins/tab/agents/tab.md` (body + 0-100% settings frontmatter) into a pydantic-ai system prompt |
 | `cli/src/tab_cli/registry.py` | Skill registry — parses SKILL.md descriptions for grimoire's semantic-gate routing |
 | `cli/src/tab_cli/mcp_server.py` | `tab mcp` runtime — exposes the CLI as an MCP server for any MCP-aware host |
