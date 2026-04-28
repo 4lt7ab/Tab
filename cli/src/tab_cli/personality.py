@@ -20,6 +20,8 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
+from tab_cli.paths import plugins_dir, strip_frontmatter
+
 
 class TabSettings(BaseModel):
     """Personality dials for the Tab agent.
@@ -35,46 +37,13 @@ class TabSettings(BaseModel):
     verbosity: int = Field(default=35, ge=0, le=100)
 
 
-def _repo_root() -> Path:
-    """Return the repo root, derived from this file's location.
-
-    Layout: `<repo>/cli/src/tab_cli/personality.py` → parents[3] is the
-    repo root. The personality compiler reads `plugins/tab/agents/tab.md`
-    from there.
-    """
-    return Path(__file__).resolve().parents[3]
-
-
 def _tab_md_path() -> Path:
-    return _repo_root() / "plugins" / "tab" / "agents" / "tab.md"
-
-
-def _strip_frontmatter(text: str) -> str:
-    """Strip a leading YAML frontmatter block (--- ... ---) if present.
-
-    Returns the body with leading blank lines trimmed. If the file has
-    no frontmatter, returns the text unchanged.
-    """
-    if not text.startswith("---"):
-        return text
-
-    # Find the closing `---` after the opening one.
-    lines = text.splitlines(keepends=True)
-    if not lines or lines[0].rstrip("\r\n") != "---":
-        return text
-
-    for idx in range(1, len(lines)):
-        if lines[idx].rstrip("\r\n") == "---":
-            body = "".join(lines[idx + 1 :])
-            return body.lstrip("\n")
-
-    # No closing delimiter — treat the whole file as body.
-    return text
+    return plugins_dir() / "tab" / "agents" / "tab.md"
 
 
 def _load_tab_md_body() -> str:
     """Read `plugins/tab/agents/tab.md` and return the body sans frontmatter."""
-    return _strip_frontmatter(_tab_md_path().read_text(encoding="utf-8"))
+    return strip_frontmatter(_tab_md_path().read_text(encoding="utf-8"))
 
 
 def _settings_preamble(settings: TabSettings) -> str:
