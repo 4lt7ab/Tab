@@ -76,6 +76,8 @@ Run `bash scripts/validate-plugins.sh` from the repo root after any structural c
 - Versions are in sync between marketplace and plugin.json
 - CLAUDE.md structure tree matches what's actually on disk
 
+The tree check is deliberately soft: the validator only greps for substring presence of each skill/agent path somewhere in CLAUDE.md. Tree-art whitespace, indentation, and box-drawing characters are decorative — adding or removing a skill doesn't require redrawing the ASCII tree, just making sure the path string appears in the file. The guarantee is that on-disk-but-not-mentioned trips the validator; cosmetic surgery isn't part of the contract.
+
 If you add or remove a skill/agent, update the Repository Structure tree above and run the validator. It will fail if the tree is out of date.
 
 ## Versioning
