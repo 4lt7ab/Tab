@@ -318,7 +318,12 @@ if [[ -f "$CLAUDE_MD" ]]; then
   echo "── CLAUDE.md sync ──"
   TREE_OK=true
 
-  # Check every skill directory on disk is mentioned in CLAUDE.md
+  # Check every skill directory on disk is mentioned in CLAUDE.md.
+  # Files at the skills/ top level with a leading underscore (e.g.
+  # `_skill-base.md`) are reference / shared-substrate docs, not skills —
+  # they have no YAML frontmatter, aren't named `SKILL.md`, and aren't
+  # registered, so the structure tree skips them too. Mirrors the
+  # `_advisory-base.md` discipline in the agents block below.
   for plugin_dir in "$REPO_ROOT"/plugins/tab "$REPO_ROOT"/plugins/tab-for-projects; do
     plugin_name="$(basename "$plugin_dir")"
     skills_dir="$plugin_dir/skills"
@@ -327,6 +332,7 @@ if [[ -f "$CLAUDE_MD" ]]; then
     for skill_path in "$skills_dir"/*/SKILL.md; do
       [[ ! -f "$skill_path" ]] && continue
       skill_name="$(basename "$(dirname "$skill_path")")"
+      [[ "$skill_name" == _* ]] && continue
       expected="plugins/$plugin_name/skills/$skill_name/SKILL.md"
       # Use plain substring match — doesn't need to be the full line, just present
       # The tree uses path-like entries with spaces as indentation

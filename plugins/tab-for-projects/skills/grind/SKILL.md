@@ -12,13 +12,15 @@ I refuse without a `group_key`. "Items that are grouped get the focus of the run
 
 I refuse `group_key="new"`. The inbox isn't a group to grind; it's a holding pen.
 
+*See `_skill-base.md` for the shared orchestrator framing, project resolution, refusal conventions, and halt vocabulary. Skill-specific posture follows.*
+
 ## Approach
 
-I'm an orchestrator. There is no rigid recipe — I read state, decide the next move, and act. The shape below is the load-bearing contract; the timing of advisor calls and the parallelism strategy are mine.
+There is no rigid recipe — the timing of advisor calls and the parallelism strategy are mine. The shape below is the load-bearing contract.
 
 ### Setup
 
-1. **Resolve the project.** Explicit arg → `.tab-project` file → git remote → cwd. Refuse if ambiguous and name what would resolve it.
+1. **Resolve the project** per `_skill-base.md`.
 2. **Verify clean tree.** `git status` must be clean before I start. Refuse otherwise — I won't grind on top of uncommitted work.
 3. **Pull the group.** `list_tasks` filtered to the group, `get_dependency_graph` for the edges. If the group is empty or every task is `done`, I say so and exit.
 4. **Sanity check the group.** If the unblocked frontier is empty but `todo` tasks remain, every remaining task has an unsatisfied `blocks` edge — I report the deadlock and exit.
@@ -35,7 +37,7 @@ Until the group is done or a halt condition fires:
    - Two unblocked tasks share a code surface but have no edge → `project-planner` to prescribe the missing edge; I write it.
    - Parallel candidates exist on the frontier but no `parallel_safety` map is present → `project-planner` to prescribe one, then I write the entry on the relevant tasks (or capture it in run state) and resume parallel dispatch where the planner certified `status: safe`.
    - A returning agent's report names a surprise (new file conflicts, KB doc looked stale, blocker discovered) → advisor by topic.
-3. **Apply advisor prescriptions.** Whatever the advisor named — task creates/updates, edge writes, status changes — I write to the MCP. Advisors don't write; I do.
+3. **Apply advisor prescriptions.** Whatever the advisor named — task creates/updates, edge writes, status changes — I write to the MCP (per `_skill-base.md`'s read-only-advisors contract).
 4. **Dispatch.** For each unblocked task I'm running this round:
    - `update_task` → `in_progress`.
    - Spawn a `general-purpose` Agent in an isolated git worktree (`isolation: "worktree"`) with a self-contained prompt: the task body verbatim, the acceptance signal, file anchors, inlined KB substance, and a clear ask — write the code, write/update tests, run them, commit in the worktree, report back.
@@ -47,13 +49,9 @@ Until the group is done or a halt condition fires:
 
 ### Halt conditions
 
-- **Dirty working tree** at any check (between rounds, after merges).
-- **Three consecutive failures** on the same task or across the run — diagnostic territory, not autopilot territory.
-- **Merge content conflict** — I never resolve conflicts autonomously; the user does.
-- **User interrupt.**
-- **Group done** — every task `done` or no unblocked frontier remains.
+Standard halts in `_skill-base.md`. Grind-specific qualifiers: I check tree-cleanliness at every boundary (before the run, between rounds, after merges), I cap repeated-failures at three on the same task or across the run, and I add **group done** — every task `done` or no unblocked frontier remains.
 
-On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reasons), what would have been useful that wasn't there (friction signals), what the user should look at next.
+On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reasons), friction signals, what to look at next.
 
 ## What I write to
 
@@ -63,19 +61,11 @@ On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reas
 
 ## What I won't do
 
-Run without a `group_key`. The premise is focus; I refuse if there isn't one.
-
-Run on `group_key="new"`. The inbox is for capture, not grinding.
-
-Run on a dirty tree. I'd lose the ability to bisect failures.
-
-Resolve merge conflicts. The user does.
+Refusal posture is at the top of the file and in `_skill-base.md`. Grind-specific:
 
 Rewrite KB docs. The archaeologist prescribes which docs apply and how; I write task updates and dispatch code work, never `update_document`.
 
 Push. I commit and merge locally. Pushing is the user's call.
-
-Burn cycles silently. Every round prints what's running, what just finished, what's queued.
 
 ## What I need
 
