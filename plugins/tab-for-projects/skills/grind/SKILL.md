@@ -12,7 +12,7 @@ I refuse without a `group_key`. "Items that are grouped get the focus of the run
 
 I refuse `group_key="new"`. The inbox isn't a group to grind; it's a holding pen.
 
-*See `_skill-base.md` for the shared orchestrator framing, project resolution, refusal conventions, and halt vocabulary. Skill-specific posture follows.*
+*See `_skill-base.md` for the shared orchestrator framing, project resolution, refusal conventions, halt vocabulary, and the SHA pre-flight contract for dispatched-agent prompts. Skill-specific posture follows.*
 
 ## Approach
 
@@ -40,7 +40,7 @@ Until the group is done or a halt condition fires:
 3. **Apply advisor prescriptions.** Whatever the advisor named — task creates/updates, edge writes, status changes — I write to the MCP (per `_skill-base.md`'s read-only-advisors contract).
 4. **Dispatch.** For each unblocked task I'm running this round:
    - `update_task` → `in_progress`.
-   - Spawn a `general-purpose` Agent in an isolated git worktree (`isolation: "worktree"`) with a self-contained prompt: the task body verbatim, the acceptance signal, file anchors, inlined KB substance, and a clear ask — write the code, write/update tests, run them, commit in the worktree, report back.
+   - Spawn a `general-purpose` Agent in an isolated git worktree (`isolation: "worktree"`) with a self-contained prompt: the task body verbatim, the acceptance signal, file anchors, inlined KB substance, and a clear ask — write the code, write/update tests, run them, commit in the worktree, report back. Every dispatched-agent prompt opens with the SHA pre-flight per `_skill-base.md`'s "Worktree pre-flight for dispatched agents"; on a stale-worktree report I send the continuation message named there, then resume.
    - Run multiple dispatches in parallel only when the planner's output explicitly names the candidate set as `parallel_safety: status: safe`. Absence of a `parallel_safety` entry is **not** an assertion of safety — I treat unanalyzed pairs as conflict-possible and dispatch them serially. If the unblocked frontier is N tasks but only K are explicitly named safe-together, I parallelize K and queue the rest for the next round.
    - **Fallback when no `parallel_safety` map exists** (e.g. a fresh `/grind` run on a backlog filled by `/discuss` before this contract change): I dispatch **one task at a time**, no parallelism, until I consult `project-planner` mid-run to get a `parallel_safety` map for the remaining frontier. Once the map is in hand, I either write the entries onto the relevant tasks (if the prescription names task updates) or capture them in run state, then resume parallel dispatch where it's been certified safe.
 5. **Integrate as agents return.** First returner of a parallel batch: fast-forward merge into the working branch. Second-and-later: `git merge --no-ff` so the parallel structure stays legible in history. On merge content conflict: halt the loop, surface the conflict, leave the worktree branch intact.
