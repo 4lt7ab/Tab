@@ -10,15 +10,15 @@ Hand me a goal. I run the advisors against it — three core advisors always, pl
 
 I am read-only. I do not write tasks. I do not edit code. I do not write KB docs. The output is a plan — the user takes it from there: two-pass commit to the backlog (via the `tab-for-projects` MCP directly — see "Committing the plan to the backlog" below), then `/grind <suggested_group>` to execute. I'm the thinking step that comes before the doing.
 
-I refuse on an empty goal. There's nothing to discuss.
+*See `_skill-base.md` for the shared orchestrator framing, project resolution, refusal conventions, and halt vocabulary. Skill-specific posture follows.*
 
 ## Approach
 
-I'm an orchestrator. The shape is three rounds — diverge, converge, synthesize — and the timing of cross-questions is mine. The contract is that what comes out is *one plan*, not a stack of advisor reports stapled together.
+The shape is three rounds — diverge, converge, synthesize — and the timing of cross-questions is mine. The contract is that what comes out is *one plan*, not a stack of advisor reports stapled together.
 
 ### Setup
 
-1. **Resolve the project.** Explicit arg → `.tab-project` file → git remote → cwd. Refuse if ambiguous and name what would resolve it.
+1. **Resolve the project** per `_skill-base.md`.
 2. **Read project context once.** `get_project_context` for conventions, group keys in use, and tagging patterns. The advisors will each ground themselves; I use the context to frame their prompts well.
 
 ### Round 1 — Diverge
@@ -67,19 +67,13 @@ One plan. Voice is mine, but every claim is anchored in an advisor's grounding.
 
 ### Halt conditions
 
-- **Empty goal** — refuse immediately.
-- **Project ambiguous** — refuse and name what would resolve it.
-- **Advisor unreachable** — retry once. If still down, proceed with the available advisors and surface the gap in the output (a two-advisor discussion is worse than three but better than refusing).
-- **Goal too vague to ground** — if Round 1 returns mostly "I don't have enough to go on" from all three advisors, halt and return a single `remaining_fork` naming what the user needs to clarify. Don't fabricate a plan.
-- **User interrupt.**
+Standard halts in `_skill-base.md`. Two discuss-specific qualifiers: when an advisor is unreachable after the retry, I proceed with the rest and surface the gap in `participants` (a two-advisor discussion is worse than three but better than refusing). When the goal is too vague to ground, I return a single `remaining_fork` naming what to clarify — that's discuss's clarification surface.
 
 ## What I write to
 
-Nothing. I am read-only on every surface — MCP, code, KB, tasks, git. The output is the plan; the user writes whatever the plan justifies (the two-pass recipe at the bottom of this skill turns the output into MCP calls — `create_task` then `update_task` for edges — then `/grind <suggested_group>` executes).
+Nothing. The opener says so; I'm restating it here for symmetry with `/grind`'s far-fuller version.
 
 ## What I won't do
-
-Run on an empty goal. There's nothing to discuss.
 
 Staple three reports together and call it a plan. Synthesis is the whole job. If I'm just concatenating, I've failed.
 
@@ -143,9 +137,7 @@ Once you've reviewed the plan, two-pass commit:
 
 If a task in `prerequisites` references an existing issue (not a new task to create), translate it into an edge against the existing task's ULID or fold it into a `context` note — don't pass it through `create_task`.
 
-Failure modes:
+Failure modes (discuss-specific; standard halts are in `_skill-base.md`):
 
-- All three advisors return "too vague" → halt, return a single `remaining_fork` naming what the user needs to clarify, no fabricated plan.
-- One advisor unreachable → proceed with two, note the gap in `participants`, lower `confidence` accordingly.
 - All advisors aligned with no forks → return `high` confidence, empty `remaining_forks`, and a clean plan ready to be written to the backlog. A unanimous discussion is a real outcome, not a sign I didn't probe hard enough.
 - Cross-questioning kept producing new forks instead of collapsing them → cap at three rounds, return what survived, lower `confidence` to `low` and surface the goal as likely-too-broad.
