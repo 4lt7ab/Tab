@@ -4,14 +4,7 @@ Covers the three places translation can break: pydantic-ai messages →
 Ollama wire format on the way in, pydantic-ai tool definitions →
 Ollama tool spec, and Ollama responses → pydantic-ai ``ModelResponse``
 on the way out. The actual ``/api/chat`` round-trip is tested with a
-mocked ``ollama.AsyncClient`` so the suite stays Ollama-server-free
-(no daemon, no model downloads).
-
-The translation helpers (``_translate_messages``, ``_translate_tools``,
-``_translate_response``) are stateless on purpose — exposing them
-makes pin-the-shape testing cheap, and any wire-format drift on either
-side surfaces as a single failure here rather than a mysterious
-agent-loop bug somewhere downstream.
+mocked ``ollama.AsyncClient`` so the suite stays Ollama-server-free.
 """
 
 from __future__ import annotations
@@ -37,12 +30,7 @@ from tab_cli.models import OllamaNativeModel
 
 
 def _run(coro: Any) -> Any:
-    """Run an async coroutine in a fresh event loop.
-
-    Mirrors ``test_mcp_server.py``'s convention — pytest-asyncio isn't
-    on the dev deps, and the rest of the suite is sync. Running
-    ``asyncio.run`` per-test keeps the suite plugin-free.
-    """
+    """Run an async coroutine in a fresh event loop. Mirrors test_mcp_server."""
     return asyncio.run(coro)
 
 
@@ -54,15 +42,10 @@ def test_model_name_returns_constructed_value():
 
 
 def test_system_returns_ollama():
-    # The ``system`` property is pydantic-ai's diagnostic label for the
-    # backend; the agent loop reads it for telemetry and error messages.
     assert OllamaNativeModel("gemma3:latest").system == "ollama"
 
 
 def test_base_url_defaults_to_localhost_when_host_unset():
-    # Reporting the canonical default rather than ``None`` makes
-    # diagnostics cleaner — "which Ollama did this hit?" becomes
-    # answerable from the model object alone.
     assert OllamaNativeModel("gemma3:latest").base_url == "http://localhost:11434"
 
 
@@ -72,10 +55,6 @@ def test_base_url_passes_through_explicit_host():
 
 
 def test_provider_returns_none():
-    # We hold our own ``ollama.AsyncClient``, so pydantic-ai's
-    # ``Provider`` slot is intentionally empty. The base class's
-    # ``__aenter__/__aexit__`` no-op cleanly when ``provider`` is
-    # ``None``.
     assert OllamaNativeModel("gemma3:latest").provider is None
 
 
@@ -95,19 +74,14 @@ def test_translate_user_prompt_part_string_content():
 
 
 def test_translate_user_prompt_part_sequence_content_flattens_strings():
-    # When ``content`` is ``Sequence[UserContent]`` and every part is a
-    # string, we concatenate. Multi-modal content (images, etc.) is
-    # explicitly out of scope for v0 — non-string parts get dropped, not
-    # silently corrupted.
+    # Multi-modal content (images, etc.) is out of scope for v0 — non-string
+    # parts get dropped, not silently corrupted.
     messages = [ModelRequest(parts=[UserPromptPart(content=["hello ", "world"])])]
     result = OllamaNativeModel._translate_messages(messages)
     assert result == [{"role": "user", "content": "hello world"}]
 
 
 def test_translate_tool_return_part():
-    # Tool returns flow back to the model on the request side. Ollama
-    # expects ``role: tool`` plus ``tool_name`` to identify which tool's
-    # result this is.
     messages = [
         ModelRequest(
             parts=[
@@ -123,8 +97,6 @@ def test_translate_tool_return_part():
     assert len(result) == 1
     assert result[0]["role"] == "tool"
     assert result[0]["tool_name"] == "web_search"
-    # ``model_response_str`` produces a JSON-shaped string for dict
-    # content.
     assert "results" in result[0]["content"]
 
 
@@ -135,9 +107,7 @@ def test_translate_model_response_text_only():
 
 
 def test_translate_model_response_concatenates_multiple_text_parts():
-    # pydantic-ai responses can carry multiple ``TextPart`` segments
-    # (e.g. interleaved with tool calls). Ollama's wire format wants
-    # one assistant ``content`` string, so we concatenate.
+    # Multi-part assistant turn collapses into a single Ollama message.
     messages = [
         ModelResponse(
             parts=[
@@ -179,9 +149,8 @@ def test_translate_model_response_with_tool_call():
 
 
 def test_translate_model_response_tool_call_only_emits_empty_content():
-    # Some models return only tool calls with no text. Ollama's shape
-    # still wants a ``content`` field — an empty string is the cleanest
-    # representation.
+    # Tool-only responses still need a ``content`` field; empty string is the
+    # cleanest representation.
     messages = [
         ModelResponse(
             parts=[
@@ -202,8 +171,6 @@ def test_translate_model_response_tool_call_only_emits_empty_content():
 
 
 def test_translate_tools_none_returns_none():
-    # Empty/missing tool list means "no tools" — passing ``None`` keeps
-    # the ollama-python call from emitting an empty ``tools`` field.
     assert OllamaNativeModel._translate_tools(None) is None
     assert OllamaNativeModel._translate_tools([]) is None
 
@@ -246,9 +213,7 @@ def test_translate_tools_handles_missing_description():
         )
     ]
     result = OllamaNativeModel._translate_tools(tools)
-    # Empty string rather than ``None`` keeps Ollama's schema validator
-    # happy — Ollama's ``Tool.Function.description`` is optional but the
-    # field still has to be a string when present.
+    # Empty string keeps Ollama's schema validator happy.
     assert result is not None
     assert result[0]["function"]["description"] == ""
 
@@ -289,9 +254,6 @@ def test_translate_response_with_tool_call():
     )
     model = OllamaNativeModel("gemma3:latest")
     result = model._translate_response(response)
-    # One text part + one tool-call part — the order matches the
-    # response field order, which is what pydantic-ai's agent loop
-    # expects when reading ``parts``.
     assert len(result.parts) == 2
     assert isinstance(result.parts[0], TextPart)
     assert result.parts[0].content == "searching"
@@ -301,10 +263,7 @@ def test_translate_response_with_tool_call():
 
 
 def test_translate_response_empty_content_no_tool_calls_yields_no_parts():
-    # Defensive: a response with no content and no tool calls produces
-    # a ``ModelResponse`` with zero parts. The agent loop reads this as
-    # "the model declined to respond", which is honest — better than
-    # synthesizing a fake empty TextPart.
+    # Honest "model declined to respond" rather than a synthetic empty TextPart.
     response = ChatResponse(
         model="gemma3:latest",
         message=Message(role="assistant", content=None),
@@ -318,14 +277,7 @@ def test_translate_response_empty_content_no_tool_calls_yields_no_parts():
 
 
 def test_request_translates_and_calls_async_client():
-    """Confirm ``request`` translates messages, calls ``AsyncClient.chat``,
-    and translates the response back. Mock the network layer so the test
-    has no Ollama dependency."""
     model = OllamaNativeModel("gemma3:latest")
-
-    # Replace the wrapped ``AsyncClient`` with a stub that returns a
-    # canned response. We assert on the call args afterward to pin the
-    # translation contract.
     fake_response = ChatResponse(
         model="gemma3:latest",
         message=Message(role="assistant", content="hello back"),
@@ -357,7 +309,6 @@ def test_request_translates_and_calls_async_client():
         )
     )
 
-    # Wire-side: confirm we called ``chat`` with the translated payload.
     model._client.chat.assert_awaited_once()
     call_kwargs = model._client.chat.await_args.kwargs
     assert call_kwargs["model"] == "gemma3:latest"
@@ -367,9 +318,6 @@ def test_request_translates_and_calls_async_client():
         {"role": "system", "content": "be tab"},
         {"role": "user", "content": "hi"},
     ]
-
-    # Caller-side: confirm we translated the response back to a
-    # pydantic-ai ``ModelResponse`` shape.
     assert isinstance(result, ModelResponse)
     assert len(result.parts) == 1
     assert isinstance(result.parts[0], TextPart)
@@ -411,8 +359,6 @@ def test_request_passes_tools_through_when_present():
     )
 
     call_kwargs = model._client.chat.await_args.kwargs
-    # The tool spec arrived in OpenAI-shaped form, which is what
-    # ollama-python passes through to ``/api/chat``.
     assert call_kwargs["tools"] == [
         {
             "type": "function",
@@ -433,42 +379,28 @@ def test_request_passes_tools_through_when_present():
 
 
 def test_compile_tab_agent_dispatches_ollama_prefix_to_native_model():
-    """``compile_tab_agent("ollama:<name>")`` builds an agent whose model
-    is the in-house ``OllamaNativeModel``, not pydantic-ai's stock
-    ``OllamaModel`` (which routes through ``/v1`` OpenAI-compat).
+    """``compile_tab_agent("ollama:<name>")`` builds an agent on the in-house
+    ``OllamaNativeModel``, not stock ``OllamaModel`` (which routes through
+    ``/v1`` OpenAI-compat).
     """
     from tab_cli.personality import compile_tab_agent
 
     agent = compile_tab_agent(model="ollama:gemma3:latest")
-    # pydantic-ai stores the model on the agent; we read it back to
-    # confirm dispatch.
     assert isinstance(agent.model, OllamaNativeModel)
     assert agent.model.model_name == "gemma3:latest"
 
 
 def test_compile_tab_agent_passes_anthropic_string_through_verbatim():
-    """``compile_tab_agent("anthropic:claude-...")`` does NOT intercept;
-    pydantic-ai parses the prefix and constructs ``AnthropicModel``
-    itself.
-    """
     from tab_cli.personality import compile_tab_agent
 
     agent = compile_tab_agent(model="anthropic:claude-sonnet-4-5")
-    # We don't assert the concrete model class (it's pydantic-ai's
-    # internal ``AnthropicModel``); we assert it's NOT our ollama model
-    # — that's the contract this test protects.
     assert not isinstance(agent.model, OllamaNativeModel)
 
 
 def test_compile_tab_agent_none_model_passes_through():
-    """``model=None`` defers resolution — callers wire it up later."""
     from tab_cli.personality import compile_tab_agent
 
     agent = compile_tab_agent(model=None)
-    # ``defer_model_check=True`` means pydantic-ai accepts ``None``; the
-    # agent stores a sentinel rather than crashing at construction.
-    # We just confirm we didn't accidentally route ``None`` through
-    # the Ollama branch.
     assert not isinstance(agent.model, OllamaNativeModel)
 
 
@@ -476,13 +408,7 @@ def test_compile_tab_agent_none_model_passes_through():
 
 
 def _async_iter(items: list[Any]) -> Any:
-    """Wrap a list as an async iterator for stream-streamed-response stubs.
-
-    ``ollama-python``'s ``AsyncClient.chat(stream=True)`` returns an
-    async iterator; tests that mock the client need to return one with
-    the same shape. ``aiter`` doesn't have a builtin one-liner, so we
-    define a tiny generator here.
-    """
+    """Wrap a list as an async iterator for streamed-response stubs."""
 
     async def _gen():
         for item in items:
@@ -492,14 +418,9 @@ def _async_iter(items: list[Any]) -> Any:
 
 
 def test_request_stream_yields_text_deltas_through_parts_manager():
-    """Streamed ``message.content`` fragments must reach the parts
-    manager as text deltas. The parts manager produces ``PartStartEvent``
-    on the first delta and ``PartDeltaEvent`` on subsequent ones; the
-    chat REPL's ``stream_text(delta=True)`` reads those events and
-    returns the concatenated text."""
+    """Streamed ``message.content`` fragments must reach the parts manager
+    as text deltas — chat.py's ``stream_text(delta=True)`` reads those events."""
     model = OllamaNativeModel("gemma3:latest")
-
-    # Three streamed chunks: greeting, body, final period.
     chunks = [
         ChatResponse(
             model="gemma3:latest",
@@ -515,7 +436,6 @@ def test_request_stream_yields_text_deltas_through_parts_manager():
             done=True,
         ),
     ]
-
     model._client = AsyncMock()
     model._client.chat.return_value = _async_iter(chunks)
 
@@ -534,13 +454,8 @@ def test_request_stream_yields_text_deltas_through_parts_manager():
             model_settings=None,
             model_request_parameters=request_params,
         ) as streamed:
-            # Iterate the events; the parts manager builds up a
-            # TextPart we then read out. Most chat code uses
-            # ``stream_text(delta=True)`` which sits on top of this.
             async for _event in streamed:
                 pass
-            # ``streamed.get()`` returns the assembled ``ModelResponse``
-            # built from the parts manager's accumulated parts.
             response = streamed.get()
             for part in response.parts:
                 if isinstance(part, TextPart):
@@ -552,9 +467,8 @@ def test_request_stream_yields_text_deltas_through_parts_manager():
 
 
 def test_request_stream_passes_messages_and_tools_to_client():
-    """The streamed path must call ``AsyncClient.chat`` with
-    ``stream=True`` and the same translated payload the non-stream
-    path uses."""
+    """Streamed path calls ``AsyncClient.chat`` with ``stream=True`` and
+    the same translated payload the non-stream path uses."""
     model = OllamaNativeModel("gemma3:latest")
     model._client = AsyncMock()
     model._client.chat.return_value = _async_iter(
@@ -605,19 +519,14 @@ def test_request_stream_passes_messages_and_tools_to_client():
         {"role": "system", "content": "be tab"},
         {"role": "user", "content": "search please"},
     ]
-    # Tools translate the same way they do for the non-stream path.
     assert call_kwargs["tools"] is not None
     assert call_kwargs["tools"][0]["function"]["name"] == "web_search"
 
 
 def test_request_stream_emits_tool_call_when_chunk_has_tool_calls():
-    """When a streamed chunk carries ``tool_calls``, the parts manager
-    must see a tool-call delta. Ollama doesn't typically stream tool-call
-    arguments token-by-token — it emits the full call as a single chunk
-    after text streaming completes — so the model's resulting parts
-    list contains both a ``TextPart`` and a ``ToolCallPart``."""
+    """Ollama emits the full tool-call as one chunk after text streaming;
+    the parts list contains both ``TextPart`` and ``ToolCallPart``."""
     model = OllamaNativeModel("gemma3:latest")
-
     chunks = [
         ChatResponse(
             model="gemma3:latest",
@@ -640,7 +549,6 @@ def test_request_stream_emits_tool_call_when_chunk_has_tool_calls():
             done=True,
         ),
     ]
-
     model._client = AsyncMock()
     model._client.chat.return_value = _async_iter(chunks)
 
@@ -663,9 +571,6 @@ def test_request_stream_emits_tool_call_when_chunk_has_tool_calls():
             return streamed.get()
 
     response = _run(_drain())
-
-    # One TextPart ('searching'), one ToolCallPart ('web_search'). The
-    # parts manager order matches the chunk order.
     text_parts = [p for p in response.parts if isinstance(p, TextPart)]
     tool_parts = [p for p in response.parts if isinstance(p, ToolCallPart)]
     assert len(text_parts) == 1
@@ -676,10 +581,8 @@ def test_request_stream_emits_tool_call_when_chunk_has_tool_calls():
 
 
 def test_streamed_response_metadata_properties():
-    """``model_name``, ``provider_name``, ``provider_url``, and
-    ``timestamp`` round-trip cleanly. These hit the agent loop's
-    diagnostic surface and need to be answerable without making a
-    real request."""
+    """``model_name``, ``provider_name``, ``provider_url``, ``timestamp`` —
+    diagnostic surface answerable without a real request."""
     from datetime import datetime
 
     from tab_cli.models.ollama_native import _OllamaStreamedResponse
