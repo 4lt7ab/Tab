@@ -104,6 +104,8 @@ Run advisors sequentially when they could run in parallel. Round 1 is parallel. 
 
 The `tasks` block is shaped to paste field-for-field into `mcp__tab-for-projects__create_task`'s `items[]` array. The `edges` block is shaped to drive `mcp__tab-for-projects__update_task`'s `add_dependencies` after Pass 1 returns ULIDs. See "Committing the plan to the backlog" below for the two-pass recipe.
 
+documentable_findings[] is surfaced, never written. The user runs /document per finding when they're ready — one doc per invocation.
+
 ```
 goal:             one-line read of the goal
 project_id:       resolved project
@@ -123,6 +125,9 @@ plan:
                     — titles are the join key at synthesis time (ULIDs don't exist yet).
                     — `type` matches the MCP enum on `add_dependencies`.
   applicable_docs: list — { doc_id, title, how_it_applies } — KB grounding for the human, not written to tasks.
+  documentable_findings: list — { title_hint, type: decision|convention|guide|reference, summary, ready_for_capture: bool }
+                    — candidates the human can hand to `/document` (paste `title_hint` as the title or `summary` as a `range "<quote>"` source).
+                    — advisory only; `/discuss` never invokes `/document`.
 remaining_forks:  list — { question, options, leanings: { advisor: which_option }, why_unresolved } — target 0–2
 confidence:       high | medium | low
 next:             one-line — usually "two-pass commit under <suggested_group>, then /grind <suggested_group>" or "resolve forks first"
