@@ -41,6 +41,7 @@ Until the group is done or a halt condition fires:
    - `update_task` → `in_progress`.
    - Spawn a `general-purpose` Agent (no isolation — it works directly on the host tree) with a self-contained prompt: the task body verbatim, the acceptance signal, file anchors, inlined KB substance, and a clear ask — write the code, write/update tests, run them, commit on the current branch, report back.
    - Every dispatched-agent prompt also includes an explicit no-KB-write clause: *"Do not call `create_document` or `update_document`. KB doc writes are out of scope for this dispatch. If the task as written seems to require either, halt and report — do not produce a KB doc."* If the agent halts on this clause, I treat it as a category-misrouted task: I refuse it on the spot, mark it failed with reason `docs-deliverable`, and surface it for the user (or `/discuss`) to re-shape.
+   - Every dispatched-agent prompt also includes an explicit no-version-bump clause: *"Do not edit `plugin.json`, `marketplace.json`, or `cli/pyproject.toml`. The runner handles version bumps once at run halt, not per task. Focus on the work."*
    - `relates_to` edges between unblocked tasks mean **surface conflict**. I'm serial-only so the parallelism question doesn't arise, but the edge still tells me two tasks are coupled — if I see a `relates_to` edge that looks like decision-input (X informs Y's design pick but they share no code surface), I surface the miscategorization as a friction signal so the planner can fix it.
 5. **Confirm the landing.** When the agent returns, verify `git status` is clean and the agent's commit is on the working branch. On success: `update_task` → `done`, append a short result note (commit SHA, what landed) to the task context. On agent failure or dirty tree: `update_task` back to `todo`, append the failure note, increment the failure counter — and refuse to proceed if the tree is dirty (no grinding on top of an unfinished agent's mess).
 6. **Re-read state and continue.** Re-pull the group; the frontier changes as tasks complete and as advisors reshape the backlog.
@@ -49,13 +50,16 @@ Until the group is done or a halt condition fires:
 
 Standard halts in `_skill-base.md`. Grind-specific qualifiers: I check tree-cleanliness at every boundary (before the run, between rounds, after every agent returns), I cap repeated-failures at three on the same task or across the run, and I add **group done** — every task `done` or no unblocked frontier remains.
 
-On halt, I print: what landed (task IDs + commits), what didn't (task IDs + reasons), friction signals, what to look at next.
+On halt with at least one task landed, I run the bump step (see "Version bumps") *before* printing the summary. The bump commit is the run's final landing.
+
+On halt, I print: what landed (task IDs + commits, including the bump commit if any), what didn't (task IDs + reasons), friction signals, what to look at next.
 
 ## What I write to
 
 Per `_skill-base.md`'s "What this skill writes" — my write surface, declared explicitly:
 
 - **Code** — only via dispatched `general-purpose` agents working directly on the host tree. I don't edit code myself; the agents do, and they commit on the current branch.
+- **Version files** — narrow exception. At run halt, I edit `plugin.json` + `marketplace.json` (per affected plugin) and/or `cli/pyproject.toml` to land the run's bump in a single commit. Only those files; never anything else.
 - **MCP task fields** — `update_task` for status transitions and result notes; `create_task` and dependency-edge writes only when an advisor prescribes them. I never create or update tasks beyond what advisors name, and I never reach for task fields the advisors didn't speak to.
 
 Refused surfaces, named explicitly:
@@ -65,15 +69,28 @@ Refused surfaces, named explicitly:
 
 ## Version bumps
 
-When a dispatched agent's work changes the behavior of a versioned package, the agent's commit bumps the version. Every dispatch prompt names this discipline so the dispatched agent isn't guessing.
+Bumps are the outcome of a run, not of each task. A coherent /grind run produces one version bump per affected package — landed as a final commit after the last task lands and before I print the halt summary. Dispatched agents are explicitly told **not** to touch version files; the runner does it once, at the end.
 
-- **Plugins (`plugins/<name>/`):** bump `plugins/<name>/.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json` together. They must match — `validate-plugins.sh` enforces sync. Behavior changes that warrant a bump: new skills/agents, agent prompt edits, skill contract changes, bug fixes.
-- **CLI (`cli/`):** bump `cli/pyproject.toml`. Independent of the marketplace.
-- **Semver:** patch for fixes and minor prompt tweaks; minor for new skills, new agents, or meaningful behavior changes; major for breaking changes. When in doubt, bump minor.
+Why end-of-run, not per-task: a single /grind run can land five tasks in tab-for-projects, all coherent. Five per-task bumps would walk the version up by five minors when one minor describes the run. Consumers reading the version walk lose the through-line.
 
-A pure-docs change inside a versioned package (e.g. fixing a typo in a SKILL.md without changing the contract) doesn't warrant a bump. The test is *behavior*, not *bytes*.
+### The bump step (runs once, at halt)
 
-If a dispatched task touches multiple versioned packages, the agent bumps each one whose behavior changed. The commit message can name multiple bumps if needed.
+When the loop halts with at least one task `done`:
+
+1. **Identify changed packages.** For each versioned package, check if any commit between run-start `HEAD` and current `HEAD` touched files inside it. Versioned packages: `plugins/tab/`, `plugins/tab-for-projects/`, `cli/`.
+2. **Skip bytes-only changes.** If a package's diff is purely docstrings/comments/whitespace with no behavior change, skip it. The test is *behavior*, not *bytes*. When in doubt, bump.
+3. **Pick the magnitude.** Default to **minor** — that's the "when in doubt" guidance and matches the typical /grind run shape (multiple coherent refactors / features / contract changes). Bump **patch** only if every landed task in the package was clearly patch-shaped (single-bug fix, docstring sharpening that affects behavior). Bump **major** never autonomously — if a task announced a breaking change, the halt summary flags it and the user picks the magnitude on amend.
+4. **Edit the version files.** This is the narrow exception to "no direct edits from /grind":
+   - Plugins: `plugins/<name>/.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json`. They must match — `validate-plugins.sh` enforces sync.
+   - CLI: `cli/pyproject.toml`. Independent of the marketplace.
+5. **Commit.** Single commit, message `bump <package>: X.Y.Z` (or `bump versions: …` for multi-package). Never bundles unrelated changes — version files only.
+6. **Print the halt summary** including the bumps in the `landed` block.
+
+### Skip conditions
+
+- Zero tasks landed → no bump, no commit. The halt summary still prints.
+- An over-eager dispatched agent already touched a version file during the run → skip that package's bump (don't double-bump). Surface as a friction signal so the dispatch prompts can be tightened.
+- The package's diff resolves to bytes-only (docstrings, comments, whitespace) → skip. Note in the halt summary.
 
 ## What I won't do
 
@@ -89,7 +106,7 @@ Push. I commit and merge locally. Pushing is the user's call.
 
 - **`tab-for-projects` MCP:** `get_project`, `get_project_context`, `list_tasks`, `get_task`, `get_dependency_graph`, `update_task`, `create_task`.
 - **Subagents:** `general-purpose` for code dispatches; `archaeologist`, `project-planner`, and `product-researcher` for advice.
-- **Code + git tools:** `Bash` (git only — status, log), `Read`, `Grep`, `Glob`. No direct `Edit` or `Write` from /grind itself — code edits happen via dispatched agents.
+- **Code + git tools:** `Bash` (git only — status, log, diff, commit), `Read`, `Grep`, `Glob`, plus `Edit` scoped to version files only (`plugin.json` / `marketplace.json` / `cli/pyproject.toml`) for the run-halt bump step. No `Edit` or `Write` on anything else — code edits happen via dispatched agents.
 
 ## Arguments
 
