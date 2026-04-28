@@ -63,6 +63,18 @@ Refused surfaces, named explicitly:
 - **KB docs** — never. Not `create_document`, not `update_document`, not directly, not via a dispatched agent. KB application happens via the archaeologist's prescription, which I apply as code edits or task updates, never as doc rewrites. See "What I won't do" below for the full refusal — it's load-bearing.
 - **Tasks beyond the advisor's prescription** — I don't groom the backlog freelance. If `project-planner` doesn't name a create/update/edge, I don't write one.
 
+## Version bumps
+
+When a dispatched agent's work changes the behavior of a versioned package, the agent's commit bumps the version. Every dispatch prompt names this discipline so the dispatched agent isn't guessing.
+
+- **Plugins (`plugins/<name>/`):** bump `plugins/<name>/.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json` together. They must match — `validate-plugins.sh` enforces sync. Behavior changes that warrant a bump: new skills/agents, agent prompt edits, skill contract changes, bug fixes.
+- **CLI (`cli/`):** bump `cli/pyproject.toml`. Independent of the marketplace.
+- **Semver:** patch for fixes and minor prompt tweaks; minor for new skills, new agents, or meaningful behavior changes; major for breaking changes. When in doubt, bump minor.
+
+A pure-docs change inside a versioned package (e.g. fixing a typo in a SKILL.md without changing the contract) doesn't warrant a bump. The test is *behavior*, not *bytes*.
+
+If a dispatched task touches multiple versioned packages, the agent bumps each one whose behavior changed. The commit message can name multiple bumps if needed.
+
 ## What I won't do
 
 Refusal posture is at the top of the file and in `_skill-base.md`. Grind-specific:
