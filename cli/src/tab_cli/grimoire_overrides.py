@@ -7,13 +7,16 @@ override half — the persisted store, the read/write API, and the
 "effective threshold + source" computation that ``tab grimoire show``
 prints.
 
-The frontmatter half is a separate ticket. Until it lands, every
-``SkillRecord`` ships with :data:`tab_cli.registry.DEFAULT_THRESHOLD`
-and the ``source`` reported here is ``loader-default`` (or ``override``
-when the user has set one). Once the loader learns to read
-``grimoire-threshold`` from frontmatter, ``effective_thresholds`` will
-naturally start reporting ``frontmatter`` for any record whose
-threshold diverges from the loader default — no change required here.
+The frontmatter half shipped on the loader side
+(task 01KQ32BB20G22GKBDHTEC6376B): :func:`tab_cli.registry.parse_skill_frontmatter`
+reads ``grimoire-threshold`` and falls back to
+:data:`tab_cli.registry.DEFAULT_THRESHOLD` when the key is absent.
+``effective_thresholds`` reports ``frontmatter`` for any record whose
+threshold diverges from that loader default, ``override`` when the
+user has set one, and ``loader-default`` otherwise. The frontmatter
+branch is dormant in practice today only because no SKILL.md
+currently sets a non-default ``grimoire-threshold`` — the parser is
+wired up and waiting.
 
 Persistence shape — v0
 -----------------------
@@ -39,9 +42,8 @@ TOML (likely a ``[grimoire.thresholds]`` section per the synthesis).
 The JSON file becomes legacy and a one-shot migration drops it.
 
 TODO(settings-system 01KQ2YXEDHVD2YG1DPD9HEVR2S): replace the
-JSON-on-disk path with whatever shape that ticket lands. Until it
-lands, mention this debt in any code review that touches the file
-location.
+JSON-on-disk path with whatever shape that ticket lands. That ticket
+is the only remaining migration debt for this module.
 """
 
 from __future__ import annotations
@@ -253,10 +255,11 @@ def effective_thresholds(
 
     1. Override (from the persisted store) wins.
     2. Otherwise, if the SkillRecord's threshold differs from the
-       loader default, treat it as a frontmatter-author value — this
-       branch is a no-op today (every record carries the loader
-       default) and lights up once the loader-side ticket lands the
-       frontmatter parser.
+       loader default, treat it as a frontmatter-author value. The
+       loader-side parser already reads ``grimoire-threshold`` from
+       SKILL.md frontmatter; this branch is dormant only because no
+       SKILL.md currently sets a non-default value, and lights up the
+       moment one does.
     3. Otherwise, the value came from the loader's single default
        constant.
 
@@ -287,10 +290,11 @@ def effective_thresholds(
             )
             continue
 
-        # Frontmatter branch: dormant in v0, active once the
-        # frontmatter loader ticket lands. We compare against the
-        # loader default so a future frontmatter-defined value
-        # automatically reads as ``frontmatter`` here.
+        # Frontmatter branch: dormant only because no SKILL.md
+        # currently sets a non-default ``grimoire-threshold``. The
+        # loader-side parser is already wired up, so the moment a
+        # SKILL.md ships a non-default value this branch reads it as
+        # ``frontmatter`` automatically — no change required here.
         if record.threshold != loader_default:
             rows.append(
                 EffectiveThreshold(
