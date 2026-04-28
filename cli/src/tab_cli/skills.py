@@ -20,9 +20,11 @@ Design choices that aren't obvious from the call sites:
   the personality plugin evolves and a stale cached copy would silently
   drift. The cost is one ``read_text`` per invocation, which is a
   rounding error next to the model call.
-- **Same plugins-dir resolution as the registry / personality compiler.**
-  Default is ``<repo>/plugins`` derived from this file's location. Tests
-  pass a tmp dir to exercise loader edges; production code can omit.
+- **Shared plugins-dir resolution.** Default comes from
+  :func:`tab_cli.paths.plugins_dir` — one resolver, used here, in the
+  registry loader, in the chat default-load branch, and in the
+  personality compiler. Tests pass a tmp dir to exercise loader edges;
+  production code can omit.
 """
 
 from __future__ import annotations
@@ -31,6 +33,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from tab_cli.paths import plugins_dir as _plugins_dir
+from tab_cli.paths import strip_frontmatter
 from tab_cli.personality import TabSettings, build_system_prompt
 
 if TYPE_CHECKING:
@@ -46,47 +50,8 @@ class SkillNotFoundError(FileNotFoundError):
     """
 
 
-def _default_plugins_dir() -> Path:
-    """Mirror :func:`tab_cli.personality._repo_root` for the plugins tree.
-
-    Layout: ``<repo>/cli/src/tab_cli/skills.py`` → ``parents[3]`` is the
-    repo root, plus ``plugins/``. Kept private and re-derived here rather
-    than imported from ``personality`` so a future split of the modules
-    doesn't entangle them.
-    """
-    return Path(__file__).resolve().parents[3] / "plugins"
-
-
 def _skill_md_path(plugins_dir: Path, skill_name: str) -> Path:
     return plugins_dir / "tab" / "skills" / skill_name / "SKILL.md"
-
-
-def _strip_frontmatter(text: str) -> str:
-    """Drop a leading ``--- ... ---`` YAML frontmatter block.
-
-    Mirrors :func:`tab_cli.personality._strip_frontmatter`. Kept local
-    so this module doesn't reach into a private helper across the
-    package — the rule is small enough that one duplicated copy is the
-    cheaper trade than a third "shared frontmatter utility" module.
-    """
-    if not text.startswith("---"):
-        return text
-
-    lines = text.splitlines(keepends=True)
-    if not lines or lines[0].rstrip("\r\n") != "---":
-        return text
-
-    for idx in range(1, len(lines)):
-        if lines[idx].rstrip("\r\n") == "---":
-            body = "".join(lines[idx + 1 :])
-            return body.lstrip("\n")
-
-    # Unterminated fence — fall back to the whole text rather than
-    # raising. The registry's strict frontmatter parser already validates
-    # the YAML at startup; by the time we get here, the file is known
-    # well-formed enough to register, and a raise on this codepath would
-    # only fire on a torn write between startup and skill dispatch.
-    return text
 
 
 def read_skill_body(skill_name: str, plugins_dir: Path | None = None) -> str:
@@ -101,7 +66,7 @@ def read_skill_body(skill_name: str, plugins_dir: Path | None = None) -> str:
         SkillNotFoundError: ``plugins/tab/skills/<skill_name>/SKILL.md``
             does not exist.
     """
-    plugins_dir = plugins_dir if plugins_dir is not None else _default_plugins_dir()
+    plugins_dir = plugins_dir if plugins_dir is not None else _plugins_dir()
     path = _skill_md_path(plugins_dir, skill_name)
     try:
         text = path.read_text(encoding="utf-8")
@@ -109,7 +74,7 @@ def read_skill_body(skill_name: str, plugins_dir: Path | None = None) -> str:
         raise SkillNotFoundError(
             f"no SKILL.md for skill {skill_name!r} at {path}",
         ) from exc
-    return _strip_frontmatter(text)
+    return strip_frontmatter(text)
 
 
 def build_skill_system_prompt(

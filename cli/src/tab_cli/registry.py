@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import yaml
+from tab_cli.paths import FrontmatterError, parse_frontmatter
 
 if TYPE_CHECKING:  # avoid forcing grimoire's Postgres import path at module load
     from grimoire import Gate, Hit
@@ -77,13 +77,19 @@ class SkillRecord:
     argument_hint: str | None = None
 
 
-class SkillFrontmatterError(ValueError):
+class SkillFrontmatterError(FrontmatterError):
     """A ``SKILL.md`` was missing required frontmatter or malformed.
 
     Loud rather than skipped: the CLI's whole gating story rests on
     correct registration, and a silently-dropped skill would make the
     agent feel mysteriously unresponsive. Better to fail loading and
     surface the broken file.
+
+    Subclasses :class:`tab_cli.paths.FrontmatterError` so the shared
+    :func:`tab_cli.paths.parse_frontmatter` errors are still catchable
+    as ``SkillFrontmatterError`` from this module's call sites — the
+    registry's own validation (missing ``name`` / ``description``,
+    bad ``grimoire-threshold``) keeps raising this name directly.
     """
 
 
@@ -241,42 +247,17 @@ def load_skill_registry(
 def _extract_frontmatter(text: str, path: Path) -> dict[str, object]:
     """Pull the YAML frontmatter block out of a Markdown file.
 
-    Frontmatter is the standard Jekyll-shaped fence: a leading ``---``
-    on its own line, a trailing ``---`` on its own line, YAML in
-    between. Anything else (no fence, single fence, non-mapping
-    content) raises :class:`SkillFrontmatterError`.
+    Thin wrapper around :func:`tab_cli.paths.parse_frontmatter` that
+    re-raises the shared :class:`tab_cli.paths.FrontmatterError` as the
+    registry's :class:`SkillFrontmatterError` so callers (and tests) that
+    catch the registry-shaped name keep working — same messages, same
+    triggers (no fence, unclosed fence, non-mapping body).
     """
-    lines = text.splitlines()
-    if not lines or lines[0].strip() != "---":
-        raise SkillFrontmatterError(
-            f"{path}: file does not start with a '---' frontmatter fence",
-        )
-
-    closing_index: int | None = None
-    for index in range(1, len(lines)):
-        if lines[index].strip() == "---":
-            closing_index = index
-            break
-
-    if closing_index is None:
-        raise SkillFrontmatterError(
-            f"{path}: frontmatter fence is not closed",
-        )
-
-    yaml_block = "\n".join(lines[1:closing_index])
     try:
-        parsed = yaml.safe_load(yaml_block)
-    except yaml.YAMLError as exc:
-        raise SkillFrontmatterError(
-            f"{path}: frontmatter is not valid YAML ({exc})",
-        ) from exc
-
-    if not isinstance(parsed, dict):
-        raise SkillFrontmatterError(
-            f"{path}: frontmatter must be a YAML mapping, got {type(parsed).__name__}",
-        )
-
-    return parsed
+        frontmatter, _body = parse_frontmatter(text, path)
+    except FrontmatterError as exc:
+        raise SkillFrontmatterError(str(exc)) from exc
+    return frontmatter
 
 
 def _parse_threshold(value: object, path: Path) -> float:

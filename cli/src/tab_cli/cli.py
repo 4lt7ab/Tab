@@ -716,14 +716,10 @@ def _load_registry_for_show() -> "object":
     pull in pgvector/Ollama at import time. The returned object has the
     same ``records`` shape :func:`effective_thresholds` expects.
     """
-    from pathlib import Path
-
+    from tab_cli.paths import plugins_dir
     from tab_cli.registry import parse_skill_frontmatter
 
-    # Mirror chat.py's plugins-dir resolution: cli/src/tab_cli/cli.py →
-    # cli/src/tab_cli/ → cli/src/ → cli/ → repo root, then plugins/.
-    plugins_dir = Path(__file__).resolve().parents[3] / "plugins"
-    skills_dir = plugins_dir / "tab" / "skills"
+    skills_dir = plugins_dir() / "tab" / "skills"
     if not skills_dir.is_dir():
         raise FileNotFoundError(
             f"expected personality skills directory at {skills_dir}",

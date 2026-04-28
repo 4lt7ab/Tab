@@ -289,12 +289,10 @@ def run_chat(
         # Lazy-imported so importing ``tab_cli.chat`` doesn't pull in
         # grimoire's Postgres/Ollama runtime requirements; tests that
         # pass an injected registry never reach this branch.
-        from pathlib import Path
-
+        from tab_cli.paths import plugins_dir
         from tab_cli.registry import load_skill_registry
 
-        plugins_dir = Path(__file__).resolve().parents[3] / "plugins"
-        registry = load_skill_registry(plugins_dir)
+        registry = load_skill_registry(plugins_dir())
 
     active_settings = settings if settings is not None else TabSettings()
     agent = compile_tab_agent(settings=active_settings, model=model)
