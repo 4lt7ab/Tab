@@ -1,121 +1,81 @@
 # Tab
 
-Personality, workflows, and skills defined in plain markdown — runtimes are interchangeable.
+Personality, workflows, and skills as plain markdown — runtimes are interchangeable. Two Claude Code plugins (`plugins/tab`, `plugins/tab-for-projects`) and one Python runtime (`cli/`) all read the same substrate under `plugins/tab/`. The markdown is the source of truth; the runtimes read it.
 
-Two runtimes live here:
+## Architecture seams
 
-- **Claude Code plugins** under `plugins/`: **tab** (a standalone personality/thinking-partner agent) and **tab-for-projects** (autonomous subagents and workflow skills that talk to the Tab for Projects MCP). Published via `.claude-plugin/marketplace.json`.
-- **Tab CLI** under `cli/`: a Python package (`tab`) that runs the same markdown substrate outside Claude Code — multi-provider via pydantic-ai, semantic-gated skill routing via grimoire.
-
-The markdown is the source of truth; the runtimes read it.
-
-## Repository Structure
-
-```
-.claude-plugin/marketplace.json     # Marketplace manifest — lists both plugins
-README.md                           # Project README
-LICENSE                             # Apache-2.0 license
-scripts/validate-plugins.sh         # Plugin validation script
-cli/                                # Tab CLI — Python runtime for the markdown substrate
-  pyproject.toml                    #   Package metadata; entry point: `tab` -> tab_cli.cli:app
-  src/tab_cli/                      #   Typer app, personality compiler, grimoire registry, Ollama-native model
-  tests/                            #   pytest suite
-plugins/
-  tab/                              # "tab" plugin package
-    .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-    settings.json                   #   Default agent: tab:Tab
-    agents/tab.md                   #   Tab personality agent
-    skills/draw-dino/SKILL.md       #   /draw-dino skill
-    skills/hey-tab/SKILL.md         #   /hey-tab — setup instructions for MCPs
-    skills/listen/SKILL.md          #   /listen — deliberate listening mode
-    skills/teach/SKILL.md           #   /teach — teaching and explanation mode
-    skills/think/SKILL.md           #   /think — conversational idea capture
-  tab-for-projects/                 # "tab-for-projects" plugin package
-    .claude-plugin/plugin.json      #   Plugin metadata (agents, skills, version)
-    agents/archaeologist.md         #   Archaeologist advisor — grounds in code + KB, prescribes a concrete solution and names which KB docs apply and how; read-only (no KB writes, no code edits, no task mutations)
-    agents/code-reviewer.md         #   Code-reviewer advisor — reviews code since the last major release through a prompt-supplied angle, grounds in code + KB, returns an issues report with type / how_found / impact / difficulty / fix_direction / fail-forward call (ship-blocker | ship-with-followup | next-cycle | accept); read-only (no code edits, no KB writes, no task mutations)
-    agents/product-researcher.md    #   Product-researcher advisor — the only advisor allowed to look outside the project, reaching the open web via Exa for libraries, patterns, and prior art; KB-first, cross-checks every external claim against the KB and cites url + fetched_at + verbatim quote; read-only (no KB writes, no code edits, no task mutations)
-    agents/project-planner.md       #   Project-planner advisor — grounds in code + KB + current backlog, prescribes which tasks to create or update with effort + impact + edges; read-only (no task writes, no KB writes, no code edits)
-    skills/discuss/SKILL.md         #   /discuss — agent-driven planning; runs the core advisors (archaeologist, project-planner, code-reviewer) in parallel against a goal — adding product-researcher when the goal calls for outside evidence — then cross-questions them across rounds until forks collapse, returning one synthesized project plan with very few decisions left for the human; read-only (no MCP / code / KB writes); the user (or a future writer) commits the plan to the backlog
-    skills/grind/SKILL.md           #   /grind — autonomous implementation against a grouped backlog; refuses without a group_key (and refuses "new"), reads the dependency graph, dispatches general-purpose agents in isolated worktrees on the unblocked frontier (parallel when surfaces don't conflict), calls archaeologist / project-planner when judgment is needed and writes the prescribed task/edge updates to the MCP itself, halts on dirty tree / three consecutive failures / merge conflict / user interrupt / group done; supports --dry-run
-    skills/document/SKILL.md        #   /document — capture-shaped KB doc writer; takes an explicit <source> (discuss <session> | range "<quote>" | --file <path>) — never implicit conversation capture — proposes one doc per invocation, runs a hard-refuse gate against project-specific markers (file paths, ULIDs, repo names) routing those to a category: design task instead, optional --review dispatches the existing archaeologist for KB-collision/overlap, supports --dry-run
-```
-
-## Package Architecture
-
-Two Claude Code plugins (`plugins/tab`, `plugins/tab-for-projects`) and one Python runtime (`cli/`). All three sit on the same markdown substrate — `agents/*.md` and `skills/*/SKILL.md` under `plugins/tab/` — so personality and skill changes flow to whichever runtime loads them.
-
-- **tab** (Claude Code plugin) is standalone. One agent (`Tab`) with a rich personality system (profiles, settings 0-100%). No MCP dependency.
-- **tab-for-projects** (Claude Code plugin) is deliberately small: four read-only advisor subagents (`archaeologist`, `project-planner`, `code-reviewer`, `product-researcher`) and three skills (`/discuss`, `/grind`, `/document`) against the Tab for Projects MCP. `/discuss` is read-only synthesis: it runs the core advisors (`archaeologist`, `project-planner`, `code-reviewer`) in parallel against a goal — adding `product-researcher` when the goal calls for outside evidence — then cross-questions them across rounds until forks collapse into one converged plan with very few decisions left for the human; the user commits the plan to the backlog (via the MCP directly) when they're ready. `/grind` executes a group. `/document` is the doorway to the KB: it takes an explicit `<source>` (`discuss <session>` | `range "<quote>"` | `--file <path>` — never implicit conversation capture), reads the existing KB shape, synthesizes one proposed doc per invocation, runs a hard-refuse gate against project-specific markers (file paths, ULIDs, repo names) routing those to a `category: design` task instead, and on confirm writes through the MCP; an optional `--review` dispatches the existing `archaeologist` for KB-collision and overlap analysis, and `--dry-run` previews without writing. The advisors never write — they ground themselves in the project's code, KB, and (for the planner) backlog, then prescribe a concrete solution. The archaeologist prescribes what to do and which KB docs apply and how; the project-planner prescribes which tasks to create or update with effort, impact, and the dependency edges that connect them; the code-reviewer reviews code since the last major release through a prompt-supplied angle and returns an issues report with type, evidence, impact, difficulty, fix direction, and a fail-forward call (ship-blocker | ship-with-followup | next-cycle | accept) — calibrated to ship early and often, with a high bar for blocking releases; the product-researcher is the only advisor allowed to look outside the project, reaching the open web via Exa for libraries, patterns, and prior art, KB-first and cross-checking every external claim against the project's own decisions before recommending. `/grind` is the execution writer: it takes a `group_key` (refuses without one, refuses `"new"`), reads the dependency graph, and dispatches Claude Code's built-in `general-purpose` agent in isolated git worktrees against the unblocked frontier — in parallel when the planner has confirmed surfaces don't conflict. As work returns, `/grind` fast-forward-merges the first dev of a parallel batch, `--no-ff`-merges the second-and-later, and writes task status (and any advisor-prescribed task/edge updates) back to the MCP. It calls the advisors when judgment is required — fuzzy task body, design-category fork, surprise from a returning agent — and writes their prescriptions itself; advisors don't write, the skill does. `/grind` halts on a dirty tree, three consecutive failures, a merge content conflict, a user interrupt, or group done, and supports `--dry-run` to preview the first round without writing. There is no inbox capture, no version anchoring, no pre-push sweep — those exist if you need them by talking to the MCP directly; the slimmer surface lets real gaps emerge naturally.
-- **tab-cli** (Python package, `cli/`) runs the markdown substrate outside Claude Code. Typer for the verb-shaped CLI surface (`tab ask`, `tab chat`, `tab <skill>`, `tab setup`); pydantic-ai for the agent loop and tool dispatch; grimoire for semantic-gate routing of user input against skill descriptions with per-skill thresholds. Two backends: `anthropic:<model>` via pydantic-ai's stock `AnthropicModel`, and `ollama:<model>` via Tab's in-house `OllamaNativeModel` (talks to Ollama's `/api/chat` directly, sidestepping pydantic-ai's stock `OllamaModel` which routes through the `/v1` OpenAI-compat layer). v0 ports the `tab/` plugin's personality skills (`draw-dino`, `listen`, `think`, `teach`); the `tab-for-projects` skills stay Claude-Code-shaped because they're tightly coupled to the MCP and the subagent dispatch primitive. The CLI reads its substrate from `plugins/tab/` so the markdown stays singular. (An earlier `tab mcp` subcommand exposed the CLI as an MCP server but had zero callers; it was retired in 0.4.0 — resurrection is cheap when a real host wires up.)
-- Each Claude Code plugin is independently installable. A `settings.json` at a package root can set the default agent via `{"agent": "<plugin>:<agent>"}`. The CLI installs separately via `uv sync` inside `cli/`.
+- **Substrate is singular.** `plugins/tab/` is canonical. The CLI reads SKILL.md / agent.md straight out of the plugin tree via `cli/src/tab_cli/paths.py:plugins_dir()`. No copy, no vendored markdown, no `cli/skills/`. If you're tempted to duplicate, stop.
+- **Agents are read-only; skills carry write authority.** All four advisors (`archaeologist`, `code-reviewer`, `product-researcher`, `project-planner`) prescribe but never write. `/grind` and `/document` are the writers; `/discuss` is read-only synthesis and the user commits its plan via the MCP directly.
+- **`tab` is standalone; `tab-for-projects` is MCP-coupled.** The personality agent has no MCP dependency. The advisor stack speaks to the Tab for Projects MCP. Personality skills port to the CLI; MCP-coupled skills don't.
+- **Plugin registration.** `plugins/<pkg>/.claude-plugin/plugin.json` carries `name`, `description`, `version`, `agents` (path array), `skills` (directory ref). Versions in `marketplace.json` and each `plugin.json` must match — the validator enforces this.
 
 ## Conventions
 
-**Agents** are markdown files with YAML frontmatter (`name`, `description`). The body is the system prompt. Registered in `plugin.json` under `"agents"` as relative paths.
+- **Skill frontmatter: `name`, `description`, optional `argument-hint`. No other fields.** Behavior, owning agents, MCP requirements go in the body. Extra frontmatter looks load-bearing, isn't, and rots.
+- **Agent frontmatter: `name`, `description`.** Body is the system prompt.
+- **Underscore-prefixed top-level files** (`_advisory-base.md`, `_skill-base.md`) are shared substrate, not registered. The validator and registry both skip them.
+- **CLI subcommands lazy-import** their runners so `tab --help` and unrelated paths don't pay pydantic-ai's import cost. `cli/MAINTENANCE.md` is the canonical reference for CLI shape.
+- **CLI runtime errors** collapse to a single stderr line of the form `tab: <reason>`, exit non-zero, never spill a traceback. New subcommand → wrap the runner the same way.
+- **CLI work runs from `cli/`**: `uv sync`, `uv run tab`, `uv run pytest`.
 
-**Skills** live in `skills/<skill-name>/SKILL.md`. The body defines behavior, trigger rules, and output format. Registered in `plugin.json` via `"skills": "./skills/"` (directory reference). Skill frontmatter fields:
+## Decisions we rejected
 
-- `name` -- skill identifier, lowercase with hyphens, matches directory name. Parsed by the runtime.
-- `description` -- what the skill does; the runtime uses this for trigger matching and catalog display. Parsed by the runtime.
-- `argument-hint` -- (optional) pattern showing expected arguments (e.g., `"[topic]"`, `"<project ID>"`). Not parsed by the runtime, but useful as a quick-glance convention.
+- **`tab mcp` subcommand** (CLI-as-MCP-server) — retired 0.4.0, zero callers. Resurrection is cheap when a real host wires up.
+- **Inbox capture, version anchoring, pre-push sweep** in `tab-for-projects` — intentionally absent. Talk to the MCP directly. The slimmer surface lets real gaps emerge.
+- **pydantic-ai's stock `OllamaModel`** — routes through the OpenAI-compat `/v1` layer and loses features. The in-house `OllamaNativeModel` talks to `/api/chat` directly. Don't "simplify" by switching.
+- **Frontmatter for "which agent runs this skill" or "what mode it operates in"** — duplicates the body, creates a maintenance trap, looks load-bearing when it isn't.
+- **Copying markdown into the CLI** — the substrate stays in `plugins/tab/`. Every `paths.plugins_dir()` call exists to enforce this.
 
-No other frontmatter fields should be added. Information about which agents run a skill, what mode it operates in, or what MCP servers it requires belongs in the skill body, not the frontmatter — duplicating it in YAML creates a maintenance trap and looks load-bearing when it isn't.
+## Gotchas
 
-**Plugin metadata** lives in `plugins/<package>/.claude-plugin/plugin.json` with fields: `name`, `description`, `version`, `author`, `license`, `agents` (array of paths), `skills` (directory path).
+- **The validator's tree check is soft — substring presence only.** Tree-art whitespace, indentation, and box-drawing characters are decorative. Don't repair tree art; just make sure each path under "Key paths" below stays in the file.
+- **Skill behavior lives in SKILL.md, not here.** Don't paraphrase what `/grind` or `/discuss` does in CLAUDE.md — the SKILL.md body is canonical, and a recap here bit-rots the moment behavior shifts.
+- **`personality.py` imports `pydantic_ai.Agent` at module top.** That's why every other subcommand defers `tab_cli.personality` — deferring the module is what defers pydantic-ai's import cost.
 
-**Marketplace manifest** at `.claude-plugin/marketplace.json` lists all plugins with `name`, `source`, `description`, `version`, `strict`.
+## Commit messages
 
-**CLI package** lives in `cli/` with standard Python conventions: `pyproject.toml`, `src/tab_cli/`, `tests/`. The CLI reads markdown from `plugins/tab/` rather than duplicating it — the substrate stays singular across runtimes. CLI work runs from `cli/` (`uv sync`, `uv run tab`, `uv run pytest`).
+Short. Wordplay over summary. The diff says *what* changed — the subject is flavor, not a recap. Riff on the code: a pun, a callback, a phrase that fits. Under ~40 chars. Drop conventional-commit prefixes unless part of the joke.
+
+Recent calibration: `the suite admits a third`, `discuss whispers, document writes`, `the doorway returns`, `bumps are the run's last word`, `stay in your lane`, `tree-art is decor, not contract`.
 
 ## Validation
 
-Run `bash scripts/validate-plugins.sh` from the repo root after any structural change — adding/removing skills, agents, or updating plugin metadata. It checks:
+`bash scripts/validate-plugins.sh` from the repo root, after any structural change — adding/removing skills, agents, bumping versions, editing plugin metadata. The script checks frontmatter, version sync between `marketplace.json` and each `plugin.json`, and the soft tree check above.
 
-- Agent and skill paths resolve correctly
-- Frontmatter is valid
-- Versions are in sync between marketplace and plugin.json
-- CLAUDE.md structure tree matches what's actually on disk
+## Key paths
 
-The tree check is deliberately soft: the validator only greps for substring presence of each skill/agent path somewhere in CLAUDE.md. Tree-art whitespace, indentation, and box-drawing characters are decorative — adding or removing a skill doesn't require redrawing the ASCII tree, just making sure the path string appears in the file. The guarantee is that on-disk-but-not-mentioned trips the validator; cosmetic surgery isn't part of the contract.
+Manifests:
 
-If you add or remove a skill/agent, update the Repository Structure tree above and run the validator. It will fail if the tree is out of date.
+- `.claude-plugin/marketplace.json`
+- `plugins/tab/.claude-plugin/plugin.json`
+- `plugins/tab-for-projects/.claude-plugin/plugin.json`
+- `plugins/tab/settings.json` — default agent for the `tab` plugin
 
-## Commit Messages
+Substrate (validator-required: every path below must appear somewhere in this file):
 
-Short. Wordplay over summary. The diff already says *what* changed — the subject line is flavor, not a recap.
+- `plugins/tab/agents/tab.md` — personality agent (profiles, 0-100% settings)
+- `plugins/tab/skills/draw-dino/SKILL.md`
+- `plugins/tab/skills/hey-tab/SKILL.md`
+- `plugins/tab/skills/listen/SKILL.md`
+- `plugins/tab/skills/teach/SKILL.md`
+- `plugins/tab/skills/think/SKILL.md`
+- `plugins/tab-for-projects/agents/archaeologist.md`
+- `plugins/tab-for-projects/agents/code-reviewer.md`
+- `plugins/tab-for-projects/agents/product-researcher.md`
+- `plugins/tab-for-projects/agents/project-planner.md`
+- `plugins/tab-for-projects/skills/discuss/SKILL.md`
+- `plugins/tab-for-projects/skills/grind/SKILL.md`
+- `plugins/tab-for-projects/skills/document/SKILL.md`
 
-Riff on the code being committed: a pun, a callback, a phrase that fits. Aim for under ~40 chars. Drop the conventional-commit prefix (`fix:`, `feat:`) unless it's part of the joke.
+CLI runtime (read `cli/MAINTENANCE.md` before editing):
 
-Recent examples to calibrate against:
+- `cli/pyproject.toml` — entry point `tab` → `tab_cli.cli:app`
+- `cli/src/tab_cli/cli.py` — Typer app; verb-shaped subcommands
+- `cli/src/tab_cli/paths.py` — `plugins_dir()`, substrate-singular helper
+- `cli/src/tab_cli/personality.py` — pydantic-ai compile site
+- `cli/src/tab_cli/registry.py` — semantic-gate skill routing
+- `cli/src/tab_cli/models/ollama_native.py` — `/api/chat` backend
 
-- `always be shufflin'`
-- `fix: no more changelogs`
+Validation:
 
-If the joke doesn't land in a line, it's too much. A body is fine when context genuinely needs it, but the subject stays terse.
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `.claude-plugin/marketplace.json` | Marketplace plugin registry |
-| `scripts/validate-plugins.sh` | Plugin validation script |
-| `plugins/tab/.claude-plugin/plugin.json` | Tab plugin manifest |
-| `plugins/tab-for-projects/.claude-plugin/plugin.json` | Tab for Projects plugin manifest |
-| `plugins/tab/agents/tab.md` | Tab agent — personality, profiles, settings |
-| `plugins/tab-for-projects/agents/archaeologist.md` | Archaeologist advisor — grounds in code + KB, prescribes a concrete solution and names which KB docs apply and how; read-only (no KB writes, no code edits, no task mutations) |
-| `plugins/tab-for-projects/agents/code-reviewer.md` | Code-reviewer advisor — reviews code since the last major release through a prompt-supplied angle, grounds in code + KB, returns an issues report with type / how_found / impact / difficulty / fix_direction / fail-forward call (ship-blocker \| ship-with-followup \| next-cycle \| accept); read-only (no code edits, no KB writes, no task mutations) |
-| `plugins/tab-for-projects/agents/product-researcher.md` | Product-researcher advisor — the only advisor allowed to look outside the project, reaching the open web via Exa for libraries, patterns, and prior art; KB-first, cross-checks every external claim against the KB and cites url + fetched_at + verbatim quote; read-only (no KB writes, no code edits, no task mutations) |
-| `plugins/tab-for-projects/agents/project-planner.md` | Project-planner advisor — grounds in code + KB + current backlog, prescribes which tasks to create or update with effort + impact + edges; read-only (no task writes, no KB writes, no code edits) |
-| `plugins/tab-for-projects/skills/discuss/SKILL.md` | `/discuss` — agent-driven planning; runs the core advisors (`archaeologist`, `project-planner`, `code-reviewer`) in parallel against a goal — adding `product-researcher` when the goal calls for outside evidence — then cross-questions them across rounds until forks collapse, returning one synthesized project plan with very few decisions left for the human; read-only (no MCP / code / KB writes); the user commits the plan to the backlog when ready |
-| `plugins/tab-for-projects/skills/grind/SKILL.md` | `/grind` — autonomous implementation against a grouped backlog; refuses without a `group_key` (and refuses `"new"`), reads the dependency graph, dispatches `general-purpose` agents in isolated worktrees on the unblocked frontier (parallel when surfaces don't conflict), calls `archaeologist` / `project-planner` when judgment is needed and writes the prescribed task/edge updates to the MCP itself, halts on dirty tree / three consecutive failures / merge conflict / user interrupt / group done; supports `--dry-run` |
-| `plugins/tab-for-projects/skills/document/SKILL.md` | `/document` — capture-shaped KB doc writer; takes an explicit `<source>` (`discuss <session>` \| `range "<quote>"` \| `--file <path>` — never implicit conversation capture), reads the existing KB shape and proposes one doc per invocation, runs a hard-refuse gate against project-specific markers (file paths, ULIDs, repo names) routing those to a `category: design` task instead, on confirm writes through the MCP; optional `--review` dispatches the existing `archaeologist` for KB-collision / overlap analysis, supports `--dry-run` |
-| `plugins/tab/settings.json` | Tab default agent config |
-| `cli/pyproject.toml` | Tab CLI package metadata; entry point `tab` -> `tab_cli.cli:app` |
-| `cli/MAINTENANCE.md` | CLI runtime conventions — lazy imports, test seams, `tab: <reason>` error pattern, substrate-singular rule |
-| `cli/src/tab_cli/cli.py` | Typer app — verb-shaped subcommands (`ask`, `chat`, `<skill>`, `setup`); bare `tab` defaults to `chat` |
-| `cli/src/tab_cli/commands.py` | Shared subcommand scaffolding — `@personality_command` decorator, `TabContext` resolved bundle, dial/model Options, `tab: <reason>` error wrapper |
-| `cli/src/tab_cli/grimoire_cli.py` | `tab grimoire` subcommand group — `set` / `reset` / `show` for per-skill threshold overrides |
-| `cli/src/tab_cli/personality.py` | Compiles `plugins/tab/agents/tab.md` (body + 0-100% settings frontmatter) into a pydantic-ai system prompt |
-| `cli/src/tab_cli/registry.py` | Skill registry — parses SKILL.md descriptions for grimoire's semantic-gate routing |
-| `cli/src/tab_cli/models/ollama_native.py` | `OllamaNativeModel` — pydantic-ai `Model` subclass backed by `ollama-python`'s `/api/chat`; bypasses pydantic-ai's stock `OllamaModel` which routes through the `/v1` OpenAI-compat layer |
+- `scripts/validate-plugins.sh`
