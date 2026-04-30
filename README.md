@@ -13,33 +13,26 @@ The repo contains:
 
 - **tab** -- a sharp, warm thinking partner personality. It changes how Claude shows up: more direct, more collaborative, more opinionated when it matters. The entire persona is defined in markdown files (agents and skills) with zero runtime dependencies.
 
-- **tab-for-projects** -- project workflow tools that integrate with the Tab for Projects MCP server for pair-programming, capturing decisions, and managing project context.
-
 - **tab-cli** -- the Python runtime. Verb-shaped subcommands (`tab ask`, `tab chat`, `tab <skill>`, `tab setup`); pydantic-ai for the agent loop with Anthropic + Ollama backends; grimoire for semantic skill routing.
 
-Both Claude Code plugins are distributed through AltTab's marketplace.
+The Claude Code plugin is distributed through AltTab's marketplace.
 
 ## Quick Start
 
-Install either package using the Claude Code plugin system:
+Install via the Claude Code plugin system:
 
 ```
-# Install Tab (the thinking partner personality)
 claude plugin add --from "https://github.com/4lt7ab/Tab" tab
-
-# Install Tab for Projects (project management agents)
-claude plugin add --from "https://github.com/4lt7ab/Tab" tab-for-projects
 ```
 
-The marketplace configuration at `.claude-plugin/marketplace.json` defines both plugins. Claude Code resolves them from this repository automatically.
+The marketplace configuration at `.claude-plugin/marketplace.json` defines the plugin. Claude Code resolves it from this repository automatically.
 
 ## Packages
 
 | Package | Version | Description |
 | --- | --- | --- |
-| [tab](./plugins/tab) | 0.3.2 | A sharp, warm thinking partner who helps you make better decisions |
-| [tab-for-projects](./plugins/tab-for-projects) | 5.3.0 | Project workflow tracking -- skills and agents for the Tab for Projects MCP |
-| [tab-cli](./cli) | 0.4.0 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, Anthropic + Ollama backends |
+| [tab](./plugins/tab) | 0.3.4 | A sharp, warm thinking partner who helps you make better decisions |
+| [tab-cli](./cli) | 0.4.2 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, Anthropic + Ollama backends |
 
 ## Trademark
 

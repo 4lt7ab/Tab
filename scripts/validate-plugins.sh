@@ -319,12 +319,11 @@ if [[ -f "$CLAUDE_MD" ]]; then
   TREE_OK=true
 
   # Check every skill directory on disk is mentioned in CLAUDE.md.
-  # Files at the skills/ top level with a leading underscore (e.g.
-  # `_skill-base.md`) are reference / shared-substrate docs, not skills —
-  # they have no YAML frontmatter, aren't named `SKILL.md`, and aren't
-  # registered, so the structure tree skips them too. Mirrors the
-  # `_advisory-base.md` discipline in the agents block below.
-  for plugin_dir in "$REPO_ROOT"/plugins/tab "$REPO_ROOT"/plugins/tab-for-projects; do
+  # Files at the skills/ top level with a leading underscore are
+  # reference / shared-substrate docs, not skills — they have no YAML
+  # frontmatter, aren't named `SKILL.md`, and aren't registered, so the
+  # structure tree skips them too. Same discipline applies to agents.
+  for plugin_dir in "$REPO_ROOT"/plugins/tab; do
     plugin_name="$(basename "$plugin_dir")"
     skills_dir="$plugin_dir/skills"
     [[ ! -d "$skills_dir" ]] && continue
@@ -343,9 +342,9 @@ if [[ -f "$CLAUDE_MD" ]]; then
     done
 
     # Check every agent file on disk is mentioned. Files with a leading
-    # underscore (e.g. `_advisory-base.md`) are reference / shared-substrate
-    # docs, not agents — they have no YAML frontmatter and aren't registered
-    # in plugin.json, so the structure tree skips them too.
+    # underscore are reference / shared-substrate docs, not agents — they
+    # have no YAML frontmatter and aren't registered in plugin.json, so
+    # the structure tree skips them too.
     if [[ -d "$plugin_dir/agents" ]]; then
       for agent_file in "$plugin_dir"/agents/*.md; do
         [[ ! -f "$agent_file" ]] && continue

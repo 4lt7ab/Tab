@@ -404,8 +404,8 @@ body
 # --------------------------------------------------------------- loader
 
 
-def test_load_skill_registry_walks_personality_plugin_only() -> None:
-    """All four v0 personality skills appear; nothing from tab-for-projects."""
+def test_load_skill_registry_walks_personality_plugin() -> None:
+    """All four v0 personality skills appear in the loaded registry."""
     gate = _make_gate()
     registry = load_skill_registry(PLUGINS_DIR, gate=gate)
 
@@ -418,11 +418,6 @@ def test_load_skill_registry_walks_personality_plugin_only() -> None:
     # separately). The loader still picks it up — that's the documented
     # behaviour in the task summary.
     assert "hey-tab" in names
-
-    # tab-for-projects skills must NOT leak in. Spot-check a few that
-    # would be obvious failures.
-    forbidden = {"design", "develop", "plan", "ship", "search", "work"}
-    assert names.isdisjoint(forbidden)
 
 
 def test_load_skill_registry_assigns_default_threshold_to_every_record() -> None:

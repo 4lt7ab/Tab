@@ -18,8 +18,6 @@ What the loader does **not** do:
 
 - Invoke skills. It returns "this input matches skill X above
   threshold" or "no match"; what to do next is the caller's business.
-- Load the ``tab-for-projects`` skills. Those stay Claude-Code-shaped;
-  the CLI sticks to the personality plugin.
 
 Per-skill thresholds are read from each SKILL.md's optional
 ``grimoire-threshold`` frontmatter key (a float in ``[0, 1]``); a skill
@@ -200,9 +198,7 @@ def load_skill_registry(
 
     Notes:
 
-    - The walker only descends into ``plugins_dir/tab/skills/`` —
-      the ``tab-for-projects`` plugin is deliberately not loaded, per
-      the v0 scope split in the Tab CLI decision doc.
+    - The walker only descends into ``plugins_dir/tab/skills/``.
     - Skills are seeded in sorted order so the registry is
       deterministic across runs (filesystem iteration order isn't).
     - An empty skills directory is not an error; the registry returns
