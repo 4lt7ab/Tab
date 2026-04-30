@@ -18,11 +18,12 @@ uv run tab ask --model 'ollama:gemma3:latest' "..."
 # Interactive REPL (default when invoked with no subcommand)
 uv run tab chat --model 'anthropic:claude-sonnet-4-5'
 
-# Skills directly
+# One-shot skill verb
 uv run tab draw-dino "stegosaurus, please"
-uv run tab teach "byzantine fault tolerance"
-uv run tab listen
-uv run tab think
+
+# Multi-turn skills (listen, think, teach) live inside `tab chat` —
+# grimoire routes phrases like "teach me about CRDTs" to the right skill.
+uv run tab chat
 
 # Setup hints
 uv run tab setup

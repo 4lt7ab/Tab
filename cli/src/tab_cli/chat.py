@@ -119,9 +119,7 @@ def _tools_for_skill(skill_name: str) -> list[Any]:
     Most personality skills don't need tools — the runner stays
     generic on purpose. ``teach`` is the first that does: the SKILL.md
     body's research phase wants a ``web_search`` tool and grimoire
-    routing inside ``tab chat`` is one of the two paths that need to
-    wire it (the other being the one-shot ``tab teach`` Typer
-    subcommand).
+    routing inside ``tab chat`` is the path that wires it.
 
     Lazy import for the same reason ``compile_skill_agent`` is lazy:
     the chat module is loaded for every REPL turn and ``httpx`` /

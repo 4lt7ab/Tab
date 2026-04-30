@@ -156,11 +156,11 @@ def run_skill(
 ) -> str:
     """Run one synchronous turn against the named skill and return text.
 
-    Used by the per-skill Typer subcommands (``tab draw-dino``,
-    ``tab listen``, ...). The chat REPL builds its own agent via
-    :func:`compile_skill_agent` so it can stream and update history;
-    this entry point is for one-shot CLI use where streaming would just
-    add complexity to the shell-out contract.
+    Used by the per-skill Typer subcommands (today: ``tab draw-dino``).
+    The chat REPL builds its own agent via :func:`compile_skill_agent`
+    so it can stream and update history; this entry point is for
+    one-shot CLI use where streaming would just add complexity to the
+    shell-out contract.
 
     ``user_input`` may be empty — every personality skill's SKILL.md
     handles a "no specific request" turn (draw-dino picks a dino,

@@ -105,3 +105,18 @@ to derive this themselves and now route through `plugins_dir()`:
 you find yourself writing `Path(__file__).resolve().parents[3]` or
 re-stripping a YAML fence, stop and use `paths.py` instead — that's
 the whole point of the module.
+
+## 5. Multi-turn skills only ship as chat-routed skills
+
+`tab draw-dino` is the only personality skill exposed as a one-shot
+Typer verb. The multi-turn skills — `listen`, `think`, `teach` — used
+to ship as one-shot verbs too, but a single turn produced only the
+SKILL body's first move (a "listening, say done" line; a single
+shaping question; a Phase 1 calibration), and the docstring had to
+direct the user to `tab chat` anyway.
+
+The verbs were cut. The skills stay on the substrate
+(`plugins/tab/skills/{listen,think,teach}/SKILL.md`), and grimoire
+inside `tab chat` routes to them. When adding a new skill: a one-shot
+verb earns its keep only when the SKILL body actually finishes in one
+turn (draw-dino does; conversation-shaped skills do not).

@@ -32,7 +32,7 @@ Personality, workflows, and skills as plain markdown — runtimes are interchang
 
 Short. Wordplay over summary. The diff says *what* changed — the subject is flavor, not a recap. Riff on the code: a pun, a callback, a phrase that fits. Under ~40 chars. Drop conventional-commit prefixes unless part of the joke.
 
-Recent calibration: `the briefing earns its rent`, `discuss whispers, document writes`, `the suite admits a third`, `the doorway returns`, `bumps are the run's last word`.
+Recent calibration: `commit checks in`, `the advisor council adjourns`, `the briefing earns its rent`, `the suite admits a third`, `discuss whispers, document writes`.
 
 ## Validation
 

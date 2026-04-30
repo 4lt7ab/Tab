@@ -7,12 +7,10 @@
 #   1. Agent paths — every path in plugin.json agents[] resolves to an existing file
 #   2. Agent frontmatter — each agent has name + description
 #   3. Skills directory — exists and contains at least one SKILL.md
-#   3b. Skill frontmatter — each SKILL.md has name + description
-#       Optional fields (validated only when present):
-#         - mode: must be one of headless, conversational, foreground
-#         - requires-mcp: must be non-empty
-#         - agents: each value should match an agent name in the same plugin (warn only)
-#         - inputs: must be non-empty
+#   3b. Skill frontmatter — each SKILL.md has name + description, and no
+#       fields outside the convention (CLAUDE.md: name, description, optional
+#       argument-hint). The forbidden keys mode / requires-mcp / agents /
+#       inputs were considered and rejected; this check enforces it.
 #   4. Version sync — marketplace version matches plugin.json version
 #   5. Settings agent reference — settings.json agent ref points to a valid agent name
 
@@ -55,58 +53,6 @@ frontmatter_field_exists() {
     /^---$/ { if (!in_fm) { in_fm=1; next } else { exit } }
     in_fm && $0 ~ "^" field ":" { print "yes"; exit }
   ' "$file" | grep -q "yes"
-}
-
-# Extract YAML list values from frontmatter. Handles:
-#   field: [a, b, c]         — inline list
-#   field: value              — scalar (treated as single-element list)
-#   field:                    — multi-line list (subsequent - item lines)
-#     - a
-#     - b
-# Outputs one value per line, with quotes stripped.
-frontmatter_list_field() {
-  local field="$1" file="$2"
-  awk -v field="$field" '
-    BEGIN { in_fm=0; found=0 }
-    /^---$/ {
-      if (!in_fm) { in_fm=1; next }
-      else { exit }
-    }
-    !in_fm { next }
-    found && /^[[:space:]]+- / {
-      val = $0
-      sub(/^[[:space:]]+- [[:space:]]*/, "", val)
-      gsub(/^["'"'"']|["'"'"']$/, "", val)
-      print val
-      next
-    }
-    found { exit }
-    $0 ~ "^" field ":" {
-      val = $0
-      sub("^" field ":[[:space:]]*", "", val)
-      # Inline list: [a, b, c]
-      if (val ~ /^\[/) {
-        gsub(/[\[\]]/, "", val)
-        n = split(val, items, ",")
-        for (i = 1; i <= n; i++) {
-          v = items[i]
-          gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-          gsub(/^["'"'"']|["'"'"']$/, "", v)
-          if (v != "") print v
-        }
-        exit
-      }
-      # Scalar value (single item)
-      if (val != "") {
-        gsub(/^["'"'"']|["'"'"']$/, "", val)
-        print val
-        exit
-      }
-      # Empty value — expect multi-line list on subsequent lines
-      found = 1
-      next
-    }
-  ' "$file"
 }
 
 echo ""
@@ -195,71 +141,16 @@ for (( i=0; i<PLUGIN_COUNT; i++ )); do
             ALL_SKILL_FM_OK=false
           fi
 
-          # ── Optional: mode ──
-          if frontmatter_field_exists "mode" "$skill_file"; then
-            fm_mode="$(frontmatter_field "mode" "$skill_file")"
-            case "$fm_mode" in
-              headless|conversational|foreground)
-                pass "Skill $skill_rel mode valid ($fm_mode)"
-                ;;
-              *)
-                fail "Skill $skill_rel has invalid mode '$fm_mode' (must be headless, conversational, or foreground)"
-                ALL_SKILL_FM_OK=false
-                ;;
-            esac
-          fi
-
-          # ── Optional: requires-mcp ──
-          if frontmatter_field_exists "requires-mcp" "$skill_file"; then
-            mcp_values=()
-            while IFS= read -r _mcp; do
-              [[ -n "$_mcp" ]] && mcp_values+=("$_mcp")
-            done < <(frontmatter_list_field "requires-mcp" "$skill_file")
-            if [[ ${#mcp_values[@]} -eq 0 ]]; then
-              fail "Skill $skill_rel has 'requires-mcp' but value is empty"
+          # ── Forbidden frontmatter keys ──
+          # CLAUDE.md: skill frontmatter is name, description, optional
+          # argument-hint. The keys below were considered and rejected
+          # ("Decisions we rejected"), so their presence is a regression.
+          for forbidden in mode requires-mcp agents inputs; do
+            if frontmatter_field_exists "$forbidden" "$skill_file"; then
+              fail "Skill $skill_rel has forbidden frontmatter '$forbidden' (CLAUDE.md: name/description/argument-hint only)"
               ALL_SKILL_FM_OK=false
-            else
-              pass "Skill $skill_rel requires-mcp valid (${mcp_values[*]})"
             fi
-          fi
-
-          # ── Optional: agents ──
-          if frontmatter_field_exists "agents" "$skill_file"; then
-            agent_names=()
-            while IFS= read -r _aname; do
-              [[ -n "$_aname" ]] && agent_names+=("$_aname")
-            done < <(frontmatter_list_field "agents" "$skill_file")
-            if [[ ${#agent_names[@]} -gt 0 ]]; then
-              for aname in "${agent_names[@]}"; do
-                agent_matched=false
-                for agent_path in "${AGENT_PATHS[@]}"; do
-                  resolved_agent="$PLUGIN_DIR/$agent_path"
-                  [[ ! -f "$resolved_agent" ]] && continue
-                  ref_name="$(frontmatter_field "name" "$resolved_agent")"
-                  if [[ "$ref_name" == "$aname" ]]; then
-                    agent_matched=true
-                    break
-                  fi
-                done
-                if $agent_matched; then
-                  pass "Skill $skill_rel agent '$aname' found in plugin"
-                else
-                  warn "Skill $skill_rel agent '$aname' not found in plugin '$PLUGIN'"
-                fi
-              done
-            fi
-          fi
-
-          # ── Optional: inputs ──
-          if frontmatter_field_exists "inputs" "$skill_file"; then
-            fm_inputs="$(frontmatter_field "inputs" "$skill_file")"
-            if [[ -z "$fm_inputs" ]]; then
-              fail "Skill $skill_rel has 'inputs' but value is empty"
-              ALL_SKILL_FM_OK=false
-            else
-              pass "Skill $skill_rel inputs field present"
-            fi
-          fi
+          done
 
         done < <(find "$SKILLS_DIR" -name "SKILL.md")
         if $ALL_SKILL_FM_OK; then

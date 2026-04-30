@@ -271,7 +271,7 @@ def default_web_search() -> Callable[[str], list[dict[str, str]]]:
 
     Reads ``EXA_API_KEY`` at call time. When unset, the returned
     callable still works — it just returns the explanatory no-op
-    entry. This is the form the CLI wraps for ``tab teach`` and the
-    chat REPL's grimoire-routed dispatch.
+    entry. This is the form the chat REPL's grimoire-routed dispatch
+    wraps when it routes to the ``teach`` skill.
     """
     return build_web_search_tool(api_key=os.environ.get("EXA_API_KEY"))
