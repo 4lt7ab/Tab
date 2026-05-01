@@ -26,8 +26,9 @@ import typer
 grimoire_app = typer.Typer(
     name="grimoire",
     help=(
-        "Inspect and override grimoire's per-skill matching thresholds. "
-        "Subcommands: set, reset, show."
+        "Inspect and override grimoire state. "
+        "Threshold overrides: set, reset, show. "
+        "Database inspection: list, items, explain."
     ),
     no_args_is_help=True,
     add_completion=False,
@@ -175,3 +176,160 @@ def grimoire_show() -> None:
     # rich-table reshaping (which would land in its own ticket).
     for row in rows:
         typer.echo(f"{row.name}\t{row.threshold}\t{row.source}")
+
+
+# --------------------------------------------------------- DB inspection
+#
+# The three commands below — ``list``, ``items``, ``explain`` — read
+# straight from the grimoire-core SQLite store at ``~/.tab/grimoire.db``
+# (pinned by :mod:`tab_cli.grimoire_runtime`). They share a TSV-shaped
+# output convention with ``show``: one row per record, no header, no
+# rich tables. ``column -t`` is the canonical pretty-printer.
+#
+# Each command runs migrations first via ``ensure_migrated`` so a fresh
+# install can ``tab grimoire list`` without going through chat/ask
+# first to materialise the schema.
+
+
+@grimoire_app.command("list")
+def grimoire_list() -> None:
+    """List every corpus in the grimoire DB with item count and embedder.
+
+    Output is one row per corpus:
+    ``<corpus_key>\\t<item_count>\\t<embedder>\\t<dimensions>\\t<embedded_at>``.
+    Empty database prints "no corpora".
+
+    The embedder/dimensions/embedded_at columns come from
+    ``corpus_meta`` and are present iff the corpus has ever been
+    written. ``-`` is shown when grimoire has the corpus key but no
+    meta row (shouldn't happen in normal flows; surfaces as ``-`` so
+    you can see it instead of crashing on a None format).
+    """
+    from tab_cli.grimoire_runtime import ensure_migrated
+
+    try:
+        ensure_migrated()
+        from grimoire_core import list_corpora
+
+        corpora = list_corpora()
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if not corpora:
+        typer.echo("no corpora")
+        return
+
+    for corpus in sorted(corpora, key=lambda c: c.corpus_key):
+        embedder = corpus.embedder or "-"
+        dims = corpus.embedding_dimensions if corpus.embedding_dimensions is not None else "-"
+        embedded_at = corpus.embedded_at or "-"
+        typer.echo(
+            f"{corpus.corpus_key}\t{corpus.item_count}\t{embedder}\t{dims}\t{embedded_at}",
+        )
+
+
+@grimoire_app.command("items")
+def grimoire_items(
+    corpus: str = typer.Argument(
+        ...,
+        help="Corpus key to dump (e.g. tab-cli-skills, topic:auth-rewrite).",
+        show_default=False,
+    ),
+) -> None:
+    """List every item in a corpus.
+
+    Output is one row per item: ``<name>\\t<threshold>\\t<text>``. Sorted
+    by name (matches grimoire-core's ``list_items`` order). Empty or
+    unknown corpus prints "no items in <corpus>" — the two cases are
+    not distinguished, since the user-visible answer is the same:
+    nothing to look at.
+
+    Reads only — no embedder is invoked, so this works without Ollama
+    reachable. ``Curator.from_settings`` does construct an
+    ``OllamaEmbedder`` lazily, but the embedder's network calls only
+    fire on writes, which ``export()`` doesn't do.
+    """
+    from tab_cli.grimoire_runtime import ensure_migrated
+
+    try:
+        ensure_migrated()
+        from grimoire_core import Curator
+
+        items = Curator.from_settings(corpus).export()
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if not items:
+        typer.echo(f"no items in {corpus}")
+        return
+
+    for item in items:
+        typer.echo(f"{item.name}\t{item.threshold}\t{item.text}")
+
+
+@grimoire_app.command("explain")
+def grimoire_explain(
+    corpus: str = typer.Argument(
+        ...,
+        help="Corpus key to query against.",
+        show_default=False,
+    ),
+    query: list[str] = typer.Argument(
+        ...,
+        metavar="QUERY...",
+        help=(
+            "Natural-language query. Words are joined with single spaces "
+            "and embedded as a search query."
+        ),
+        show_default=False,
+    ),
+    top_k: int = typer.Option(
+        5,
+        "--top-k",
+        "-k",
+        help="Number of neighbours to return (default 5).",
+    ),
+) -> None:
+    """Show top-k neighbours for a query against a corpus.
+
+    Output is one row per neighbour, sorted by similarity descending:
+    ``<name>\\t<similarity>\\t<threshold>\\t<pass|fail>``. Similarity
+    and threshold are formatted to three decimals; ``pass`` means the
+    row would have fired through ``Gate.match``, ``fail`` means it
+    would have stayed silent. Empty result (no rows in corpus, or
+    ``--top-k 0``) prints "no neighbours".
+
+    Unlike ``items``, this command embeds the query — Ollama needs to
+    be reachable. If it isn't, the failure collapses to a readable
+    ``tab: <reason>`` line just like the other subcommands.
+    """
+    if top_k < 0:
+        typer.echo("tab: --top-k must be >= 0", err=True)
+        raise typer.Exit(code=1)
+
+    from tab_cli.commands import join_words
+    from tab_cli.grimoire_runtime import ensure_migrated
+
+    rendered_query = join_words(query)
+
+    try:
+        ensure_migrated()
+        from grimoire_core import Gate
+
+        gate = Gate.from_settings(corpus=corpus)
+        hits = gate.explain(rendered_query, k=top_k)
+    except Exception as exc:  # noqa: BLE001 — collapse to readable error
+        typer.echo(f"tab: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if not hits:
+        typer.echo("no neighbours")
+        return
+
+    for hit in hits:
+        flag = "pass" if hit.passed else "fail"
+        typer.echo(
+            f"{hit.name}\t{hit.similarity:.3f}\t{hit.threshold:.3f}\t{flag}",
+        )

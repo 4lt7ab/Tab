@@ -1,16 +1,22 @@
-"""Unit tests for :mod:`tab_cli.registry` — no Postgres, no Ollama.
+"""Unit tests for :mod:`tab_cli.registry` — no real DB, no Ollama.
 
 The registry's job is small and well-bounded: read SKILL.md frontmatter,
-seed a grimoire gate, expose ``match(query)``. We test the loader against
-the real ``plugins/tab/`` tree (the v0 personality skills are the
-fixture) and substitute a deterministic embedder + an in-memory repo so
-the gate works without a stack.
+seed a grimoire corpus, expose ``match(query)``. We test the loader
+against the real ``plugins/tab/`` tree (the v0 personality skills are
+the fixture) and substitute a deterministic embedder + an in-memory
+repository so the gate and curator work without sqlite or Ollama in the
+loop.
 
 The fake embedder is a hashed bag-of-words: tokens become 1-bits in a
 fixed-dim vector, the repo computes cosine similarity. That gives us a
 real semantic-ish signal — overlapping tokens score high, disjoint
-tokens score low — without dragging in pgvector or Ollama. Mirrors the
-shape of grimoire's own ``tests/test_gate.py`` fakes.
+tokens score low — without dragging in real embedding machinery.
+Mirrors the shape of grimoire-core's own ``tests/test_gate.py`` fakes.
+
+In grimoire-core 0.5.x ``Gate`` is read-only and writes live on
+``Curator``, so the loader takes both as paired test seams. Tests build
+both off the same in-memory repository, so seeds via the curator are
+visible to the gate's ``match``.
 """
 
 from __future__ import annotations
@@ -19,14 +25,13 @@ import math
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from grimoire import Gate
-from grimoire.db.repository import CorpusMeta, ItemMatch, ItemSeed
-from grimoire.embeddings import embedder_from_callable
+from grimoire_core import Curator, Gate
+from grimoire_core.db.repository import CorpusMeta, ItemSeed, Match
+from grimoire_core.embeddings import embedder_from_callable
 
 from tab_cli.registry import (
     DEFAULT_THRESHOLD,
@@ -122,12 +127,17 @@ class _Row:
 
 
 class _InMemoryRepository:
-    """Just enough of :class:`GrimoireRepository` to drive a Gate.
+    """Just enough of :class:`GrimoireRepository` to drive a Gate + Curator.
 
-    Stores seeded rows in memory, computes cosine on top_k_in_corpus,
-    answers get_corpus_meta from a single recorded row. Follows the
-    method-shape grimoire's own test stubs use; missing methods (e.g.
-    upsert_items) are unused on the codepaths the registry exercises.
+    Stores seeded rows in memory, computes cosine on
+    ``top_k_in_corpus``, answers ``get_corpus_meta`` from a single
+    recorded row. Follows the method-shape grimoire-core's own test
+    stubs use; methods the registry never reaches (``apply_corpus``,
+    ``rename_item``, etc.) are intentionally absent.
+
+    ``embedded_at`` is a string in grimoire-core 0.5.x's
+    :class:`CorpusMeta` (was a ``datetime`` pre-rename); we hand it a
+    fixed ISO-8601 stamp so the value is stable across runs.
     """
 
     def __init__(self) -> None:
@@ -158,7 +168,7 @@ class _InMemoryRepository:
             corpus_key=corpus_key,
             embedder=embedder_identity,
             embedding_dimensions=embedding_dimensions,
-            embedded_at=datetime(2026, 4, 25, tzinfo=UTC),
+            embedded_at="2026-04-25T00:00:00.000Z",
         )
 
     def top_k_in_corpus(
@@ -166,10 +176,10 @@ class _InMemoryRepository:
         corpus_key: str,
         query_vec: list[float],
         k: int,
-    ) -> list[ItemMatch]:
+    ) -> list[Match]:
         rows = self._corpora.get(corpus_key, [])
         scored = [
-            ItemMatch(
+            Match(
                 name=row.name,
                 threshold=row.threshold,
                 similarity=_cosine(query_vec, row.vec),
@@ -180,12 +190,29 @@ class _InMemoryRepository:
         return scored[:k]
 
 
-def _make_gate() -> Gate:
-    return Gate(
+def _make_pair() -> tuple[Gate, Curator]:
+    """Build a paired gate + curator over one shared in-memory repo.
+
+    The loader's two test seams (``gate=`` and ``curator=``) need a
+    single repository between them — otherwise the curator's seed
+    writes into one store and the gate's match reads from another,
+    and every match silently misses. The pair-with-shared-repo shape
+    is what production looks like too; the only difference is the
+    fake repo / fake embedder.
+    """
+    repo = _InMemoryRepository()
+    embedder = _make_embedder()
+    gate = Gate(
         corpus=SKILL_CORPUS,
-        embedder=_make_embedder(),
-        repository=_InMemoryRepository(),  # type: ignore[arg-type]
+        embedder=embedder,
+        repository=repo,  # type: ignore[arg-type]
     )
+    curator = Curator(
+        corpus=SKILL_CORPUS,
+        embedder=embedder,
+        repository=repo,  # type: ignore[arg-type]
+    )
+    return gate, curator
 
 
 # ----------------------------------------------------- frontmatter parsing
@@ -345,12 +372,12 @@ def test_parse_frontmatter_threshold_error_includes_path(tmp_path: Path) -> None
 def test_load_skill_registry_threads_per_skill_threshold_to_gate(
     tmp_path: Path,
 ) -> None:
-    """End-to-end: a custom grimoire-threshold on one skill flows to Gate.seed.
+    """End-to-end: a custom grimoire-threshold on one skill flows to Curator.seed.
 
     The acceptance signal: build a synthetic plugins tree with two
     skills, give one of them a non-default threshold, load through
-    `load_skill_registry`, and confirm the gate's seeded row carries
-    the override (and the other row carries the fallback).
+    `load_skill_registry`, and confirm the seeded row carries the
+    override (and the other row carries the fallback).
     """
     skills_dir = tmp_path / "tab" / "skills"
     skills_dir.mkdir(parents=True)
@@ -380,16 +407,17 @@ body
         encoding="utf-8",
     )
 
-    gate = _make_gate()
-    registry = load_skill_registry(tmp_path, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(tmp_path, gate=gate, curator=curator)
 
     by_name = {record.name: record for record in registry.records}
     assert by_name["tuned"].threshold == pytest.approx(0.81)
     assert by_name["default"].threshold == DEFAULT_THRESHOLD
 
-    # And the gate received those same per-row thresholds — pull a top-1
-    # for each skill's own description so the threshold field on the
-    # returned Hit is the seeded threshold for that row.
+    # And the curator wrote those same per-row thresholds into the
+    # corpus — pull a top-1 via the gate for each skill's own
+    # description so the threshold field on the returned Hit is the
+    # seeded threshold for that row.
     tuned_hit = registry.match("Tuned skill with a custom bar.")
     assert tuned_hit is not None
     assert tuned_hit.name == "tuned"
@@ -406,8 +434,8 @@ body
 
 def test_load_skill_registry_walks_personality_plugin() -> None:
     """All four v0 personality skills appear in the loaded registry."""
-    gate = _make_gate()
-    registry = load_skill_registry(PLUGINS_DIR, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(PLUGINS_DIR, gate=gate, curator=curator)
 
     names = {record.name for record in registry.records}
 
@@ -421,8 +449,8 @@ def test_load_skill_registry_walks_personality_plugin() -> None:
 
 
 def test_load_skill_registry_assigns_default_threshold_to_every_record() -> None:
-    gate = _make_gate()
-    registry = load_skill_registry(PLUGINS_DIR, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(PLUGINS_DIR, gate=gate, curator=curator)
 
     assert registry.records  # not empty
     for record in registry.records:
@@ -442,8 +470,8 @@ def test_match_routes_obvious_query_to_draw_dino_above_threshold() -> None:
     clear; the fake here is a deliberately strict proxy that fails
     closed rather than open.
     """
-    gate = _make_gate()
-    registry = load_skill_registry(PLUGINS_DIR, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(PLUGINS_DIR, gate=gate, curator=curator)
 
     hit = registry.match("draw an ASCII art dinosaur")
 
@@ -453,6 +481,10 @@ def test_match_routes_obvious_query_to_draw_dino_above_threshold() -> None:
         f"(similarity={hit.similarity:.3f}); is the fake embedder ranking "
         f"another skill higher because of accidental token overlap?"
     )
+    # ``passed`` is informational here — grimoire-core 0.5.x's
+    # ``Gate.match`` filters non-passing hits server-side, so a
+    # non-None hit has already cleared its bar. We still assert the
+    # flag so a future relaxation of the adapter catches our eye.
     assert hit.passed, (
         f"expected draw-dino to clear its threshold, "
         f"got similarity={hit.similarity:.3f} threshold={hit.threshold:.3f}"
@@ -464,18 +496,18 @@ def test_match_returns_silent_for_obviously_unrelated_input() -> None:
 
     "What is the capital of Mongolia" shares no meaningful tokens with
     any of the v0 skill descriptions, so cosine is near-zero across the
-    board and nothing clears the default threshold.
+    board and nothing clears the default threshold. In grimoire-core
+    0.5.x ``Gate.match`` filters below-threshold rows out, so silence
+    surfaces as a flat ``None`` from the registry adapter — no
+    ``passed=False`` middle ground anymore.
     """
-    gate = _make_gate()
-    registry = load_skill_registry(PLUGINS_DIR, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(PLUGINS_DIR, gate=gate, curator=curator)
 
     hit = registry.match("what is the capital of Mongolia")
-
-    # Either no neighbour at all (impossible here — corpus is non-empty)
-    # or a non-passing top-1: the gate's silence-by-default contract.
-    assert hit is None or not hit.passed, (
-        f"expected silence, got passing hit name={hit.name if hit else None} "
-        f"similarity={hit.similarity if hit else None}"
+    assert hit is None, (
+        f"expected silence, got passing hit name={hit.name} "
+        f"similarity={hit.similarity:.3f}"
     )
 
 
@@ -483,14 +515,14 @@ def test_match_returns_silent_for_obviously_unrelated_input() -> None:
 
 
 def test_skill_registry_records_are_immutable() -> None:
-    gate = _make_gate()
-    registry = load_skill_registry(PLUGINS_DIR, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(PLUGINS_DIR, gate=gate, curator=curator)
     assert isinstance(registry.records, tuple)
 
 
 def test_skill_registry_exposes_underlying_gate() -> None:
-    gate = _make_gate()
-    registry = load_skill_registry(PLUGINS_DIR, gate=gate)
+    gate, curator = _make_pair()
+    registry = load_skill_registry(PLUGINS_DIR, gate=gate, curator=curator)
     assert isinstance(registry, SkillRegistry)
     assert registry.gate is gate
 
@@ -505,9 +537,12 @@ def test_load_skill_registry_handles_empty_skills_directory(tmp_path: Path) -> N
 
     Whether that's intentional (a fresh checkout before plugins land)
     or a packaging miss is the caller's call — see the loader docstring.
+    No curator is needed: the loader skips curator construction
+    entirely when ``records`` is empty, so the test seam stays clean
+    without a settings-backed default sneaking in.
     """
     (tmp_path / "tab" / "skills").mkdir(parents=True)
-    gate = _make_gate()
+    gate, _curator = _make_pair()
     registry = load_skill_registry(tmp_path, gate=gate)
     assert registry.records == ()
     # Gate works; just nothing seeded.

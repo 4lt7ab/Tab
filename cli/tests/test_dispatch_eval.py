@@ -3,11 +3,12 @@
 The contract this test pins:
 
 * Run every labeled query in ``cli/tests/fixtures/dispatch_eval.json``
-  through the gate seeded with the v0 personality skills, classify each
-  pair via ``grimoire.calibration.calibrate``, and check the
-  Pattern-B-vs-calibration property: no query should land in
-  ``WRONG_PASS`` — that's the load-bearing safety property the
-  silence-by-default routing relies on.
+  through a gate seeded with the v0 personality skills, classify each
+  pair into one of four buckets (CORRECT_PASS, CORRECT_MISS,
+  WRONG_PASS, WRONG_MISS), and check the Pattern-B-vs-calibration
+  property: no query should land in ``WRONG_PASS`` — that's the
+  load-bearing safety property the silence-by-default routing relies
+  on.
 * Every *non-ambiguous* fires-case (a row whose ``expected`` names a
   skill and whose entry has no ``notes`` annotation) must end in
   ``CORRECT_PASS``. CORRECT_MISS for a fires-case means the right item
@@ -18,11 +19,18 @@ The contract this test pins:
   with their bucket and notes, so reviewers can sanity-check the
   judgement call when calibration changes.
 
+The classification logic was previously imported from
+``grimoire.calibration``; that module didn't survive the
+grimoire → grimoire-core split (calibration was a pre-1.0 surface that
+only the test consumed — production never imported it). Inlined here
+as ``_Bucket`` / ``_classify_pair`` since the bucketing rule is small
+and fully expressed in twelve lines.
+
 The gate is constructed with a hand-curated *concept embedder*, not
 the production Ollama embedder. Reasons:
 
-* No Ollama in the test loop — keeps the suite Postgres-/Ollama-free,
-  same constraint the existing ``test_registry`` fakes respect.
+* No Ollama in the test loop — keeps the suite stack-free, same
+  constraint the existing ``test_registry`` fakes respect.
 * The hashed-bag-of-words used by ``test_registry`` is deliberately
   too crude for fixture-style queries to clear the default 0.55
   threshold (probed: nearly every fires-case lands as CORRECT_MISS
@@ -39,6 +47,11 @@ the production Ollama embedder. Reasons:
 
 The structure mirrors ``test_registry.py``: same ``_InMemoryRepository``
 shape, same ``embedder_from_callable`` seam, same ``Gate`` constructor.
+Writes go through ``Curator`` (split off ``Gate`` in grimoire-core
+0.5.x); reads use ``Gate.explain(k=1)`` to get the top-1 with its
+per-row pass/fail flag, which is what calibration needs (``Gate.match``
+already filters non-passing hits and would lose the CORRECT_MISS
+signal).
 """
 
 from __future__ import annotations
@@ -47,20 +60,12 @@ import json
 import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from enum import Enum
 from pathlib import Path
 
-from grimoire import Gate
-from grimoire.calibration import (
-    Bucket,
-    CalibrationReport,
-    LabeledPair,
-    PairResult,
-    calibrate,
-    load_labeled_file,
-)
-from grimoire.db.repository import CorpusMeta, ItemMatch, ItemSeed
-from grimoire.embeddings import embedder_from_callable
+from grimoire_core import Curator, Gate
+from grimoire_core.db.repository import CorpusMeta, ItemSeed, Match
+from grimoire_core.embeddings import embedder_from_callable
 
 from tab_cli.registry import DEFAULT_THRESHOLD, SKILL_CORPUS
 
@@ -190,11 +195,11 @@ class _Row:
 
 
 class _InMemoryRepository:
-    """Just enough of :class:`GrimoireRepository` to drive a Gate.
+    """Just enough of :class:`GrimoireRepository` to drive a Gate + Curator.
 
     Mirrors the test seam in ``test_registry.py``; the calibration
-    surface only needs ``top_k_in_corpus`` and ``seed_corpus`` (via
-    :meth:`Gate.seed`) plus the corpus-meta hand-shake.
+    surface only needs ``top_k_in_corpus``, ``seed_corpus`` (via
+    :meth:`Curator.seed`) and the ``corpus_meta`` hand-shake.
     """
 
     def __init__(self) -> None:
@@ -225,7 +230,7 @@ class _InMemoryRepository:
             corpus_key=corpus_key,
             embedder=embedder_identity,
             embedding_dimensions=embedding_dimensions,
-            embedded_at=datetime(2026, 4, 25, tzinfo=UTC),
+            embedded_at="2026-04-25T00:00:00.000Z",
         )
 
     def top_k_in_corpus(
@@ -233,10 +238,10 @@ class _InMemoryRepository:
         corpus_key: str,
         query_vec: list[float],
         k: int,
-    ) -> list[ItemMatch]:
+    ) -> list[Match]:
         rows = self._corpora.get(corpus_key, [])
         scored = [
-            ItemMatch(
+            Match(
                 name=row.name,
                 threshold=row.threshold,
                 similarity=_cosine(query_vec, row.vec),
@@ -261,17 +266,126 @@ _SKILL_CENTROIDS: tuple[tuple[str, str], ...] = (
 
 
 def _make_gate() -> Gate:
-    """Build the v0-skill-seeded gate the dispatch eval runs against."""
+    """Build the v0-skill-seeded gate the dispatch eval runs against.
+
+    Reads and writes share one in-memory repository so the curator's
+    seed lands where the gate's match later reads.
+    """
+    repo = _InMemoryRepository()
+    embedder = _make_embedder()
     gate = Gate(
         corpus=SKILL_CORPUS,
-        embedder=_make_embedder(),
-        repository=_InMemoryRepository(),  # type: ignore[arg-type]
+        embedder=embedder,
+        repository=repo,  # type: ignore[arg-type]
     )
-    gate.seed(
+    curator = Curator(
+        corpus=SKILL_CORPUS,
+        embedder=embedder,
+        repository=repo,  # type: ignore[arg-type]
+    )
+    curator.seed(
         (name, description, DEFAULT_THRESHOLD)
         for name, description in _SKILL_CENTROIDS
     )
     return gate
+
+
+# ------------------------------------------------------------- calibration
+
+
+@dataclass(frozen=True, slots=True)
+class _LabeledPair:
+    """One row from the dispatch fixture: a query and its expected skill.
+
+    ``expected`` is ``None`` for negative rows (queries that should
+    land in silence). The fixture also carries an optional ``notes``
+    field for ambiguous-but-judged rows; we keep that on the raw
+    entries dict and look it up by index, so this dataclass stays
+    pair-shaped.
+    """
+
+    query: str
+    expected: str | None
+
+
+class _Bucket(Enum):
+    """The four classification buckets calibration sorts each pair into.
+
+    * ``CORRECT_PASS`` — top-1 was the expected skill *and* cleared its
+      threshold. The good outcome for a fires-case.
+    * ``CORRECT_MISS`` — silence was correct (either the expected skill
+      was top-1 but didn't clear the bar, or expected was ``None`` and
+      no row cleared the bar).
+    * ``WRONG_PASS`` — top-1 cleared its threshold but was the wrong
+      skill (or any skill, when expected was ``None``). The
+      load-bearing safety violation: a misroute the user can't see.
+    * ``WRONG_MISS`` — top-1 was a different skill than expected and
+      didn't clear its bar. Fixable silence: nothing fired but the
+      right skill wasn't the one we almost picked either.
+    """
+
+    CORRECT_PASS = "CORRECT_PASS"
+    CORRECT_MISS = "CORRECT_MISS"
+    WRONG_PASS = "WRONG_PASS"
+    WRONG_MISS = "WRONG_MISS"
+
+
+@dataclass(frozen=True, slots=True)
+class _PairResult:
+    """One row's classification, plus the top-1 numbers that drove it."""
+
+    pair: _LabeledPair
+    bucket: _Bucket
+    top1_name: str | None
+    top1_similarity: float | None
+    top1_threshold: float | None
+
+
+def _classify_pair(gate: Gate, pair: _LabeledPair) -> _PairResult:
+    """Classify one labeled pair into a :class:`_Bucket`.
+
+    Uses :meth:`Gate.explain` rather than :meth:`Gate.match` so we get
+    the top-1 *with* its pass/fail flag. ``match`` already filters
+    non-passing rows out, which is the right shape for production
+    routing but loses the CORRECT_MISS signal calibration needs.
+    """
+    hits = gate.explain(pair.query, k=1)
+    if not hits:
+        # Empty corpus or zero-vector query against an empty corpus.
+        # Treat as silence: CORRECT_MISS when expected was None,
+        # WRONG_MISS when expected named a skill that wasn't even in
+        # the corpus.
+        bucket = _Bucket.CORRECT_MISS if pair.expected is None else _Bucket.WRONG_MISS
+        return _PairResult(
+            pair=pair,
+            bucket=bucket,
+            top1_name=None,
+            top1_similarity=None,
+            top1_threshold=None,
+        )
+
+    hit = hits[0]
+    correct_skill = hit.name == pair.expected
+    if hit.passed:
+        bucket = _Bucket.CORRECT_PASS if correct_skill else _Bucket.WRONG_PASS
+    else:
+        # Below threshold → silence. The expected==None case is
+        # CORRECT_MISS regardless of which skill happened to be top-1
+        # (the user wanted silence and got it). The expected==<skill>
+        # case is CORRECT_MISS only when the right skill won the
+        # top-1 (right intent, bar drift); otherwise WRONG_MISS.
+        if pair.expected is None or correct_skill:
+            bucket = _Bucket.CORRECT_MISS
+        else:
+            bucket = _Bucket.WRONG_MISS
+
+    return _PairResult(
+        pair=pair,
+        bucket=bucket,
+        top1_name=hit.name,
+        top1_similarity=hit.similarity,
+        top1_threshold=hit.threshold,
+    )
 
 
 # ------------------------------------------------------------- helpers
@@ -280,18 +394,19 @@ def _make_gate() -> Gate:
 def _load_fixture_entries() -> list[dict[str, object]]:
     """Read the raw JSON entries (preserves the ``notes`` field).
 
-    ``grimoire.calibration.load_labeled_file`` discards anything beyond
-    ``query`` and ``expected``; the test needs the optional ``notes``
-    key for the ambiguous-audit block, so we parse the file ourselves
-    and rebuild ``LabeledPair`` rows alongside.
+    The ambiguous-audit block needs the optional ``notes`` key, which
+    is fixture-only and doesn't belong on :class:`_LabeledPair`. We
+    parse the file once and rebuild ``_LabeledPair`` rows alongside.
     """
     raw = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
     if not isinstance(raw, list):
-        raise ValueError(f"{FIXTURE_PATH}: expected JSON array, got {type(raw).__name__}")
+        raise ValueError(
+            f"{FIXTURE_PATH}: expected JSON array, got {type(raw).__name__}",
+        )
     return raw
 
 
-def _format_results_table(results: Iterable[PairResult]) -> str:
+def _format_results_table(results: Iterable[_PairResult]) -> str:
     """Render a per-pair table for failure messages.
 
     Columns are picked for human triage: bucket first (so a column scan
@@ -350,26 +465,24 @@ def test_dispatch_eval_holds_calibration_contract() -> None:
     """
     raw_entries = _load_fixture_entries()
     pairs = [
-        LabeledPair(query=str(entry["query"]), expected=entry.get("expected"))  # type: ignore[arg-type]
+        _LabeledPair(
+            query=str(entry["query"]),
+            expected=entry.get("expected"),  # type: ignore[arg-type]
+        )
         for entry in raw_entries
     ]
-    # Sanity-check load_labeled_file matches our hand parse — the
-    # fixture is consumed both ways in production (CLI calibrate) and
-    # here, and they should agree on rows.
-    file_pairs = load_labeled_file(FIXTURE_PATH)
-    assert file_pairs == pairs, (
-        "raw JSON entries and load_labeled_file disagree on rows; "
-        "the fixture's ambiguous-row 'notes' field may have crossed "
-        "into LabeledPair territory unexpectedly."
-    )
 
     gate = _make_gate()
-    report: CalibrationReport = calibrate(gate, pairs)
+    results = [_classify_pair(gate, pair) for pair in pairs]
 
-    table = _format_results_table(report.results)
+    bucket_counts = {bucket: 0 for bucket in _Bucket}
+    for result in results:
+        bucket_counts[result.bucket] += 1
+
+    table = _format_results_table(results)
 
     # ---- (1) Safety property ---------------------------------------
-    wrong_pass_count = report.bucket_counts[Bucket.WRONG_PASS]
+    wrong_pass_count = bucket_counts[_Bucket.WRONG_PASS]
     assert wrong_pass_count == 0, (
         "calibration regression: at least one query routed to the "
         f"wrong skill above its threshold ({wrong_pass_count} WRONG_PASS rows). "
@@ -380,8 +493,8 @@ def test_dispatch_eval_holds_calibration_contract() -> None:
 
     # ---- (2) Non-ambiguous fires-cases must end in CORRECT_PASS ----
     is_ambiguous = ["notes" in entry for entry in raw_entries]
-    failures: list[PairResult] = []
-    for result, ambiguous, entry in zip(report.results, is_ambiguous, raw_entries, strict=True):
+    failures: list[_PairResult] = []
+    for result, ambiguous, _entry in zip(results, is_ambiguous, raw_entries, strict=True):
         if ambiguous:
             continue
         if result.pair.expected is None:
@@ -389,7 +502,7 @@ def test_dispatch_eval_holds_calibration_contract() -> None:
             # assertion. WRONG_PASS would already have failed (1)
             # above; CORRECT_MISS is the expected silence behaviour.
             continue
-        if result.bucket is not Bucket.CORRECT_PASS:
+        if result.bucket is not _Bucket.CORRECT_PASS:
             failures.append(result)
 
     assert not failures, (
@@ -403,7 +516,7 @@ def test_dispatch_eval_holds_calibration_contract() -> None:
 
     # ---- (3) Ambiguous-case audit block (non-fatal) ----------------
     audit_lines = ["", "ambiguous-case audit (non-fatal):"]
-    for result, ambiguous, entry in zip(report.results, is_ambiguous, raw_entries, strict=True):
+    for result, ambiguous, entry in zip(results, is_ambiguous, raw_entries, strict=True):
         if not ambiguous:
             continue
         notes = entry.get("notes", "")

@@ -34,3 +34,8 @@ __pycache__/
 .env.*
 
 .local/
+
+# grimoire-core's cwd-relative SQLite fallback. The Tab runtime pins
+# the DB to ~/.tab/grimoire.db; this directory only appears when
+# something runs grimoire-core before the pin (e.g. an ad-hoc REPL).
+.grimoire/

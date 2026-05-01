@@ -249,6 +249,55 @@ def draw_dino(
 # ``cli/MAINTENANCE.md`` §5.
 
 
+@personality_command(app, "muse")
+def muse(
+    ctx: TabContext,
+    topic: list[str] = typer.Argument(
+        ...,
+        metavar="TOPIC...",
+        help=(
+            "The topic to muse on (e.g. 'auth rewrite'). Words are "
+            "joined with single spaces and passed to the muse loop."
+        ),
+        show_default=False,
+    ),
+    iterations: int = typer.Option(
+        15,
+        "--iterations",
+        "-n",
+        help="Maximum loop iterations before stopping (generation budget).",
+    ),
+    stale_limit: int = typer.Option(
+        3,
+        "--stale-limit",
+        help="Stop after this many consecutive redundant thoughts.",
+    ),
+) -> None:
+    """Curate a per-topic grimoire by thinking about it out loud.
+
+    Each iteration generates one Tab-voiced sentence about the topic,
+    embeds it, and gates against a per-topic grimoire corpus
+    (``topic:<slug>``). Novel thoughts get added; redundant ones are
+    skipped. Termination is convergence (``--stale-limit`` consecutive
+    redundant thoughts) or budget (``--iterations``), whichever fires
+    first.
+
+    The corpus persists across calls — re-run ``tab muse <topic>``
+    next week and yesterday's thoughts still gate today's. Personality
+    dials (``--humor``, ``--directness``, etc.) shape voice the same
+    way they do for ``tab chat``.
+    """
+    from tab_cli.muse import run_muse
+
+    run_muse(
+        join_words(topic),
+        settings=ctx.settings,
+        model=ctx.model,
+        budget=iterations,
+        stale_limit=stale_limit,
+    )
+
+
 @personality_command(app, "chat")
 def chat(ctx: TabContext) -> None:
     """Start an interactive REPL with the Tab persona.

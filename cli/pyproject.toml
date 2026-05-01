@@ -1,6 +1,6 @@
 [project]
 name = "tab-cli"
-version = "0.4.3"
+version = "0.4.4"
 description = "Tab — a verb-shaped CLI agent for the Tab plugin ecosystem"
 readme = "README.md"
 license = { file = "../LICENSE" }
@@ -9,7 +9,7 @@ authors = [{ name = "4lt7ab" }]
 dependencies = [
     "typer>=0.15.1",
     "pydantic-ai>=0.0.20",
-    "grimoire",
+    "grimoire-core",
     "pyyaml>=6.0",
     # Used by `tab ask --model ollama:<name>` to bypass pydantic-ai's
     # OpenAI-compat routing for local Ollama. Currently transitive via
@@ -29,7 +29,7 @@ build-backend = "hatchling.build"
 packages = ["src/tab_cli"]
 
 [tool.uv.sources]
-grimoire = { git = "https://github.com/4lt7ab/grimoire.git", tag = "v0.1.1" }
+grimoire-core = { git = "https://github.com/4lt7ab/grimoire.git", tag = "v0.0.1", subdirectory = "packages/grimoire-core" }
 
 [dependency-groups]
 dev = [

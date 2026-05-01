@@ -10,7 +10,7 @@ above.
 The loader is deliberately small. It walks
 ``plugins/tab/skills/*/SKILL.md``, parses YAML frontmatter for ``name``
 and ``description`` (``argument-hint`` is optional), and seeds a
-:class:`grimoire.Gate` with the resulting rows. The chat/ask wiring
+:class:`grimoire_core.Gate` with the resulting rows. The chat/ask wiring
 holds the registry and queries it per turn — silence-by-default is the
 safety property; below-threshold input falls through to the agent.
 
@@ -33,8 +33,8 @@ from typing import TYPE_CHECKING
 
 from tab_cli.paths import FrontmatterError, parse_frontmatter
 
-if TYPE_CHECKING:  # avoid forcing grimoire's Postgres import path at module load
-    from grimoire import Gate, Hit
+if TYPE_CHECKING:  # avoid forcing grimoire's backend import path at module load
+    from grimoire_core import Curator, Gate, Hit
 
 
 # The corpus key under which all v0 personality-skill rows live. Single
@@ -63,9 +63,9 @@ class SkillRecord:
     """One parsed ``SKILL.md`` ready to seed grimoire.
 
     ``threshold`` carries the per-row gate bar straight to
-    :meth:`grimoire.Gate.seed`. A SKILL.md may set ``grimoire-threshold``
-    in its frontmatter to override; absent the override, the loader fills
-    in :data:`DEFAULT_THRESHOLD`.
+    :meth:`grimoire_core.Curator.seed`. A SKILL.md may set
+    ``grimoire-threshold`` in its frontmatter to override; absent the
+    override, the loader fills in :data:`DEFAULT_THRESHOLD`.
     """
 
     name: str
@@ -111,7 +111,7 @@ class SkillRegistry:
 
     @property
     def gate(self) -> Gate:
-        """The underlying :class:`grimoire.Gate`. Exposed for diagnostics."""
+        """The underlying :class:`grimoire_core.Gate`. Exposed for diagnostics."""
         return self._gate
 
     @property
@@ -120,15 +120,17 @@ class SkillRegistry:
         return self._records
 
     def match(self, query: str) -> Hit | None:
-        """Return the top-1 :class:`grimoire.Hit` for ``query``.
+        """Return the top-1 :class:`grimoire_core.Hit` for ``query``, or ``None``.
 
-        Mirror of :meth:`grimoire.Gate.match` — we don't reshape the
-        return type because callers will want ``passed``, ``similarity``,
-        and ``threshold`` to log diagnostics ("almost matched X with
-        0.51 vs 0.55"). The chat wiring decides what to do with a
-        non-passing hit; the registry just relays.
+        Adapter over :meth:`grimoire_core.Gate.match`, which returns a
+        list of passed hits (silence-by-default — non-passing rows are
+        filtered out, not surfaced with ``passed=False``). We unwrap to
+        ``Hit | None`` for the chat wiring's ergonomics. For diagnostic
+        "almost matched X at 0.51 vs 0.55" output, reach
+        :attr:`gate` and call :meth:`grimoire_core.Gate.explain` directly.
         """
-        return self._gate.match(query)
+        hits = self._gate.match(query)
+        return hits[0] if hits else None
 
 
 def parse_skill_frontmatter(path: Path) -> SkillRecord:
@@ -183,16 +185,24 @@ def load_skill_registry(
     plugins_dir: Path,
     *,
     gate: Gate | None = None,
+    curator: Curator | None = None,
 ) -> SkillRegistry:
     """Walk ``plugins_dir/tab/skills/*/SKILL.md`` and seed a grimoire gate.
 
     The signature documented in the task is ``(plugins_dir) ->
-    SkillRegistry``; the keyword-only ``gate=`` is a test seam mirroring
-    grimoire's own ``Gate(repository=None)`` shape. When omitted, the
-    function constructs the canonical gate via
-    :meth:`grimoire.Gate.from_settings` (Ollama + the shared pgvector
-    pool). When provided, the caller has already wired an embedder and
-    repository — typically a fake pair for unit tests.
+    SkillRegistry``; the keyword-only ``gate=`` / ``curator=`` are
+    test seams. ``gate`` is the read side (used by :meth:`SkillRegistry.match`),
+    ``curator`` is the write side (used here to seed the SKILL.md rows
+    into the corpus). When either is omitted, the function constructs
+    the canonical pair via :meth:`grimoire_core.Gate.from_settings`
+    and :meth:`grimoire_core.Curator.from_settings` (Ollama + the
+    shared backing store). Tests typically inject a paired fake
+    (gate + curator sharing one in-memory repository) so the seeded
+    rows are visible to the gate's match call.
+
+    The split mirrors grimoire-core's own API shape (v0.5.x and later):
+    ``Gate`` is read-only, authoring lives on ``Curator``. One seam
+    per role.
 
     Returns a :class:`SkillRegistry` ready to answer ``match(query)``.
 
@@ -203,7 +213,8 @@ def load_skill_registry(
       deterministic across runs (filesystem iteration order isn't).
     - An empty skills directory is not an error; the registry returns
       no matches. Whether that's the user's intent or a packaging miss
-      is the caller's call.
+      is the caller's call. We also skip building a default curator
+      in that case — the corpus stays untouched.
     """
     skills_dir = plugins_dir / "tab" / "skills"
     if not skills_dir.is_dir():
@@ -218,18 +229,28 @@ def load_skill_registry(
     skill_md_paths = sorted(skills_dir.glob("*/SKILL.md"))
     records = [parse_skill_frontmatter(path) for path in skill_md_paths]
 
-    if gate is None:
-        # Lazy import: grimoire's top-level ``Gate.from_settings`` pulls
-        # in pgvector and ollama at first call. Tests that pass an
-        # injected gate avoid the import entirely, which keeps the
-        # ``tab_cli.registry`` module cheap to import in environments
-        # that don't have the runtime stack wired up yet.
-        from grimoire import Gate
+    if gate is None or (records and curator is None):
+        # Lazy import: grimoire_core's ``from_settings`` constructors
+        # pull in the embedder and DB connection at first call. Tests
+        # that inject both seams avoid the import entirely, which
+        # keeps the ``tab_cli.registry`` module cheap to import in
+        # environments that don't have the runtime stack wired up yet.
+        # ``ensure_migrated`` is idempotent and cached, so the second
+        # call site (in muse.py) hits a no-op.
+        from tab_cli.grimoire_runtime import ensure_migrated
 
-        gate = Gate.from_settings(corpus=SKILL_CORPUS)
+        ensure_migrated()
 
-    if records:
-        gate.seed(
+        from grimoire_core import Curator as _Curator
+        from grimoire_core import Gate as _Gate
+
+        if gate is None:
+            gate = _Gate.from_settings(corpus=SKILL_CORPUS)
+        if records and curator is None:
+            curator = _Curator.from_settings(corpus=SKILL_CORPUS)
+
+    if records and curator is not None:
+        curator.seed(
             (record.name, record.description, record.threshold)
             for record in records
         )
