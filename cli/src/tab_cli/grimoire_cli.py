@@ -44,17 +44,24 @@ def _load_registry_for_show() -> "object":
     calling :func:`tab_cli.registry.load_skill_registry`, which would
     pull in pgvector/Ollama at import time. The returned object has the
     same ``records`` shape :func:`effective_thresholds` expects.
+
+    Walks both skill homes (plugin tree + CLI-local) in the same order
+    :func:`tab_cli.registry.load_skill_registry` does, so the show
+    output is the same set of records the chat REPL gates against.
     """
-    from tab_cli.paths import plugins_dir
+    from tab_cli.paths import cli_skills_dir, plugins_dir
     from tab_cli.registry import parse_skill_frontmatter
 
-    skills_dir = plugins_dir() / "tab" / "skills"
-    if not skills_dir.is_dir():
+    plugin_skills_dir = plugins_dir() / "tab" / "skills"
+    if not plugin_skills_dir.is_dir():
         raise FileNotFoundError(
-            f"expected personality skills directory at {skills_dir}",
+            f"expected personality skills directory at {plugin_skills_dir}",
         )
 
-    skill_md_paths = sorted(skills_dir.glob("*/SKILL.md"))
+    skill_md_paths = sorted(plugin_skills_dir.glob("*/SKILL.md"))
+    cli_dir = cli_skills_dir()
+    if cli_dir.is_dir():
+        skill_md_paths.extend(sorted(cli_dir.glob("*/SKILL.md")))
     records = tuple(parse_skill_frontmatter(path) for path in skill_md_paths)
 
     # Lightweight stand-in mirroring SkillRegistry's read-only surface:

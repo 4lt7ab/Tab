@@ -33,6 +33,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from tab_cli.paths import cli_skills_dir as _cli_skills_dir
 from tab_cli.paths import plugins_dir as _plugins_dir
 from tab_cli.paths import strip_frontmatter
 from tab_cli.personality import TabSettings, build_system_prompt
@@ -51,7 +52,36 @@ class SkillNotFoundError(FileNotFoundError):
 
 
 def _skill_md_path(plugins_dir: Path, skill_name: str) -> Path:
+    """Return the canonical plugin-tree path for ``skill_name``'s SKILL.md.
+
+    Used by the test seam ``read_skill_body(plugins_dir=...)`` and the
+    error path of the multi-source resolver. The CLI-local skill home
+    has its own layout (``<cli_skills>/<name>/SKILL.md``, no ``tab/``
+    intermediate) and is resolved through :func:`_resolve_skill_md_path`,
+    not this helper.
+    """
     return plugins_dir / "tab" / "skills" / skill_name / "SKILL.md"
+
+
+def _resolve_skill_md_path(skill_name: str) -> Path:
+    """Find ``skill_name``'s SKILL.md across both skill homes.
+
+    Plugin tree first, CLI-local second — matches the order
+    :func:`tab_cli.registry.load_skill_registry` walks, so a
+    duplicate-name conflict the registry rejects at load time would
+    also surface here as the plugin copy winning. Returns the canonical
+    plugin path when neither file exists, so the resulting
+    :class:`SkillNotFoundError` points at the most likely missing
+    location rather than the CLI-local fallback.
+    """
+    candidates = (
+        _skill_md_path(_plugins_dir(), skill_name),
+        _cli_skills_dir() / skill_name / "SKILL.md",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
 
 
 def read_skill_body(skill_name: str, plugins_dir: Path | None = None) -> str:
@@ -62,12 +92,19 @@ def read_skill_body(skill_name: str, plugins_dir: Path | None = None) -> str:
     draw-dino port pins exactly this: behavior is driven by the markdown
     body of the SKILL.md, not by a Python-side copy.
 
+    When ``plugins_dir`` is omitted, the resolver searches both skill
+    homes (plugin tree, then CLI-local). When it is provided — the
+    test seam — only the plugin-tree layout is consulted, preserving
+    the existing test contract.
+
     Raises:
-        SkillNotFoundError: ``plugins/tab/skills/<skill_name>/SKILL.md``
-            does not exist.
+        SkillNotFoundError: ``SKILL.md`` not present in either home (or,
+            with the test seam, at the explicit plugins_dir path).
     """
-    plugins_dir = plugins_dir if plugins_dir is not None else _plugins_dir()
-    path = _skill_md_path(plugins_dir, skill_name)
+    if plugins_dir is not None:
+        path = _skill_md_path(plugins_dir, skill_name)
+    else:
+        path = _resolve_skill_md_path(skill_name)
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:

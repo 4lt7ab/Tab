@@ -186,6 +186,7 @@ def load_skill_registry(
     *,
     gate: Gate | None = None,
     curator: Curator | None = None,
+    extra_skill_dirs: Iterable[Path] = (),
 ) -> SkillRegistry:
     """Walk ``plugins_dir/tab/skills/*/SKILL.md`` and seed a grimoire gate.
 
@@ -204,11 +205,29 @@ def load_skill_registry(
     ``Gate`` is read-only, authoring lives on ``Curator``. One seam
     per role.
 
+    ``extra_skill_dirs`` accepts additional directories whose immediate
+    children each hold a ``SKILL.md``. Production wires
+    :func:`tab_cli.paths.cli_skills_dir` here so the CLI-local skill
+    home (``cli/src/tab_cli/skills/<name>/SKILL.md``) seeds into the
+    same gate as the plugin substrate. Each path is treated like the
+    plugin ``skills/`` dir — its layout is ``<dir>/<name>/SKILL.md``,
+    not ``<dir>/tab/skills/<name>/SKILL.md``. Missing directories are
+    silently skipped (a fresh checkout where the CLI dir has no skills
+    yet shouldn't crash); a dir that exists but has zero ``SKILL.md``
+    files is also fine.
+
     Returns a :class:`SkillRegistry` ready to answer ``match(query)``.
 
     Notes:
 
-    - The walker only descends into ``plugins_dir/tab/skills/``.
+    - The walker descends into ``plugins_dir/tab/skills/`` and each
+      ``extra_skill_dirs`` entry. Records are merged into one corpus
+      (:data:`SKILL_CORPUS`) so a single ``match`` answers across all
+      sources.
+    - Duplicate skill names across sources raise :class:`SkillFrontmatterError`
+      — silently letting one source shadow another would make the
+      override implicit, and the registry's whole job is to be
+      explicit about what fired.
     - Skills are seeded in sorted order so the registry is
       deterministic across runs (filesystem iteration order isn't).
     - An empty skills directory is not an error; the registry returns
@@ -216,18 +235,41 @@ def load_skill_registry(
       is the caller's call. We also skip building a default curator
       in that case — the corpus stays untouched.
     """
-    skills_dir = plugins_dir / "tab" / "skills"
-    if not skills_dir.is_dir():
+    plugin_skills_dir = plugins_dir / "tab" / "skills"
+    if not plugin_skills_dir.is_dir():
         raise FileNotFoundError(
-            f"expected personality skills directory at {skills_dir}",
+            f"expected personality skills directory at {plugin_skills_dir}",
         )
 
-    # Sort by skill-folder name. The glob pattern keeps us scoped to
-    # immediate children of ``skills/`` — nested ``SKILL.md`` files
-    # would be a structural surprise and shouldn't be silently picked
-    # up.
-    skill_md_paths = sorted(skills_dir.glob("*/SKILL.md"))
+    # Sort by skill-folder name within each source. The glob pattern
+    # keeps us scoped to immediate children of each skills dir —
+    # nested ``SKILL.md`` files would be a structural surprise and
+    # shouldn't be silently picked up.
+    skill_md_paths: list[Path] = sorted(plugin_skills_dir.glob("*/SKILL.md"))
+    for extra in extra_skill_dirs:
+        if not extra.is_dir():
+            # Missing extra-source dir is benign: a fresh checkout may
+            # not have CLI-local skills yet, and the production caller
+            # always passes ``cli_skills_dir()`` even when empty.
+            continue
+        skill_md_paths.extend(sorted(extra.glob("*/SKILL.md")))
+
     records = [parse_skill_frontmatter(path) for path in skill_md_paths]
+
+    # Duplicate-name check spans every source. Two SKILL.md files
+    # claiming the same ``name`` would seed two rows under one corpus
+    # key on :meth:`Curator.seed`'s upsert semantics — last write wins
+    # silently — and the user-visible match would flicker between them
+    # depending on filesystem order. Better to fail at load.
+    seen: dict[str, Path] = {}
+    for record in records:
+        prior = seen.get(record.name)
+        if prior is not None:
+            raise SkillFrontmatterError(
+                f"duplicate skill name {record.name!r} in {record.path} "
+                f"(also at {prior})",
+            )
+        seen[record.name] = record.path
 
     if gate is None or (records and curator is None):
         # Lazy import: grimoire_core's ``from_settings`` constructors

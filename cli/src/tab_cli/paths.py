@@ -86,6 +86,24 @@ def plugins_dir() -> Path:
     return repo_root / "plugins"
 
 
+@lru_cache(maxsize=1)
+def cli_skills_dir() -> Path:
+    """Return the CLI-local skills directory: ``cli/src/tab_cli/skills``.
+
+    Companion to :func:`plugins_dir`. Skills shared with the Claude
+    Code plugin host live under ``plugins/tab/skills/``; skills whose
+    capability depends on CLI-only Python (grimoire-core, the settings
+    system, anything pydantic-ai-shaped) live here. The registry
+    loader walks both paths and seeds them into a single gate, so a
+    chat turn matches across the union without callers caring which
+    home a given skill came from.
+
+    Cached for the same reason :func:`plugins_dir` is — fixed for the
+    lifetime of the process, touched every chat / ask init.
+    """
+    return Path(__file__).resolve().parent / "skills"
+
+
 def parse_frontmatter(text: str, path: Path) -> tuple[dict[str, object], str]:
     """Pull the YAML frontmatter and body out of a Markdown file.
 

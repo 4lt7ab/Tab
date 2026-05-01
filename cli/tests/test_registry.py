@@ -547,3 +547,142 @@ def test_load_skill_registry_handles_empty_skills_directory(tmp_path: Path) -> N
     assert registry.records == ()
     # Gate works; just nothing seeded.
     assert registry.match("anything") is None
+
+
+# ----------------------------------------------------- multi-source loader
+
+
+def test_load_skill_registry_merges_extra_skill_dirs(tmp_path: Path) -> None:
+    """``extra_skill_dirs`` records seed alongside the plugin records.
+
+    The CLI-only home (``cli/src/tab_cli/skills/``) plumbs through this
+    parameter in production. The acceptance signal: a skill in the
+    extra dir shows up in ``registry.records`` and matches via the
+    same gate as the plugin-tree skills.
+    """
+    plugin_skills = tmp_path / "tab" / "skills"
+    plugin_skills.mkdir(parents=True)
+    (plugin_skills / "shared").mkdir()
+    (plugin_skills / "shared" / "SKILL.md").write_text(
+        """---
+name: shared
+description: "A skill that lives in the plugin tree."
+---
+
+body
+""",
+        encoding="utf-8",
+    )
+
+    cli_skills = tmp_path / "cli_local"
+    cli_skills.mkdir()
+    (cli_skills / "cliside").mkdir()
+    (cli_skills / "cliside" / "SKILL.md").write_text(
+        """---
+name: cliside
+description: "A CLI-only skill that lives next to the runtime."
+---
+
+body
+""",
+        encoding="utf-8",
+    )
+
+    gate, curator = _make_pair()
+    registry = load_skill_registry(
+        tmp_path,
+        gate=gate,
+        curator=curator,
+        extra_skill_dirs=[cli_skills],
+    )
+
+    names = {r.name for r in registry.records}
+    assert names == {"shared", "cliside"}
+
+    # The CLI-only record matches via the same gate.
+    cli_hit = registry.match("A CLI-only skill that lives next to the runtime.")
+    assert cli_hit is not None
+    assert cli_hit.name == "cliside"
+
+
+def test_load_skill_registry_silently_skips_missing_extra_dirs(
+    tmp_path: Path,
+) -> None:
+    """A missing CLI-local dir is benign — empty checkouts mustn't crash.
+
+    Production passes ``cli_skills_dir()`` even when no CLI-only
+    skills exist. The loader treats ``is_dir()`` false as "no extra
+    records to seed" rather than raising — same shape as the empty-
+    skills-dir case.
+    """
+    plugin_skills = tmp_path / "tab" / "skills"
+    plugin_skills.mkdir(parents=True)
+    (plugin_skills / "alone").mkdir()
+    (plugin_skills / "alone" / "SKILL.md").write_text(
+        """---
+name: alone
+description: "Only skill in the tree."
+---
+
+body
+""",
+        encoding="utf-8",
+    )
+
+    gate, curator = _make_pair()
+    registry = load_skill_registry(
+        tmp_path,
+        gate=gate,
+        curator=curator,
+        extra_skill_dirs=[tmp_path / "does-not-exist"],
+    )
+
+    assert {r.name for r in registry.records} == {"alone"}
+
+
+def test_load_skill_registry_rejects_duplicate_names_across_sources(
+    tmp_path: Path,
+) -> None:
+    """A name collision between the plugin tree and a CLI-only dir loads loudly.
+
+    Silently letting one source shadow another would make the
+    override implicit. The registry's contract is silence-by-default
+    on misses but loud-by-default on misconfiguration; this is the
+    misconfiguration shape.
+    """
+    plugin_skills = tmp_path / "tab" / "skills"
+    plugin_skills.mkdir(parents=True)
+    (plugin_skills / "twin").mkdir()
+    (plugin_skills / "twin" / "SKILL.md").write_text(
+        """---
+name: twin
+description: "The plugin-tree copy."
+---
+
+body
+""",
+        encoding="utf-8",
+    )
+
+    cli_skills = tmp_path / "cli_local"
+    cli_skills.mkdir()
+    (cli_skills / "twin").mkdir()
+    (cli_skills / "twin" / "SKILL.md").write_text(
+        """---
+name: twin
+description: "The CLI-local copy."
+---
+
+body
+""",
+        encoding="utf-8",
+    )
+
+    gate, curator = _make_pair()
+    with pytest.raises(SkillFrontmatterError, match="duplicate"):
+        load_skill_registry(
+            tmp_path,
+            gate=gate,
+            curator=curator,
+            extra_skill_dirs=[cli_skills],
+        )

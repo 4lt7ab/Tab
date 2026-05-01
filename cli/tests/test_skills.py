@@ -81,6 +81,47 @@ def test_read_skill_body_raises_for_unknown_skill(tmp_path: Path) -> None:
         read_skill_body("draw-dino", plugins_dir=tmp_path)
 
 
+def test_read_skill_body_resolves_cli_local_skill() -> None:
+    """The no-arg form finds skills under ``cli/src/tab_cli/skills/``.
+
+    ``cairn`` is the first CLI-only skill — its SKILL.md lives next
+    to the runtime, not in the plugin tree, because its capability
+    depends on grimoire-core which the Claude Code plugin host can't
+    provide. The resolver must fall through plugin-tree to CLI-local
+    so the chat dispatch can compile the agent without callers
+    plumbing a separate path.
+    """
+    body = read_skill_body("cairn")
+
+    # File-specific body content — these phrases anchor the cairn
+    # SKILL.md's voice and survive unrelated edits.
+    assert "Cairn" in body
+    assert "recall" in body.lower()
+
+    # Frontmatter must not bleed through.
+    assert not body.startswith("---")
+    assert "name: cairn" not in body
+
+
+def test_read_skill_body_test_seam_does_not_fall_through_to_cli_local(
+    tmp_path: Path,
+) -> None:
+    """``plugins_dir=`` is a test seam — it must not consult the CLI-local home.
+
+    The seam exists so tests can build a synthetic plugins tree and
+    get deterministic resolution. If a missing skill in the synthetic
+    tree silently fell through to the real ``cli_skills_dir()``, a
+    test that meant to assert "this skill is missing" would
+    accidentally find ``cairn`` (or any other on-disk CLI-local
+    skill) and the failure mode would be invisible.
+    """
+    (tmp_path / "tab" / "skills").mkdir(parents=True)
+    # ``cairn`` exists on disk under cli_skills_dir(), but the test
+    # seam should refuse to look there.
+    with pytest.raises(SkillNotFoundError, match="cairn"):
+        read_skill_body("cairn", plugins_dir=tmp_path)
+
+
 def test_read_skill_body_strips_frontmatter_for_a_synthetic_skill(
     tmp_path: Path,
 ) -> None:

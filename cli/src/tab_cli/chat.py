@@ -117,18 +117,26 @@ def _tools_for_skill(skill_name: str) -> list[Any]:
     """Return the per-skill tool list for ``skill_name`` dispatches.
 
     Most personality skills don't need tools — the runner stays
-    generic on purpose. ``teach`` is the first that does: the SKILL.md
-    body's research phase wants a ``web_search`` tool and grimoire
-    routing inside ``tab chat`` is the path that wires it.
+    generic on purpose. Two skills do today:
+
+    - ``teach`` — its SKILL.md body's research phase wants
+      ``web_search`` (Exa-backed).
+    - ``cairn`` — its SKILL.md body asks Tab to look up memories via
+      ``recall``, which walks every memory corpus in the grimoire DB.
 
     Lazy import for the same reason ``compile_skill_agent`` is lazy:
     the chat module is loaded for every REPL turn and ``httpx`` /
-    pydantic-ai cost only matters when a tool is actually attached.
+    pydantic-ai / grimoire-core cost only matters when a tool is
+    actually attached.
     """
     if skill_name == "teach":
         from tab_cli.web_search import default_web_search
 
         return [default_web_search()]
+    if skill_name == "cairn":
+        from tab_cli.recall import default_recall
+
+        return [default_recall()]
     return []
 
 
@@ -287,10 +295,18 @@ def run_chat(
         # Lazy-imported so importing ``tab_cli.chat`` doesn't pull in
         # grimoire's Postgres/Ollama runtime requirements; tests that
         # pass an injected registry never reach this branch.
-        from tab_cli.paths import plugins_dir
+        from tab_cli.paths import cli_skills_dir, plugins_dir
         from tab_cli.registry import load_skill_registry
 
-        registry = load_skill_registry(plugins_dir())
+        # CLI-only skills (e.g. ``cairn``) live alongside the runtime
+        # at ``cli/src/tab_cli/skills/`` rather than in the plugin
+        # tree, because their capability depends on grimoire-core /
+        # other CLI-side machinery the Claude Code plugin host can't
+        # provide. The loader merges both sources into one gate.
+        registry = load_skill_registry(
+            plugins_dir(),
+            extra_skill_dirs=[cli_skills_dir()],
+        )
 
     active_settings = settings if settings is not None else TabSettings()
     agent = compile_tab_agent(settings=active_settings, model=model)
