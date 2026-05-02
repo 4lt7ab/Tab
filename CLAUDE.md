@@ -1,71 +1,50 @@
-# Tab
+# CLAUDE.md
 
-Personality, workflows, and skills as plain markdown — runtimes are interchangeable. A Claude Code plugin (`plugins/tab/`) and a Python runtime (`cli/`) both read the same substrate. The markdown is the source of truth; the runtimes read it.
+**TL;DR:** Tab is personality, workflows, and skills as plain markdown. A Claude Code plugin (`plugins/tab/`) and a Python CLI (`cli/`) both read the same substrate. The markdown is the source of truth; the runtimes load it.
 
-## Architecture seams
+## Where to look
 
-- **Two skill homes, no overlap.** Skills shared with the Claude Code plugin host live under `plugins/tab/skills/` (canonical for everything portable). Skills whose capability depends on CLI-only Python — grimoire-core, the settings system, anything pydantic-ai-shaped — live under `cli/src/tab_cli/skills/`. The registry loader walks both via `paths.plugins_dir()` + `paths.cli_skills_dir()` and merges them into one gate. A SKILL.md never lives in both homes; the loader rejects duplicate `name` across sources.
-- **Plugin registration.** `plugins/<pkg>/.claude-plugin/plugin.json` carries `name`, `description`, `version`, `agents` (path array), `skills` (directory ref). Versions in `marketplace.json` and each `plugin.json` must match — the validator enforces this. The CLI-local skills home is not part of the marketplace and isn't validated by `validate-plugins.sh`; its frontmatter is checked at runtime by the registry loader instead.
+| If you need to... | Read |
+|---|---|
+| Understand the system | [docs/architecture.md](docs/architecture.md) |
+| Set up locally | [docs/setup.md](docs/setup.md) |
+| Run or write tests | [docs/testing.md](docs/testing.md) |
+| Cut a release | [docs/deployment.md](docs/deployment.md) |
+| Match the codebase style | [docs/conventions.md](docs/conventions.md) |
+| Understand why something is the way it is | [docs/decisions.md](docs/decisions.md) |
+| Edit the CLI runtime | [cli/MAINTENANCE.md](cli/MAINTENANCE.md) |
 
-## Conventions
+## Rules
 
-- **Skill frontmatter: `name`, `description`, optional `argument-hint`. No other fields.** Behavior, owning agents, MCP requirements go in the body. Extra frontmatter looks load-bearing, isn't, and rots.
-- **Agent frontmatter: `name`, `description`.** Body is the system prompt.
-- **CLI subcommands lazy-import** their runners so `tab --help` and unrelated paths don't pay pydantic-ai's import cost. `cli/MAINTENANCE.md` is the canonical reference for CLI shape.
-- **CLI runtime errors** collapse to a single stderr line of the form `tab: <reason>`, exit non-zero, never spill a traceback. New subcommand → wrap the runner the same way.
-- **CLI work runs from `cli/`**: `uv sync`, `uv run tab`, `uv run pytest`.
+All files in `.claude/rules/` apply to this repo. Read them.
 
-## Decisions we rejected
+- [commit-messages](.claude/rules/commit-messages.md) — wordplay over summary, under ~40 chars
+- [never-bump-versions](.claude/rules/never-bump-versions.md) — versions move only via `just bump`
+- [python-tooling](.claude/rules/python-tooling.md) — uv only, never pip / python3
+- [skill-and-agent-frontmatter](.claude/rules/skill-and-agent-frontmatter.md) — `name`, `description`, optional `argument-hint`
+- [destructive-git](.claude/rules/destructive-git.md) — confirm before reset --hard / push --force / branch delete
 
-- **`tab mcp` subcommand** (CLI-as-MCP-server) — retired 0.4.0, zero callers. Resurrection is cheap when a real host wires up.
-- **pydantic-ai's stock `OllamaModel`** — routes through the OpenAI-compat `/v1` layer and loses features. The in-house `OllamaNativeModel` talks to `/api/chat` directly. Don't "simplify" by switching.
-- **Frontmatter for "which agent runs this skill" or "what mode it operates in"** — duplicates the body, creates a maintenance trap, looks load-bearing when it isn't.
-- **Duplicating a SKILL.md into both homes** — a skill lives in exactly one place. CLI-only capability → `cli/src/tab_cli/skills/`; portable substrate → `plugins/tab/skills/`. The loader rejects a `name` that appears in both, on purpose.
+## Project-specific notes
 
-## Gotchas
+The Tab plugin in `plugins/tab/` is what this repo *ships*. The `.claude/` directory is for working *on* the repo. Don't paraphrase skill behavior into this file or any doc — `SKILL.md` is canonical, and recaps bit-rot.
 
-- **The validator's tree check is soft — substring presence only.** Tree-art whitespace, indentation, and box-drawing characters are decorative. Don't repair tree art; just make sure each path under "Key paths" below stays in the file.
-- **Skill behavior lives in SKILL.md, not here.** Don't paraphrase skill behavior in CLAUDE.md — the SKILL.md body is canonical, and a recap here bit-rots the moment behavior shifts.
-- **`personality.py` imports `pydantic_ai.Agent` at module top.** That's why every other subcommand defers `tab_cli.personality` — deferring the module is what defers pydantic-ai's import cost.
+The validator's CLAUDE.md tree check is a soft substring presence check: every skill `skills/<name>/SKILL.md` and every agent `agents/<name>` must appear somewhere in this file. Tree-art whitespace and box-drawing characters are decorative — don't repair them.
 
-## Commit messages
+## Substrate (validator-required paths)
 
-Short. Wordplay over summary. The diff says *what* changed — the subject is flavor, not a recap. Riff on the code: a pun, a callback, a phrase that fits. Under ~40 chars. Drop conventional-commit prefixes unless part of the joke.
+These paths must appear somewhere in this file. The validator greps for them.
 
-Recent calibration: `muse moves in, grimoire packs light`, `one-shot or it isn't a verb`, `commit checks in`, `the advisor council adjourns`, `the briefing earns its rent`.
+```
+plugins/tab/agents/tab.md
+plugins/tab/skills/draw-dino/SKILL.md
+plugins/tab/skills/hey-tab/SKILL.md
+plugins/tab/skills/listen/SKILL.md
+plugins/tab/skills/teach/SKILL.md
+plugins/tab/skills/think/SKILL.md
+```
 
-## Validation
+CLI-only skill (registry-validated, not in the marketplace):
 
-`bash scripts/validate-plugins.sh` from the repo root, after any structural change — adding/removing skills, agents, bumping versions, editing plugin metadata. The script checks frontmatter, version sync between `marketplace.json` and each `plugin.json`, and the soft tree check above.
-
-## Key paths
-
-Manifests:
-
-- `.claude-plugin/marketplace.json`
-- `plugins/tab/.claude-plugin/plugin.json`
-- `plugins/tab/settings.json` — default agent for the `tab` plugin
-
-Substrate (validator-required: every path below must appear somewhere in this file):
-
-- `plugins/tab/agents/tab.md` — personality agent (profiles, 0-100% settings)
-- `plugins/tab/skills/draw-dino/SKILL.md`
-- `plugins/tab/skills/hey-tab/SKILL.md`
-- `plugins/tab/skills/listen/SKILL.md`
-- `plugins/tab/skills/teach/SKILL.md`
-- `plugins/tab/skills/think/SKILL.md`
-
-CLI runtime (read `cli/MAINTENANCE.md` before editing):
-
-- `cli/pyproject.toml` — entry point `tab` → `tab_cli.cli:app`
-- `cli/src/tab_cli/cli.py` — Typer app; verb-shaped subcommands
-- `cli/src/tab_cli/paths.py` — `plugins_dir()` + `cli_skills_dir()`, the two skill-home roots
-- `cli/src/tab_cli/personality.py` — pydantic-ai compile site
-- `cli/src/tab_cli/registry.py` — semantic-gate skill routing
-- `cli/src/tab_cli/recall.py` — multi-corpus memory tool wired into the cairn skill
-- `cli/src/tab_cli/skills/cairn/SKILL.md` — CLI-only memory-recall skill (grimoire-backed)
-- `cli/src/tab_cli/models/ollama_native.py` — `/api/chat` backend
-
-Validation:
-
-- `scripts/validate-plugins.sh`
+```
+cli/src/tab_cli/skills/cairn/SKILL.md
+```

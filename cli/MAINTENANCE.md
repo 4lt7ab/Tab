@@ -74,35 +74,37 @@ shape with a slightly different prefix — see the function docstring
 for why we don't route through Typer's `BadParameter`. Adding a new
 subcommand? Wrap the runner in this same try/except.
 
-## 4. The CLI reads markdown from `plugins/tab/`; it does not copy
+## 4. The CLI reads markdown in place; it does not copy
 
-The substrate is singular across runtimes. The CLI resolves
-`<repo>/plugins/` from the on-disk location of `paths.py` and reads
-SKILL.md / tab.md straight out of the plugin tree. There is no copy
-step, no vendored markdown, no separate `cli/skills/` directory.
+Two skill homes, one loader, no copy step, no vendored markdown.
 
-The single helper everything routes through is in
-`cli/src/tab_cli/paths.py:75-86`:
+- **`plugins/tab/`** is the portable substrate — read by both the
+  Claude Code plugin host and the CLI. SKILL.md / tab.md are read
+  straight out of the plugin tree.
+- **`cli/src/tab_cli/skills/`** is the CLI-only skill home for skills
+  whose capability depends on Python the plugin host doesn't have
+  (grimoire-core, settings, pydantic-ai). Today this holds `cairn`.
+
+`paths.py` exposes both directories. Everything routes through these
+two helpers — there is no third path-derivation site:
 
 ```python
 @lru_cache(maxsize=1)
 def plugins_dir() -> Path:
-    """Return ``<repo>/plugins`` derived from this file's location.
+    """Return ``<repo>/plugins`` derived from this file's location."""
 
-    Cached because the answer is fixed for the lifetime of the process
-    and every personality / registry / chat init touches it.
-    """
-    here = Path(__file__).resolve()
-    repo_root = here
-    for _ in range(_REPO_ROOT_DEPTH):
-        repo_root = repo_root.parent
-    return repo_root / "plugins"
+@lru_cache(maxsize=1)
+def cli_skills_dir() -> Path:
+    """Return ``cli/src/tab_cli/skills`` — the CLI-only skill home."""
 ```
 
-The module docstring (`paths.py:1-46`) lists the five sites that used
-to derive this themselves and now route through `plugins_dir()`:
-`cli.py`, `chat.py`, `skills.py`, `registry.py`, `personality.py`. If
-you find yourself writing `Path(__file__).resolve().parents[3]` or
+The registry loader (`registry.py`) walks both, merges them into one
+gate, and rejects a `name` that appears in both sources. Skills shared
+with the plugin host go in `plugins/tab/skills/`; CLI-only capability
+goes in `cli/src/tab_cli/skills/`. Don't duplicate — the loader will
+refuse to start.
+
+If you find yourself writing `Path(__file__).resolve().parents[3]` or
 re-stripping a YAML fence, stop and use `paths.py` instead — that's
 the whole point of the module.
 

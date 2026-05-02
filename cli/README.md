@@ -1,4 +1,4 @@
-# tab-cli
+# tab
 
 The Tab CLI — a verb-shaped agent that runs the Tab personality and skills outside Claude Code.
 
@@ -74,5 +74,3 @@ cli/
 - **anthropic** — first backend (`anthropic:<model>`) via pydantic-ai's stock `AnthropicModel`.
 - **ollama-python** — second backend (`ollama:<model>`) via Tab's in-house `OllamaNativeModel`, which talks to `/api/chat` directly. pydantic-ai's stock `OllamaModel` extends `OpenAIChatModel` and routes through `/v1` OpenAI-compat, which has model-registration drift on some installs.
 - **grimoire** (tag-pinned) — semantic-gate routing of user input against skill descriptions.
-
-See KB doc `01KQ2YKTWGXQKYZZS56Y29KT0C` for the architectural decision context.

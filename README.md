@@ -1,23 +1,15 @@
 # Tab
 
-A thinking partner defined entirely in markdown -- no compiled code, no dependencies, just text files that shape how Claude talks, thinks, and works with you.
+A thinking partner defined entirely in markdown — no compiled code, no dependencies, just text files that shape how Claude talks, thinks, and works with you.
 
 ## What is Tab?
 
 Tab is a markdown substrate for an AI thinking partner. The personality, skills, and workflows live in plain text files; runtimes load them. Two runtimes ship today:
 
-- **Claude Code plugins** under `plugins/`: distributed through AltTab's marketplace.
-- **Tab CLI** under `cli/`: a Python package that runs the same markdown outside Claude Code.
+- **Claude Code plugin** under `plugins/tab/`, distributed through AltTab's marketplace.
+- **Tab CLI** under `cli/` — a Python package (PyPI: `tab`) that runs the same markdown outside Claude Code. Verb-shaped subcommands (`tab ask`, `tab chat`, `tab <skill>`, `tab setup`); pydantic-ai for the agent loop with Anthropic + Ollama backends; grimoire for semantic skill routing.
 
-The repo contains:
-
-- **tab** -- a sharp, warm thinking partner personality. It changes how Claude shows up: more direct, more collaborative, more opinionated when it matters. The entire persona is defined in markdown files (agents and skills) with zero runtime dependencies.
-
-- **tab-cli** -- the Python runtime. Verb-shaped subcommands (`tab ask`, `tab chat`, `tab <skill>`, `tab setup`); pydantic-ai for the agent loop with Anthropic + Ollama backends; grimoire for semantic skill routing.
-
-The Claude Code plugin is distributed through AltTab's marketplace.
-
-## Quick Start
+## Quick start
 
 Install via the Claude Code plugin system:
 
@@ -25,14 +17,26 @@ Install via the Claude Code plugin system:
 claude plugin add --from "https://github.com/4lt7ab/Tab" tab
 ```
 
-The marketplace configuration at `.claude-plugin/marketplace.json` defines the plugin. Claude Code resolves it from this repository automatically.
+Or run the CLI from a clone:
 
-## Packages
+```bash
+cd cli
+uv sync
+uv run tab --help
+```
 
-| Package | Version | Description |
-| --- | --- | --- |
-| [tab](./plugins/tab) | 0.3.4 | A sharp, warm thinking partner who helps you make better decisions |
-| [tab-cli](./cli) | 0.4.2 | Python runtime for the Tab markdown substrate -- verb-shaped subcommands, Anthropic + Ollama backends |
+Full setup, including provider keys and personality dials: [docs/setup.md](docs/setup.md).
+
+## Documentation
+
+- [Architecture](docs/architecture.md) — repo layout, the two skill homes, plugin registration
+- [Setup](docs/setup.md) — local development and plugin install
+- [Testing](docs/testing.md) — `just test`, `just validate`, pluggable test seams
+- [Deployment](docs/deployment.md) — versions and release process
+- [Conventions](docs/conventions.md) — frontmatter, error patterns, lazy imports
+- [Decisions](docs/decisions.md) — choices we deliberately made and rejected
+
+For agents: [CLAUDE.md](CLAUDE.md) and [.claude/rules/](.claude/rules/).
 
 ## Trademark
 
@@ -44,4 +48,4 @@ If you fork or modify this project, please choose a different name for your deri
 
 ## License
 
-This project is licensed under [Apache-2.0](./LICENSE).
+Apache-2.0. See [LICENSE](LICENSE).
