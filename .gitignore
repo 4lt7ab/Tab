@@ -26,9 +26,6 @@ __pycache__/
 .mypy_cache/
 *.egg-info/
 
-# asdf — tool version pins are per-machine
-.tool-versions
-
 # Environment
 .env
 .env.*
