@@ -1921,8 +1921,8 @@ wheels = [
 ]
 
 [[package]]
-name = "tab-cli"
-version = "0.4.5"
+name = "tab"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "grimoire-core" },

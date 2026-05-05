@@ -1,6 +1,6 @@
 [project]
-name = "tab-cli"
-version = "0.4.5"
+name = "tab"
+version = "0.0.1"
 description = "Tab — a verb-shaped CLI agent for the Tab plugin ecosystem"
 readme = "README.md"
 license = { file = "../LICENSE" }
