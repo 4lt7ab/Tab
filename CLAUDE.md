@@ -37,6 +37,7 @@ These paths must appear somewhere in this file. The validator greps for them.
 ```
 plugins/tab/agents/tab.md
 plugins/tab/skills/draw-dino/SKILL.md
+plugins/tab/skills/grimoire/SKILL.md
 plugins/tab/skills/hey-tab/SKILL.md
 plugins/tab/skills/listen/SKILL.md
 plugins/tab/skills/teach/SKILL.md

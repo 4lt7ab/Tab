@@ -17,6 +17,7 @@ Tab/
 │   ├── agents/tab.md                 # personality agent (profiles, 0–100% dials)
 │   └── skills/
 │       ├── draw-dino/SKILL.md
+│       ├── grimoire/SKILL.md
 │       ├── hey-tab/SKILL.md
 │       ├── listen/SKILL.md
 │       ├── teach/SKILL.md
@@ -64,6 +65,7 @@ Substrate (validator-required — every path below must appear in CLAUDE.md):
 
 - `plugins/tab/agents/tab.md`
 - `plugins/tab/skills/draw-dino/SKILL.md`
+- `plugins/tab/skills/grimoire/SKILL.md`
 - `plugins/tab/skills/hey-tab/SKILL.md`
 - `plugins/tab/skills/listen/SKILL.md`
 - `plugins/tab/skills/teach/SKILL.md`
